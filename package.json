@@ -1,0 +1,95 @@
+{
+   "name": "@xleddyl/nuxt-cms",
+   "version": "0.1.8",
+   "description": "Lightweight CMS that ships with your Nuxt app: runs on the Nitro server, content types defined in code, /cms admin panel, GraphQL API, SQLite or Postgres. No external CMS needed!",
+   "license": "MIT",
+   "author": "Edoardo Alberti (https://github.com/xleddyl)",
+   "repository": {
+      "type": "git",
+      "url": "https://github.com/xleddyl/nuxt-cms"
+   },
+   "homepage": "https://github.com/xleddyl/nuxt-cms#readme",
+   "bugs": {
+      "url": "https://github.com/xleddyl/nuxt-cms/issues"
+   },
+   "keywords": [
+      "nuxt",
+      "nuxt-module",
+      "nitro",
+      "cms",
+      "headless-cms",
+      "self-hosted",
+      "sqlite",
+      "postgres",
+      "drizzle",
+      "graphql"
+   ],
+   "engines": {
+      "node": ">=20.19.0"
+   },
+   "type": "module",
+   "packageManager": "pnpm@11.10.0",
+   "publishConfig": {
+      "access": "public",
+      "provenance": true
+   },
+   "exports": {
+      ".": {
+         "types": "./dist/types.d.mts",
+         "import": "./dist/module.mjs"
+      }
+   },
+   "main": "./dist/module.mjs",
+   "typesVersions": {
+      "*": {
+         ".": [
+            "./dist/types.d.mts"
+         ]
+      }
+   },
+   "files": [
+      "dist"
+   ],
+   "scripts": {
+      "prepack": "nuxt-module-build build",
+      "dev": "pnpm dev:prepare && nuxt dev playground",
+      "dev:build": "nuxt build playground",
+      "dev:prepare": "nuxt-module-build build --stub && nuxt-module-build prepare && nuxt prepare playground",
+      "db:studio": "drizzle-kit studio --config=playground/.nuxt/cms/drizzle.config.ts",
+      "test:types": "vue-tsc --noEmit && cd playground && vue-tsc --noEmit",
+      "format": "prettier --write \"**/*.{ts,tsx,js,jsx,md,html,json,sql,vue}\" --log-level error",
+      "release": "changelogen --release --push"
+   },
+   "dependencies": {
+      "@nuxt/kit": "^4.4.8",
+      "@nuxt/ui": "^4.0.0",
+      "@nuxtjs/i18n": "^10.4.0",
+      "@tiptap/starter-kit": "^3.0.0",
+      "@tiptap/vue-3": "^3.0.0",
+      "aws4fetch": "^1.0.20",
+      "better-sqlite3": "^12.2.0",
+      "drizzle-kit": "^0.31.0",
+      "drizzle-orm": "^0.44.0",
+      "gql.tada": "^1.11.2",
+      "graphql": "^16.11.0",
+      "graphql-yoga": "^5.10.0",
+      "jiti": "^2.7.0",
+      "nuxt-auth-utils": "^0.5.29",
+      "pg": "^8.16.0",
+      "zod": "^4.0.0"
+   },
+   "devDependencies": {
+      "@nuxt/devtools": "^3.2.4",
+      "@nuxt/module-builder": "^1.0.2",
+      "@nuxt/schema": "^4.4.8",
+      "@types/better-sqlite3": "^7.6.13",
+      "@types/node": "latest",
+      "@types/pg": "^8.11.0",
+      "changelogen": "^0.6.0",
+      "nuxt": "^4.4.8",
+      "prettier": "3.1.1",
+      "prettier-plugin-tailwindcss": "0.6.11",
+      "typescript": "~6.0.3",
+      "vue-tsc": "^3.3.3"
+   }
+}

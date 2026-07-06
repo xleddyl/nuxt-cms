@@ -1,0 +1,10 @@
+packages:
+  - playground
+
+allowBuilds:
+  '@parcel/watcher': true
+  better-sqlite3: true
+  esbuild: true
+  sharp: true
+  unrs-resolver: true
+  vue-demi: false

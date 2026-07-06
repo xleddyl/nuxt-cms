@@ -1,0 +1,421 @@
+{
+   "version": "6",
+   "dialect": "sqlite",
+   "id": "a559e0a5-4c80-47a1-9920-94b39dc41f22",
+   "prevId": "00000000-0000-0000-0000-000000000000",
+   "tables": {
+      "categories": {
+         "name": "categories",
+         "columns": {
+            "id": {
+               "name": "id",
+               "type": "text",
+               "primaryKey": true,
+               "notNull": true,
+               "autoincrement": false
+            },
+            "name": {
+               "name": "name",
+               "type": "text",
+               "primaryKey": false,
+               "notNull": true,
+               "autoincrement": false
+            },
+            "created_at": {
+               "name": "created_at",
+               "type": "text",
+               "primaryKey": false,
+               "notNull": true,
+               "autoincrement": false,
+               "default": "(datetime('now'))"
+            },
+            "updated_at": {
+               "name": "updated_at",
+               "type": "text",
+               "primaryKey": false,
+               "notNull": true,
+               "autoincrement": false,
+               "default": "(datetime('now'))"
+            }
+         },
+         "indexes": {},
+         "foreignKeys": {},
+         "compositePrimaryKeys": {},
+         "uniqueConstraints": {},
+         "checkConstraints": {}
+      },
+      "cms_media": {
+         "name": "cms_media",
+         "columns": {
+            "id": {
+               "name": "id",
+               "type": "integer",
+               "primaryKey": true,
+               "notNull": true,
+               "autoincrement": true
+            },
+            "key": {
+               "name": "key",
+               "type": "text",
+               "primaryKey": false,
+               "notNull": true,
+               "autoincrement": false
+            },
+            "alt": {
+               "name": "alt",
+               "type": "text",
+               "primaryKey": false,
+               "notNull": false,
+               "autoincrement": false
+            },
+            "folder": {
+               "name": "folder",
+               "type": "text",
+               "primaryKey": false,
+               "notNull": false,
+               "autoincrement": false
+            },
+            "mime": {
+               "name": "mime",
+               "type": "text",
+               "primaryKey": false,
+               "notNull": false,
+               "autoincrement": false
+            },
+            "size": {
+               "name": "size",
+               "type": "integer",
+               "primaryKey": false,
+               "notNull": false,
+               "autoincrement": false
+            },
+            "width": {
+               "name": "width",
+               "type": "integer",
+               "primaryKey": false,
+               "notNull": false,
+               "autoincrement": false
+            },
+            "height": {
+               "name": "height",
+               "type": "integer",
+               "primaryKey": false,
+               "notNull": false,
+               "autoincrement": false
+            },
+            "created_at": {
+               "name": "created_at",
+               "type": "text",
+               "primaryKey": false,
+               "notNull": true,
+               "autoincrement": false,
+               "default": "(datetime('now'))"
+            }
+         },
+         "indexes": {
+            "cms_media_key_unique": {
+               "name": "cms_media_key_unique",
+               "columns": ["key"],
+               "isUnique": true
+            }
+         },
+         "foreignKeys": {},
+         "compositePrimaryKeys": {},
+         "uniqueConstraints": {},
+         "checkConstraints": {}
+      },
+      "events": {
+         "name": "events",
+         "columns": {
+            "id": {
+               "name": "id",
+               "type": "text",
+               "primaryKey": true,
+               "notNull": true,
+               "autoincrement": false
+            },
+            "title": {
+               "name": "title",
+               "type": "text",
+               "primaryKey": false,
+               "notNull": true,
+               "autoincrement": false
+            },
+            "slug": {
+               "name": "slug",
+               "type": "text",
+               "primaryKey": false,
+               "notNull": true,
+               "autoincrement": false
+            },
+            "description": {
+               "name": "description",
+               "type": "text",
+               "primaryKey": false,
+               "notNull": false,
+               "autoincrement": false
+            },
+            "seats": {
+               "name": "seats",
+               "type": "integer",
+               "primaryKey": false,
+               "notNull": false,
+               "autoincrement": false
+            },
+            "date": {
+               "name": "date",
+               "type": "text",
+               "primaryKey": false,
+               "notNull": true,
+               "autoincrement": false
+            },
+            "featured": {
+               "name": "featured",
+               "type": "integer",
+               "primaryKey": false,
+               "notNull": false,
+               "autoincrement": false
+            },
+            "visibility": {
+               "name": "visibility",
+               "type": "text",
+               "primaryKey": false,
+               "notNull": false,
+               "autoincrement": false
+            },
+            "contact_email": {
+               "name": "contact_email",
+               "type": "text",
+               "primaryKey": false,
+               "notNull": false,
+               "autoincrement": false
+            },
+            "metadata": {
+               "name": "metadata",
+               "type": "text",
+               "primaryKey": false,
+               "notNull": false,
+               "autoincrement": false
+            },
+            "body": {
+               "name": "body",
+               "type": "text",
+               "primaryKey": false,
+               "notNull": false,
+               "autoincrement": false
+            },
+            "poster": {
+               "name": "poster",
+               "type": "text",
+               "primaryKey": false,
+               "notNull": false,
+               "autoincrement": false
+            },
+            "category": {
+               "name": "category",
+               "type": "text",
+               "primaryKey": false,
+               "notNull": false,
+               "autoincrement": false
+            },
+            "status": {
+               "name": "status",
+               "type": "text",
+               "primaryKey": false,
+               "notNull": true,
+               "autoincrement": false,
+               "default": "'draft'"
+            },
+            "created_at": {
+               "name": "created_at",
+               "type": "text",
+               "primaryKey": false,
+               "notNull": true,
+               "autoincrement": false,
+               "default": "(datetime('now'))"
+            },
+            "updated_at": {
+               "name": "updated_at",
+               "type": "text",
+               "primaryKey": false,
+               "notNull": true,
+               "autoincrement": false,
+               "default": "(datetime('now'))"
+            }
+         },
+         "indexes": {
+            "events_slug_unique": {
+               "name": "events_slug_unique",
+               "columns": ["slug"],
+               "isUnique": true
+            }
+         },
+         "foreignKeys": {
+            "events_category_categories_id_fk": {
+               "name": "events_category_categories_id_fk",
+               "tableFrom": "events",
+               "tableTo": "categories",
+               "columnsFrom": ["category"],
+               "columnsTo": ["id"],
+               "onDelete": "set null",
+               "onUpdate": "no action"
+            }
+         },
+         "compositePrimaryKeys": {},
+         "uniqueConstraints": {},
+         "checkConstraints": {}
+      },
+      "events_tags": {
+         "name": "events_tags",
+         "columns": {
+            "source_id": {
+               "name": "source_id",
+               "type": "text",
+               "primaryKey": false,
+               "notNull": true,
+               "autoincrement": false
+            },
+            "target_id": {
+               "name": "target_id",
+               "type": "text",
+               "primaryKey": false,
+               "notNull": true,
+               "autoincrement": false
+            },
+            "position": {
+               "name": "position",
+               "type": "integer",
+               "primaryKey": false,
+               "notNull": true,
+               "autoincrement": false,
+               "default": 0
+            }
+         },
+         "indexes": {},
+         "foreignKeys": {
+            "events_tags_source_id_events_id_fk": {
+               "name": "events_tags_source_id_events_id_fk",
+               "tableFrom": "events_tags",
+               "tableTo": "events",
+               "columnsFrom": ["source_id"],
+               "columnsTo": ["id"],
+               "onDelete": "cascade",
+               "onUpdate": "no action"
+            },
+            "events_tags_target_id_tags_id_fk": {
+               "name": "events_tags_target_id_tags_id_fk",
+               "tableFrom": "events_tags",
+               "tableTo": "tags",
+               "columnsFrom": ["target_id"],
+               "columnsTo": ["id"],
+               "onDelete": "cascade",
+               "onUpdate": "no action"
+            }
+         },
+         "compositePrimaryKeys": {
+            "events_tags_source_id_target_id_pk": {
+               "columns": ["source_id", "target_id"],
+               "name": "events_tags_source_id_target_id_pk"
+            }
+         },
+         "uniqueConstraints": {},
+         "checkConstraints": {}
+      },
+      "homepage": {
+         "name": "homepage",
+         "columns": {
+            "id": {
+               "name": "id",
+               "type": "text",
+               "primaryKey": true,
+               "notNull": true,
+               "autoincrement": false
+            },
+            "hero_title": {
+               "name": "hero_title",
+               "type": "text",
+               "primaryKey": false,
+               "notNull": true,
+               "autoincrement": false
+            },
+            "hero_subtitle": {
+               "name": "hero_subtitle",
+               "type": "text",
+               "primaryKey": false,
+               "notNull": false,
+               "autoincrement": false
+            },
+            "launch_date": {
+               "name": "launch_date",
+               "type": "text",
+               "primaryKey": false,
+               "notNull": false,
+               "autoincrement": false
+            },
+            "updated_at": {
+               "name": "updated_at",
+               "type": "text",
+               "primaryKey": false,
+               "notNull": true,
+               "autoincrement": false,
+               "default": "(datetime('now'))"
+            }
+         },
+         "indexes": {},
+         "foreignKeys": {},
+         "compositePrimaryKeys": {},
+         "uniqueConstraints": {},
+         "checkConstraints": {}
+      },
+      "tags": {
+         "name": "tags",
+         "columns": {
+            "id": {
+               "name": "id",
+               "type": "text",
+               "primaryKey": true,
+               "notNull": true,
+               "autoincrement": false
+            },
+            "name": {
+               "name": "name",
+               "type": "text",
+               "primaryKey": false,
+               "notNull": true,
+               "autoincrement": false
+            },
+            "created_at": {
+               "name": "created_at",
+               "type": "text",
+               "primaryKey": false,
+               "notNull": true,
+               "autoincrement": false,
+               "default": "(datetime('now'))"
+            },
+            "updated_at": {
+               "name": "updated_at",
+               "type": "text",
+               "primaryKey": false,
+               "notNull": true,
+               "autoincrement": false,
+               "default": "(datetime('now'))"
+            }
+         },
+         "indexes": {},
+         "foreignKeys": {},
+         "compositePrimaryKeys": {},
+         "uniqueConstraints": {},
+         "checkConstraints": {}
+      }
+   },
+   "views": {},
+   "enums": {},
+   "_meta": {
+      "schemas": {},
+      "tables": {},
+      "columns": {}
+   },
+   "internal": {
+      "indexes": {}
+   }
+}
