@@ -70,6 +70,7 @@ import {
    watch,
 } from '#imports'
 import cmsConfig from '#cms-config'
+import { useCmsConfirm } from '../composables/cms-confirm'
 import { cmsApi } from '../utils/api'
 import { errorMessage } from '../utils/ui'
 
@@ -111,9 +112,14 @@ function pickFields(row: Record<string, unknown>) {
 const formState = ref<Record<string, unknown>>(emptyState())
 
 if (!isNew) {
-   const { data } = await useFetch<Record<string, unknown> | null>(`${endpoint}/${id}`)
-   if (!data.value) {
-      throw createError({ statusCode: 404, statusMessage: 'Entry not found', fatal: true })
+   const { data, error } = await useFetch<Record<string, unknown> | null>(`${endpoint}/${id}`)
+   if (error.value || !data.value) {
+      const statusCode = error.value?.statusCode ?? 404
+      throw createError({
+         statusCode,
+         statusMessage: statusCode === 404 ? 'Entry not found' : 'Failed to load entry',
+         fatal: true,
+      })
    }
    formState.value = pickFields(data.value)
 }
@@ -134,8 +140,10 @@ watch(dirty, (value) => {
 
 onBeforeUnmount(() => window.removeEventListener('beforeunload', onBeforeUnload))
 
-onBeforeRouteLeave(() => {
-   if (dirty.value && !confirm(t('cms.entry.unsavedChanges'))) return false
+const confirmAction = useCmsConfirm()
+
+onBeforeRouteLeave(async () => {
+   if (dirty.value && !(await confirmAction(t('cms.entry.unsavedChanges')))) return false
 })
 
 const published = computed({

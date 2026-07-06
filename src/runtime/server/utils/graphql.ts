@@ -131,8 +131,20 @@ const OPERATORS: Record<string, (column: AnySQLiteColumn, value: unknown) => SQL
    gte: (column, value) => gte(column, value),
    lt: (column, value) => lt(column, value),
    lte: (column, value) => lte(column, value),
-   like: (column, value) => like(column, String(value).replaceAll('*', '%')),
+   like: (column, value) => {
+      const pattern = String(value)
+         .replaceAll('\\', '\\\\')
+         .replaceAll('%', '\\%')
+         .replaceAll('_', '\\_')
+         .replaceAll('*', '%')
+      return sql`${column} like ${pattern} escape '\\'`
+   },
    in: (column, value) => inArray(column, value as unknown[]),
+}
+
+function columnFor(table: SQLiteTable, key: string): AnySQLiteColumn | undefined {
+   const columns = tableColumns(table)
+   return Object.hasOwn(columns, key) ? columns[key] : undefined
 }
 
 function filterConditions(table: SQLiteTable, filters: Filters | null | undefined): SQL[] {
@@ -140,7 +152,7 @@ function filterConditions(table: SQLiteTable, filters: Filters | null | undefine
    const conditions: SQL[] = []
    for (const [key, ops] of Object.entries(filters)) {
       if (!ops) continue
-      const column = tableColumns(table)[key]
+      const column = columnFor(table, key)
       if (!column) throw new GraphQLError(`Unknown filter field: ${key}`)
       for (const [op, value] of Object.entries(ops)) {
          if (value === undefined) continue
@@ -163,7 +175,7 @@ function filterConditions(table: SQLiteTable, filters: Filters | null | undefine
 function sortOrder(table: SQLiteTable, sort: SortInput[] | null | undefined): SQL[] {
    const order: SQL[] = []
    for (const part of sort ?? []) {
-      const column = tableColumns(table)[part.field]
+      const column = columnFor(table, part.field)
       if (!column) throw new GraphQLError(`Unknown sort field: ${part.field}`)
       order.push(part.direction === 'desc' ? desc(column) : asc(column))
    }

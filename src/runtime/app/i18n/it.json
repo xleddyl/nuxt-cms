@@ -27,7 +27,16 @@
          "emptyBody": "Le voci che crei appariranno qui.",
          "deleteConfirm": "Eliminare questa voce?",
          "status": "Stato",
-         "columns": "Colonne"
+         "columns": "Colonne",
+         "loadError": "Impossibile caricare le voci",
+         "retry": "Riprova",
+         "searchPlaceholder": "Cerca…",
+         "noResults": "Nessuna voce corrispondente"
+      },
+      "confirm": {
+         "title": "Sei sicuro?",
+         "confirm": "Conferma",
+         "cancel": "Annulla"
       },
       "entry": {
          "unsavedChanges": "Ci sono modifiche non salvate. Uscire comunque?"
@@ -79,7 +88,28 @@
          "mediaChange": "Cambia",
          "mediaRemove": "Rimuovi",
          "invalidJson": "JSON non valido",
-         "addBlock": "Aggiungi blocco"
+         "addBlock": "Aggiungi blocco",
+         "moveUp": "Sposta su",
+         "moveDown": "Sposta giù",
+         "duplicateBlock": "Duplica blocco",
+         "removeBlock": "Rimuovi blocco",
+         "collapseBlock": "Comprimi blocco",
+         "expandBlock": "Espandi blocco"
+      },
+      "richtext": {
+         "bold": "Grassetto",
+         "italic": "Corsivo",
+         "strike": "Barrato",
+         "h2": "Titolo 2",
+         "h3": "Titolo 3",
+         "bulletList": "Elenco puntato",
+         "orderedList": "Elenco numerato",
+         "blockquote": "Citazione",
+         "link": "Link",
+         "setLink": "Applica",
+         "unsetLink": "Rimuovi link",
+         "undo": "Annulla",
+         "redo": "Ripristina"
       },
       "validation": {
          "required": "Campo obbligatorio",

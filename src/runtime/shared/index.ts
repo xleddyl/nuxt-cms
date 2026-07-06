@@ -141,6 +141,112 @@ export interface CmsEntry {
 
 export type CmsConfig = Record<string, CmsEntry>
 
-export function defineCmsConfig<T extends CmsConfig>(config: T): T {
+interface FieldInputBase {
+   label: string
+   required?: boolean
+}
+
+export interface TextFieldInput extends FieldInputBase {
+   type: 'text'
+   textarea?: boolean
+   translatable?: boolean
+}
+
+export interface RichtextFieldInput extends FieldInputBase {
+   type: 'richtext'
+   translatable?: boolean
+}
+
+export interface NumberFieldInput extends FieldInputBase {
+   type: 'number'
+   integer?: boolean
+}
+
+export interface BooleanFieldInput extends FieldInputBase {
+   type: 'boolean'
+}
+
+export interface DateFieldInput extends FieldInputBase {
+   type: 'date'
+}
+
+export interface EmailFieldInput extends FieldInputBase {
+   type: 'email'
+}
+
+export interface SlugFieldInput extends FieldInputBase {
+   type: 'slug'
+   from: string
+}
+
+export interface SelectFieldInput extends FieldInputBase {
+   type: 'select'
+   options: string[]
+}
+
+export interface JsonFieldInput extends FieldInputBase {
+   type: 'json'
+}
+
+export interface MediaFieldInput extends FieldInputBase {
+   type: 'media'
+   mediaType?: MediaType
+   accept?: string[]
+}
+
+export interface RelationFieldInput extends FieldInputBase {
+   type: 'relation'
+   to: string
+   cardinality?: 'many-to-one' | 'one-to-one' | 'many-to-many'
+   onDelete?: 'set null' | 'cascade' | 'restrict'
+}
+
+export type BlockFieldInput =
+   | Omit<TextFieldInput, 'translatable'>
+   | Omit<RichtextFieldInput, 'translatable'>
+   | NumberFieldInput
+   | BooleanFieldInput
+   | DateFieldInput
+   | EmailFieldInput
+   | SelectFieldInput
+   | JsonFieldInput
+   | MediaFieldInput
+
+export interface BlockInput {
+   label: string
+   fields: Record<string, BlockFieldInput>
+}
+
+export interface BlocksFieldInput extends FieldInputBase {
+   type: 'blocks'
+   blocks: Record<string, BlockInput>
+}
+
+export type CmsFieldInput =
+   | TextFieldInput
+   | RichtextFieldInput
+   | NumberFieldInput
+   | BooleanFieldInput
+   | DateFieldInput
+   | EmailFieldInput
+   | SlugFieldInput
+   | SelectFieldInput
+   | JsonFieldInput
+   | MediaFieldInput
+   | RelationFieldInput
+   | BlocksFieldInput
+
+export interface CmsEntryInput {
+   id: string
+   label: string
+   kind: 'collection' | 'single'
+   titleField?: string
+   drafts?: boolean
+   fields: Record<string, CmsFieldInput>
+}
+
+export type CmsConfigInput = Record<string, CmsEntryInput>
+
+export function defineCmsConfig<T extends CmsConfigInput>(config: T): T {
    return config
 }

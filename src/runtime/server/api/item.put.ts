@@ -1,6 +1,6 @@
 import { eq } from 'drizzle-orm'
 import { createError, defineEventHandler, readValidatedBody } from 'h3'
-import { useDb } from '#cms-db'
+import { withTransaction } from '#cms-db'
 import {
    buildValidator,
    getRegistryEntry,
@@ -33,15 +33,19 @@ export default defineEventHandler(async (event) => {
    await assertRelationTargets(entry, lists)
    const set = withUpdatedAt(table, values)
 
-   return mapConstraintErrors(async () => {
-      const [row] = await useDb()
-         .update(table)
-         .set(set)
-         .where(eq(idColumn(table), id))
-         .returning()
-      if (!row) throw createError({ statusCode: 404, statusMessage: 'Row not found' })
-      await saveManyToMany(name, id, lists)
-      const [attached] = await attachManyToMany(name, entry, [row as Record<string, unknown>])
-      return attached
-   })
+   return mapConstraintErrors(() =>
+      withTransaction(async (db) => {
+         const [row] = await db
+            .update(table)
+            .set(set)
+            .where(eq(idColumn(table), id))
+            .returning()
+         if (!row) throw createError({ statusCode: 404, statusMessage: 'Row not found' })
+         await saveManyToMany(db, name, id, lists)
+         const [attached] = await attachManyToMany(db, name, entry, [
+            row as Record<string, unknown>,
+         ])
+         return attached
+      })
+   )
 })

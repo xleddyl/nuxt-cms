@@ -32,7 +32,22 @@
          </div>
       </CmsPageHeader>
 
-      <div v-if="config.kind === 'single'" class="cms-card p-7">
+      <CmsEmptyState
+         v-if="error"
+         icon="i-lucide-triangle-alert"
+         :title="t('cms.collection.loadError')"
+      >
+         <UButton
+            :label="t('cms.collection.retry')"
+            icon="i-lucide-refresh-cw"
+            variant="subtle"
+            class="mt-3 rounded-full px-4"
+            :loading="status === 'pending'"
+            @click="reload"
+         />
+      </CmsEmptyState>
+
+      <div v-else-if="config.kind === 'single'" class="cms-card p-7">
          <CmsEntryForm
             v-model="formState"
             :fields="config.fields"
@@ -43,6 +58,14 @@
       </div>
 
       <template v-else>
+         <UInput
+            v-if="total || searchTerm"
+            v-model="search"
+            icon="i-lucide-search"
+            :placeholder="t('cms.collection.searchPlaceholder')"
+            class="max-w-xs"
+         />
+
          <div v-if="rows.length" class="cms-card overflow-hidden">
             <UTable
                v-model:column-visibility="columnVisibility"
@@ -85,6 +108,19 @@
             </UTable>
          </div>
 
+         <div v-else-if="status === 'pending'" class="flex justify-center py-10">
+            <UIcon
+               name="i-lucide-loader-circle"
+               class="text-(--ui-text-dimmed) size-6 animate-spin"
+            />
+         </div>
+
+         <CmsEmptyState
+            v-else-if="searchTerm"
+            icon="i-lucide-search-x"
+            :title="t('cms.collection.noResults')"
+         />
+
          <CmsEmptyState
             v-else
             icon="i-lucide-sprout"
@@ -99,6 +135,10 @@
                @click="openCreate"
             />
          </CmsEmptyState>
+
+         <div v-if="total > PAGE_SIZE" class="flex justify-center">
+            <UPagination v-model:page="page" :total="total" :items-per-page="PAGE_SIZE" />
+         </div>
       </template>
    </div>
 </template>
@@ -121,6 +161,7 @@ import {
    watch,
 } from '#imports'
 import cmsConfig from '#cms-config'
+import { useCmsConfirm } from '../composables/cms-confirm'
 import { useCmsRuntime } from '../composables/cms-runtime'
 import { cmsApi } from '../utils/api'
 import { errorMessage } from '../utils/ui'
@@ -151,9 +192,48 @@ type Row = Record<string, unknown>
 
 const endpoint: string = `/api/cms/admin/${name}`
 
-const { data, refresh } = await useFetch<Row[] | Row | null>(endpoint)
+const PAGE_SIZE = 25
+const page = ref(1)
+const search = ref('')
+const searchTerm = ref('')
+let searchTimer: ReturnType<typeof setTimeout> | undefined
+watch(search, (value) => {
+   clearTimeout(searchTimer)
+   searchTimer = setTimeout(() => {
+      searchTerm.value = value.trim()
+      page.value = 1
+   }, 300)
+})
 
-const rows = computed<Row[]>(() => (Array.isArray(data.value) ? data.value : []))
+interface ListResponse {
+   items: Row[]
+   total: number
+}
+
+const listQuery = computed(() => ({
+   limit: PAGE_SIZE,
+   offset: (page.value - 1) * PAGE_SIZE,
+   ...(searchTerm.value ? { search: searchTerm.value } : {}),
+}))
+
+const { data, refresh, error, status } = await useFetch<ListResponse | Row | null>(endpoint, {
+   query: config.kind === 'collection' ? listQuery : undefined,
+})
+
+function isList(value: ListResponse | Row | null | undefined): value is ListResponse {
+   return !!value && Array.isArray((value as ListResponse).items)
+}
+
+const rows = computed<Row[]>(() => (isList(data.value) ? data.value.items : []))
+const total = computed(() => (isList(data.value) ? data.value.total : 0))
+
+const reload = async () => {
+   await refresh()
+   if (config.kind === 'single' && !error.value) {
+      formState.value =
+         data.value && !isList(data.value) ? pickFields(data.value as Row) : emptyState()
+   }
+}
 
 const tableUi = {
    thead: 'border-b border-(--cms-line)',
@@ -174,6 +254,7 @@ function pickFields(row: Record<string, unknown>) {
 }
 
 async function submit(action: () => Promise<unknown>) {
+   if (saving.value) return false
    saving.value = true
    try {
       await action()
@@ -193,7 +274,7 @@ async function submit(action: () => Promise<unknown>) {
 
 if (config.kind === 'single') {
    formState.value =
-      data.value && !Array.isArray(data.value) ? pickFields(data.value) : emptyState()
+      data.value && !isList(data.value) ? pickFields(data.value as Row) : emptyState()
 }
 
 async function saveSingle() {
@@ -287,7 +368,7 @@ const columnItems = computed(() =>
 const kicker = computed(() =>
    config.kind === 'single'
       ? t('cms.collection.kickerSingle')
-      : t('cms.collection.kicker', rows.value.length)
+      : t('cms.collection.kicker', total.value)
 )
 
 function onSelect(_event: Event, row: TableRow<Row>) {
@@ -296,20 +377,25 @@ function onSelect(_event: Event, row: TableRow<Row>) {
 
 async function toggleStatus(row: Record<string, unknown>) {
    const next = row.status === 'published' ? 'draft' : 'published'
-   await submit(() =>
-      cmsApi(`${endpoint}/${row.id}`, {
+   await submit(async () => {
+      const fresh = await cmsApi<Record<string, unknown>>(`${endpoint}/${row.id}`)
+      await cmsApi(`${endpoint}/${row.id}`, {
          method: 'PUT',
-         body: { ...pickFields(row), status: next },
+         body: { ...pickFields(fresh), status: next },
       })
-   )
+   })
 }
 
 function openCreate() {
    navigateTo(`/cms/${name}/new`)
 }
 
+const confirmAction = useCmsConfirm()
+
 async function deleteRow(row: Record<string, unknown>) {
-   if (!confirm(t('cms.collection.deleteConfirm'))) return
-   await submit(() => cmsApi(`${endpoint}/${row.id}`, { method: 'DELETE' }))
+   if (!(await confirmAction(t('cms.collection.deleteConfirm')))) return
+   const lastOnPage = rows.value.length === 1 && page.value > 1
+   const ok = await submit(() => cmsApi(`${endpoint}/${row.id}`, { method: 'DELETE' }))
+   if (ok && lastOnPage) page.value -= 1
 }
 </script>

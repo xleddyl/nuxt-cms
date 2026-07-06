@@ -6,14 +6,26 @@
          class="cms-card flex flex-col gap-4 p-4"
       >
          <div class="flex items-center gap-1">
-            <span class="cms-kicker grow">
+            <button
+               type="button"
+               class="cms-kicker flex grow items-center gap-1.5 text-left"
+               :aria-label="
+                  isCollapsed(item) ? t('cms.form.expandBlock') : t('cms.form.collapseBlock')
+               "
+               @click="toggleCollapsed(item)"
+            >
+               <UIcon
+                  :name="isCollapsed(item) ? 'i-lucide-chevron-right' : 'i-lucide-chevron-down'"
+                  class="size-3.5"
+               />
                {{ blocks[item.type as string]?.label ?? item.type }}
-            </span>
+            </button>
             <UButton
                icon="i-lucide-chevron-up"
                size="xs"
                variant="ghost"
                color="neutral"
+               :aria-label="t('cms.form.moveUp')"
                :disabled="index === 0"
                @click="move(index, -1)"
             />
@@ -22,30 +34,42 @@
                size="xs"
                variant="ghost"
                color="neutral"
+               :aria-label="t('cms.form.moveDown')"
                :disabled="index === items.length - 1"
                @click="move(index, 1)"
+            />
+            <UButton
+               icon="i-lucide-copy"
+               size="xs"
+               variant="ghost"
+               color="neutral"
+               :aria-label="t('cms.form.duplicateBlock')"
+               @click="duplicate(index)"
             />
             <UButton
                icon="i-lucide-trash-2"
                size="xs"
                variant="ghost"
                color="error"
+               :aria-label="t('cms.form.removeBlock')"
                @click="remove(index)"
             />
          </div>
-         <UFormField
-            v-for="(blockField, blockKey) in blocks[item.type as string]?.fields"
-            :key="blockKey"
-            :label="blockField.label"
-            :required="blockField.required"
-            :ui="CMS_FIELD_UI"
-         >
-            <CmsFieldInput
-               :model-value="item[blockKey]"
-               :field="blockField"
-               @update:model-value="(value: unknown) => updateField(index, blockKey, value)"
-            />
-         </UFormField>
+         <template v-if="!isCollapsed(item)">
+            <UFormField
+               v-for="(blockField, blockKey) in blocks[item.type as string]?.fields"
+               :key="blockKey"
+               :label="blockField.label"
+               :required="blockField.required"
+               :ui="CMS_FIELD_UI"
+            >
+               <CmsFieldInput
+                  :model-value="item[blockKey]"
+                  :field="blockField"
+                  @update:model-value="(value: unknown) => updateField(index, blockKey, value)"
+               />
+            </UFormField>
+         </template>
       </div>
       <UDropdownMenu :items="addItems">
          <UButton
@@ -60,7 +84,7 @@
 
 <script setup lang="ts">
 import type { FieldConfig } from '#nuxt-cms'
-import { computed, useI18n } from '#imports'
+import { computed, ref, useI18n } from '#imports'
 import { CMS_FIELD_UI } from '../../utils/ui'
 
 const props = defineProps<{ field: FieldConfig }>()
@@ -102,6 +126,29 @@ function add(type: string) {
 function remove(index: number) {
    const next = items.value.filter((_, i) => i !== index)
    model.value = next.length ? next : null
+}
+
+function duplicate(index: number) {
+   const current = items.value[index]
+   if (!current) return
+   const copy = JSON.parse(JSON.stringify(current)) as Record<string, unknown>
+   const next = [...items.value]
+   next.splice(index + 1, 0, copy)
+   model.value = next
+}
+
+const collapsedUids = ref(new Set<number>())
+
+function isCollapsed(item: Record<string, unknown>) {
+   return collapsedUids.value.has(uidFor(item))
+}
+
+function toggleCollapsed(item: Record<string, unknown>) {
+   const uid = uidFor(item)
+   const next = new Set(collapsedUids.value)
+   if (next.has(uid)) next.delete(uid)
+   else next.add(uid)
+   collapsedUids.value = next
 }
 
 function move(index: number, delta: number) {

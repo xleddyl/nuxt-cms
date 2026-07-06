@@ -153,7 +153,8 @@ export default defineNuxtModule<ModuleOptions>({
       const schemaTemplate = addTemplate({
          filename: 'cms/schema.ts',
          write: true,
-         getContents: () => renderSchemaFile(cmsConfig, options.database.driver ?? 'sqlite', resolveImport),
+         getContents: () =>
+            renderSchemaFile(cmsConfig, options.database.driver ?? 'sqlite', resolveImport),
       })
       nuxt.options.alias['#cms-tables'] = schemaTemplate.dst
 
@@ -232,7 +233,11 @@ export default defineNuxtModule<ModuleOptions>({
          })
       })
 
-      const { driver = 'sqlite', path: dbPath = 'data/cms.db', url: databaseUrl = '' } = options.database
+      const {
+         driver = 'sqlite',
+         path: dbPath = 'data/cms.db',
+         url: databaseUrl = '',
+      } = options.database
       nuxt.options.alias['#cms-db'] = resolver.resolve(
          driver === 'postgres'
             ? './runtime/server/utils/db-postgres'

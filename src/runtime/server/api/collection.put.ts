@@ -1,5 +1,5 @@
 import { createError, defineEventHandler, readValidatedBody } from 'h3'
-import { useDb } from '#cms-db'
+import { withTransaction } from '#cms-db'
 import { mapConstraintErrors } from '../utils/db-errors'
 import { buildValidator, getRegistryEntry, idColumn, withUpdatedAt } from '../utils/registry'
 import {
@@ -22,14 +22,18 @@ export default defineEventHandler(async (event) => {
    await assertRelationTargets(entry, lists)
    const set = withUpdatedAt(table, values)
 
-   return mapConstraintErrors(async () => {
-      const [row] = await useDb()
-         .insert(table)
-         .values({ id: entry.id, ...set } as Record<string, unknown>)
-         .onConflictDoUpdate({ target: idColumn(table), set })
-         .returning()
-      await saveManyToMany(name, entry.id, lists)
-      const [attached] = await attachManyToMany(name, entry, [row as Record<string, unknown>])
-      return attached
-   })
+   return mapConstraintErrors(() =>
+      withTransaction(async (db) => {
+         const [row] = await db
+            .insert(table)
+            .values({ id: entry.id, ...set } as Record<string, unknown>)
+            .onConflictDoUpdate({ target: idColumn(table), set })
+            .returning()
+         await saveManyToMany(db, name, entry.id, lists)
+         const [attached] = await attachManyToMany(db, name, entry, [
+            row as Record<string, unknown>,
+         ])
+         return attached
+      })
+   )
 })

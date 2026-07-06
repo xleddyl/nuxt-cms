@@ -56,6 +56,7 @@
       "dev:build": "nuxt build playground",
       "dev:prepare": "nuxt-module-build build --stub && nuxt-module-build prepare && nuxt prepare playground",
       "db:studio": "drizzle-kit studio --config=playground/.nuxt/cms/drizzle.config.ts",
+      "test": "vitest run",
       "test:types": "vue-tsc --noEmit && cd playground && vue-tsc --noEmit",
       "format": "prettier --write \"**/*.{ts,tsx,js,jsx,md,html,json,sql,vue}\" --log-level error",
       "release": "changelogen --release --push"
@@ -86,10 +87,12 @@
       "@types/node": "latest",
       "@types/pg": "^8.11.0",
       "changelogen": "^0.6.0",
+      "h3": "^1.15.11",
       "nuxt": "^4.4.8",
       "prettier": "3.1.1",
       "prettier-plugin-tailwindcss": "0.6.11",
       "typescript": "~6.0.3",
+      "vitest": "^4.1.9",
       "vue-tsc": "^3.3.3"
    }
 }

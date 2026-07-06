@@ -1,41 +1,47 @@
 name: release
 
 on:
-  push:
-    tags:
-      - 'v*'
+   push:
+      tags:
+         - 'v*'
 
 permissions:
-  contents: write
-  id-token: write
+   contents: write
+   id-token: write
 
 jobs:
-  publish:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
+   publish:
+      runs-on: ubuntu-latest
+      steps:
+         - uses: actions/checkout@v4
 
-      - uses: pnpm/action-setup@v4
+         - uses: pnpm/action-setup@v4
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version-file: .nvmrc
-          registry-url: https://registry.npmjs.org
-          cache: pnpm
+         - uses: actions/setup-node@v4
+           with:
+              node-version-file: .nvmrc
+              registry-url: https://registry.npmjs.org
+              cache: pnpm
 
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+         - name: Install dependencies
+           run: pnpm install --frozen-lockfile
 
-      - name: Prepare
-        run: pnpm dev:prepare
+         - name: Prepare
+           run: pnpm dev:prepare
 
-      - name: Build
-        run: pnpm prepack
+         - name: Type check
+           run: pnpm test:types
 
-      - name: Publish to npm
-        run: pnpm publish --provenance --access public --no-git-checks
+         - name: Test
+           run: pnpm test
 
-      - name: Create GitHub release
-        uses: softprops/action-gh-release@v2
-        with:
-          generate_notes: true
+         - name: Build
+           run: pnpm prepack
+
+         - name: Publish to npm
+           run: pnpm publish --provenance --access public --no-git-checks
+
+         - name: Create GitHub release
+           uses: softprops/action-gh-release@v2
+           with:
+              generate_notes: true

@@ -1,5 +1,5 @@
 import { createError, defineEventHandler, readValidatedBody } from 'h3'
-import { useDb } from '#cms-db'
+import { withTransaction } from '#cms-db'
 import { customId } from '../utils/custom-id'
 import { mapConstraintErrors } from '../utils/db-errors'
 import { buildValidator, getRegistryEntry } from '../utils/registry'
@@ -26,10 +26,14 @@ export default defineEventHandler(async (event) => {
    await assertRelationTargets(entry, lists)
    if (entry.drafts) values.status ??= 'draft'
    values.id = customId(entry.id)
-   return mapConstraintErrors(async () => {
-      const [row] = await useDb().insert(table).values(values).returning()
-      await saveManyToMany(name, (row as Record<string, unknown>).id as string, lists)
-      const [attached] = await attachManyToMany(name, entry, [row as Record<string, unknown>])
-      return attached
-   })
+   return mapConstraintErrors(() =>
+      withTransaction(async (db) => {
+         const [row] = await db.insert(table).values(values).returning()
+         await saveManyToMany(db, name, (row as Record<string, unknown>).id as string, lists)
+         const [attached] = await attachManyToMany(db, name, entry, [
+            row as Record<string, unknown>,
+         ])
+         return attached
+      })
+   )
 })

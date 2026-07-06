@@ -30,7 +30,7 @@ function safeEqual(a: string, b: string) {
 }
 
 export default defineEventHandler(async (event) => {
-   const ip = getRequestIP(event) ?? 'unknown'
+   const ip = getRequestIP(event, { xForwardedFor: true }) ?? 'unknown'
    const now = Date.now()
    pruneFailures(now)
    if (globalFailures.resetAt > now && globalFailures.count >= RATE_GLOBAL_MAX_FAILURES) {

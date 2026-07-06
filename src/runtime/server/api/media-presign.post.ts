@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto'
 import { createError, defineEventHandler, readValidatedBody } from 'h3'
 import { z } from 'zod'
 import { slugify } from '../../shared/index'
-import { useMediaStorage } from '../utils/media'
+import { assertUploadContentType, useMediaStorage } from '../utils/media'
 import { requireAdmin } from '../utils/require-admin'
 
 const MAX_BASE_LENGTH = 80
@@ -35,6 +35,7 @@ export default defineEventHandler(async (event) => {
    const { media, client, bucketUrl, publicUrl } = useMediaStorage(event)
 
    const { filename, contentType, size } = await readValidatedBody(event, bodySchema.parse)
+   assertUploadContentType(contentType)
    if (size > MAX_FILE_SIZE) {
       throw createError({
          statusCode: 413,

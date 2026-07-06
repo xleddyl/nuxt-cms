@@ -86,7 +86,7 @@
                />
                <div
                   v-if="!selectable"
-                  class="absolute right-2 top-2 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100"
+                  class="absolute right-2 top-2 flex gap-1 opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100"
                >
                   <UButton
                      icon="i-lucide-pencil"
@@ -188,6 +188,7 @@
 import type { MediaItem, MediaType } from '#nuxt-cms'
 import { computed, onMounted, ref, useI18n, useToast } from '#imports'
 import { MEDIA_TYPES, mediaFilename, mediaIconFor } from '#nuxt-cms'
+import { useCmsConfirm } from '../../composables/cms-confirm'
 import { CMS_MODAL_UI, errorMessage } from '../../utils/ui'
 
 const props = defineProps<{
@@ -312,8 +313,13 @@ async function copy(item: MediaItem) {
    }
 }
 
+const confirmAction = useCmsConfirm()
+const removing = ref(false)
+
 async function remove(item: MediaItem) {
-   if (!confirm(t('cms.media.deleteConfirm'))) return
+   if (removing.value) return
+   if (!(await confirmAction(t('cms.media.deleteConfirm')))) return
+   removing.value = true
    try {
       await $fetch(endpoint, { method: 'DELETE', query: { key: item.key } })
       await reload()
@@ -323,6 +329,8 @@ async function remove(item: MediaItem) {
          description: errorMessage(err),
          color: 'error',
       })
+   } finally {
+      removing.value = false
    }
 }
 </script>

@@ -1,6 +1,7 @@
 import { asc, eq, inArray } from 'drizzle-orm'
 import type { AnySQLiteColumn, SQLiteTable } from 'drizzle-orm/sqlite-core'
 import { createError } from 'h3'
+import type { CmsDb } from '#cms-db'
 import { useDb } from '#cms-db'
 import * as cmsTables from '#cms-tables'
 import type { CmsEntry } from '../../shared/index'
@@ -66,11 +67,11 @@ export async function assertRelationTargets(entry: CmsEntry, lists: Record<strin
 }
 
 export async function saveManyToMany(
+   db: CmsDb,
    name: string,
    sourceId: string,
    lists: Record<string, string[]>
 ) {
-   const db = useDb()
    for (const [key, ids] of Object.entries(lists)) {
       const join = joinTable(name, key)
       await db.delete(join.table).where(eq(join.sourceId, sourceId))
@@ -83,6 +84,7 @@ export async function saveManyToMany(
 }
 
 export async function attachManyToMany<T extends Row>(
+   db: CmsDb,
    name: string,
    entry: CmsEntry,
    rows: T[]
@@ -91,7 +93,6 @@ export async function attachManyToMany<T extends Row>(
    const ids = rows.map((row) => row.id as string).filter((id) => id != null)
    if (!keys.length || !ids.length) return rows
 
-   const db = useDb()
    for (const key of keys) {
       const join = joinTable(name, key)
       const links = (await db

@@ -13,13 +13,14 @@ export default defineEventHandler(async (event) => {
    }
 
    const id = parseId(event)
-   const rows = await useDb()
+   const db = useDb()
+   const rows = await db
       .select()
       .from(table)
       .where(eq(idColumn(table), id))
       .limit(1)
    if (!rows[0]) throw createError({ statusCode: 404, statusMessage: 'Row not found' })
 
-   const [attached] = await attachManyToMany(name, entry, [rows[0] as Record<string, unknown>])
+   const [attached] = await attachManyToMany(db, name, entry, [rows[0] as Record<string, unknown>])
    return attached
 })

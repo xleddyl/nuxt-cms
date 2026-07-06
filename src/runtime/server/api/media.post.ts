@@ -4,7 +4,7 @@ import { useDb } from '#cms-db'
 import { cms_media } from '#cms-tables'
 import type { MediaItem } from '../../shared/index'
 import { objectKeySchema } from '../../shared/validation'
-import { toMediaItem, useMediaConfig } from '../utils/media'
+import { assertUploadContentType, toMediaItem, useMediaConfig } from '../utils/media'
 import { requireAdmin } from '../utils/require-admin'
 
 const bodySchema = z.object({
@@ -21,6 +21,7 @@ export default defineEventHandler(async (event): Promise<MediaItem> => {
    await requireAdmin(event)
    const { publicUrl } = useMediaConfig(event)
    const body = await readValidatedBody(event, bodySchema.parse)
+   if (body.mime) assertUploadContentType(body.mime)
 
    const values = {
       key: body.key,

@@ -16,3 +16,11 @@ export function useDb() {
    }
    return _db
 }
+
+type Db = ReturnType<typeof useDb>
+
+export type CmsDb = Db | Parameters<Parameters<Db['transaction']>[0]>[0]
+
+export function withTransaction<T>(fn: (db: CmsDb) => Promise<T>): Promise<T> {
+   return useDb().transaction((tx) => fn(tx))
+}
