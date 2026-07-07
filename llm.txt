@@ -1,0 +1,170 @@
+# nuxt-cms — LLM guide
+
+Nuxt module embedding a CMS in the app's Nitro server. Content types are declared in code (`cms.config.ts`); DB schema, migrations, TypeScript types and a read-only GraphQL API are generated from it. Admin panel at `/cms`. This guide covers: defining the data schema, and querying content from the app.
+
+## 1. Setup (nuxt.config.ts)
+
+```ts
+export default defineNuxtConfig({
+   modules: ['@xleddyl/nuxt-cms'],
+   cms: {
+      database: { driver: 'sqlite', path: 'data/cms.db' }, // or { driver: 'postgres', url: '...' }
+      i18n: { locales: ['en', 'it'], defaultLocale: 'en' }, // only needed if using translatable fields
+   },
+})
+```
+
+Admin credentials come from `NUXT_CMS_ADMIN_EMAIL` / `NUXT_CMS_ADMIN_PASSWORD` env vars. Media (S3-compatible) is configured under `cms.media` or `NUXT_CMS_MEDIA_*` env vars.
+
+## 2. Schema definition (cms.config.ts, project root)
+
+```ts
+import { defineCmsConfig } from '#nuxt-cms'
+
+export default defineCmsConfig({
+   <entryKey>: {
+      id: '<entryKey>',            // must equal the object key
+      label: 'Human label',
+      kind: 'collection' | 'single',
+      titleField: 'name',          // collections: field shown as entry title in admin
+      drafts: true,                // optional; adds draft/published status (GraphQL returns published only)
+      fields: { <fieldKey>: <FieldInput>, ... },
+   },
+})
+```
+
+- `collection` = many rows (list + detail queries). `single` = one document (single query).
+- `id`, `createdAt` (collections only), `updatedAt` are automatic — never declare them as fields.
+
+### Field types
+
+Every field has `label: string` and optional `required?: boolean`. Type-specific options:
+
+| type       | extra options                                                                      | stored/queried as |
+| ---------- | ---------------------------------------------------------------------------------- | ----------------- |
+| `text`     | `textarea?: boolean`, `translatable?: boolean`                                      | String            |
+| `richtext` | `translatable?: boolean`                                                            | String (HTML)     |
+| `number`   | `integer?: boolean`                                                                 | Float / Int       |
+| `boolean`  | —                                                                                   | Boolean           |
+| `date`     | —                                                                                   | String `yyyy-mm-dd` |
+| `email`    | —                                                                                   | String            |
+| `slug`     | `from: '<fieldKey>'` (required; auto-generated from that text field)                | String            |
+| `select`   | `options: string[]` (required)                                                      | String (enum)     |
+| `json`     | —                                                                                   | JSON              |
+| `media`    | `mediaType?: 'image' \| 'video' \| 'file'`, `accept?: string[]`                     | CmsMedia object   |
+| `relation` | `to: '<entryKey>'` (required), `cardinality?: 'many-to-one' (default) \| 'one-to-one' \| 'many-to-many'`, `onDelete?: 'set null' \| 'cascade' \| 'restrict'` | related entry / list |
+| `blocks`   | `blocks: Record<name, { label, fields }>` (required)                                | array of typed blocks |
+
+Notes:
+- `translatable` only works on `text` and `richtext`; requires `cms.i18n` locales. Stored per locale, resolved to a single String at query time via the `locale` argument (falls back to default locale).
+- Block fields accept every type above except `slug`, `relation`, `blocks`, and `translatable`.
+- After changing the schema, restart dev (migrations are generated + applied on boot).
+
+### Example
+
+```ts
+export default defineCmsConfig({
+   categories: {
+      id: 'categories', label: 'Categories', kind: 'collection', titleField: 'name',
+      fields: { name: { label: 'Name', type: 'text', required: true } },
+   },
+   events: {
+      id: 'events', label: 'Events', kind: 'collection', titleField: 'title', drafts: true,
+      fields: {
+         title: { label: 'Title', type: 'text', required: true },
+         slug: { label: 'Slug', type: 'slug', from: 'title', required: true },
+         description: { label: 'Description', type: 'richtext', translatable: true },
+         seats: { label: 'Seats', type: 'number', integer: true },
+         date: { label: 'Date', type: 'date', required: true },
+         visibility: { label: 'Visibility', type: 'select', options: ['public', 'hidden'] },
+         poster: { label: 'Poster', type: 'media', mediaType: 'image' },
+         category: { label: 'Category', type: 'relation', to: 'categories' },
+         tags: { label: 'Tags', type: 'relation', to: 'tags', cardinality: 'many-to-many' },
+         body: {
+            label: 'Body', type: 'blocks',
+            blocks: {
+               hero: { label: 'Hero', fields: {
+                  heading: { label: 'Heading', type: 'text', required: true },
+                  image: { label: 'Image', type: 'media', mediaType: 'image' },
+               } },
+            },
+         },
+      },
+   },
+   homepage: {
+      id: 'homepage', label: 'Homepage', kind: 'single',
+      fields: { heroTitle: { label: 'Hero title', type: 'text', required: true, translatable: true } },
+   },
+})
+```
+
+## 3. Querying content
+
+Public read-only GraphQL endpoint at `POST /api/cms/graphql`. Two auto-imported composables (typed end-to-end from the query string — no codegen step):
+
+```ts
+// reactive, SSR-friendly (wraps useAsyncData) — use in components/pages
+const { data, error, refresh } = useCms(`{ ... }`, variables?)
+
+// plain promise — use in event handlers or server-side logic
+const result = await $cmsQuery(`{ ... }`, variables?)
+```
+
+### Generated queries
+
+For each **collection** `events` (GraphQL type name = PascalCase of key):
+
+```graphql
+events(filters: EventsFilters, sort: [EventsSort!], limit: Int, offset: Int, locale: String): [Events!]!
+eventsById(id: ID!, locale: String): Events
+eventsCount(filters: EventsFilters): Int!
+```
+
+For each **single** `homepage`:
+
+```graphql
+homepage(locale: String): Homepage
+```
+
+### Filters, sort, pagination
+
+Filterable: `id`, `createdAt`, `updatedAt`, and every field except `json`, `blocks`, `translatable` text, and `many-to-many` relations (single relations filter by the related id as a StringFilter).
+
+Filter operators — String: `eq neq gt gte lt lte like in isNull`; Int/Float: `eq neq gt gte lt lte in isNull`; Boolean: `eq neq isNull`.
+
+Sort: `[{ field: <fieldName>, direction: asc | desc }]` (direction defaults to `asc`).
+
+### Media & blocks in queries
+
+`media` fields resolve to: `{ key url type alt folder mime size width height }`.
+
+`blocks` fields are unions — use inline fragments; block type names are `<Entry><Field><Block>`:
+
+```graphql
+body { type ... on EventsBodyHero { heading image { url alt } } }
+```
+
+### Example
+
+```ts
+const { data } = useCms(`query ($cat: String!) {
+   homepage(locale: "it") { heroTitle }
+   events(
+      filters: { date: { gte: "2026-01-01" }, category: { eq: $cat } }
+      sort: [{ field: date, direction: desc }]
+      limit: 10
+      offset: 0
+   ) {
+      id title date slug
+      poster { url alt }
+      category { id name }
+      tags { id name }
+   }
+   eventsCount
+}`, { cat: 'some-category-id' })
+```
+
+Behavior:
+- Entries with `drafts: true` only return `published` rows (drafts are invisible to the API).
+- `locale` omitted → default locale; unknown locale → error; missing translation → falls back to default locale.
+- Relations resolve nested entries (localized with the parent's locale); a required many-to-one pointing to a drafted entry can still be null.

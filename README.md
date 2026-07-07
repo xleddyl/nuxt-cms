@@ -8,6 +8,53 @@ nuxt-cms is a Nuxt module that leverages the Nitro server to ship a lightweight 
 - **Public GraphQL API**: read-only, typed end-to-end via gql.tada, with filtering, sorting and pagination.
 - **SQLite or Postgres**: a local file database by default, one config line to switch.
 
+## Installation
+
+```bash
+npm install @xleddyl/nuxt-cms
+```
+
+Register the module and configure it under the `cms` key in `nuxt.config.ts`:
+
+```ts
+export default defineNuxtConfig({
+   modules: ['@xleddyl/nuxt-cms'],
+   cms: {
+      database: {
+         driver: 'sqlite', // or 'postgres' (with `url` instead of `path`)
+         path: 'data/cms.db',
+      },
+      i18n: {
+         locales: ['en', 'it'],
+         defaultLocale: 'en',
+      },
+   },
+})
+```
+
+Then declare your content types in a `cms.config.ts` at the project root with `defineCmsConfig()`.
+
+### Environment variables
+
+Every secret maps to runtime config, so it can be set as an env var instead of in `nuxt.config.ts`:
+
+| Variable | Required | Purpose |
+| --- | --- | --- |
+| `NUXT_CMS_ADMIN_EMAIL` | yes | admin login email |
+| `NUXT_CMS_ADMIN_PASSWORD` | yes | admin login password |
+| `NUXT_SESSION_PASSWORD` | in production | session encryption key (32+ chars) |
+| `NUXT_CMS_DATABASE_URL` | with `driver: 'postgres'` | Postgres connection string |
+| `NUXT_CMS_MEDIA_ENDPOINT` | for media | S3-compatible endpoint |
+| `NUXT_CMS_MEDIA_REGION` | for media | S3 region (default `auto`) |
+| `NUXT_CMS_MEDIA_BUCKET` | for media | bucket name |
+| `NUXT_CMS_MEDIA_ACCESS_KEY_ID` | for media | S3 access key id |
+| `NUXT_CMS_MEDIA_SECRET_ACCESS_KEY` | for media | S3 secret access key |
+| `NUXT_PUBLIC_CMS_MEDIA_BASE_URL` | for media | public base URL for uploaded files |
+
+## LLM guide
+
+[llm.txt](llm.txt) is a compact reference meant to be fed to an LLM: schema definition (`cms.config.ts`, field types, relations, blocks, i18n), the `useCms` / `$cmsQuery` composables and the generated GraphQL API (filters, sorting, pagination).
+
 ## Development
 
 ```bash
