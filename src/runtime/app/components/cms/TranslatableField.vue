@@ -1,7 +1,7 @@
 <template>
    <div class="flex flex-col gap-2">
       <div v-if="i18n.locales.length > 1" class="flex items-center gap-1">
-         <UButton
+         <CmsButton
             v-for="locale in i18n.locales"
             :key="locale"
             size="xs"
@@ -19,23 +19,23 @@
                class="size-1.5 rounded-full"
                :class="hasContent(locale) ? 'bg-(--cms-fern)' : 'bg-(--cms-line)'"
             />
-         </UButton>
+         </CmsButton>
          <span
             v-if="props.field.required && active === i18n.defaultLocale"
-            class="text-(--ui-text-muted) ml-auto font-mono text-xs"
+            class="ml-auto font-mono text-xs text-(--ui-text-muted)"
          >
             {{ i18n.defaultLocale }} *
          </span>
       </div>
       <CmsRichTextField v-if="props.field.type === 'richtext'" v-model="current" />
-      <UTextarea
+      <CmsTextarea
          v-else-if="props.field.textarea"
          v-model="current"
          :rows="4"
          size="lg"
          class="w-full"
       />
-      <UInput v-else v-model="current" size="lg" class="w-full" />
+      <CmsInput v-else v-model="current" size="lg" class="w-full" />
    </div>
 </template>
 

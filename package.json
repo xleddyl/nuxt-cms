@@ -58,18 +58,16 @@
       "dev:build": "nuxt build playground",
       "dev:prepare": "nuxt-module-build build --stub && nuxt-module-build prepare && nuxt prepare playground",
       "db:studio": "drizzle-kit studio --config=playground/.nuxt/cms/drizzle.config.ts",
-      "test": "vitest run",
-      "test:types": "vue-tsc --noEmit && cd playground && vue-tsc --noEmit",
       "format": "prettier --write \"**/*.{ts,tsx,js,jsx,md,html,json,sql,vue}\" --log-level error",
       "release": "changelogen --release --push"
    },
    "dependencies": {
       "@libsql/client": "^0.17.4",
       "@nuxt/kit": "^4.4.8",
-      "@nuxt/ui": "^4.0.0",
-      "@nuxtjs/i18n": "^10.4.0",
+      "@tailwindcss/vite": "^4.3.2",
       "@tiptap/starter-kit": "^3.0.0",
       "@tiptap/vue-3": "^3.0.0",
+      "tailwindcss": "^4.3.2",
       "aws4fetch": "^1.0.20",
       "better-sqlite3": "^12.2.0",
       "drizzle-kit": "^0.31.0",
@@ -80,6 +78,7 @@
       "jiti": "^2.7.0",
       "nuxt-auth-utils": "^0.5.29",
       "pg": "^8.16.0",
+      "vite-svg-loader": "^5.1.0",
       "zod": "^4.0.0"
    },
    "devDependencies": {
@@ -95,7 +94,6 @@
       "prettier": "3.1.1",
       "prettier-plugin-tailwindcss": "0.6.11",
       "typescript": "~6.0.3",
-      "vitest": "^4.1.9",
       "vue-tsc": "^3.3.3"
    }
 }

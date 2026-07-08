@@ -1,9 +1,27 @@
-import { useOverlay } from '#imports'
-import ConfirmModal from '../components/cms/ConfirmModal.vue'
+import { useState } from '#imports'
+
+export interface CmsConfirmState {
+   open: boolean
+   message: string
+   title?: string
+   confirmLabel?: string
+   resolve?: (value: boolean) => void
+}
+
+export function useCmsConfirmState() {
+   return useState<CmsConfirmState>('cms-confirm', () => ({ open: false, message: '' }))
+}
 
 export function useCmsConfirm() {
-   const overlay = useOverlay()
-   const modal = overlay.create(ConfirmModal)
-   return async (message: string, options?: { title?: string; confirmLabel?: string }) =>
-      (await modal.open({ message, ...options })) === true
+   const state = useCmsConfirmState()
+   return (message: string, options?: { title?: string; confirmLabel?: string }) =>
+      new Promise<boolean>((resolve) => {
+         state.value = {
+            open: true,
+            message,
+            title: options?.title,
+            confirmLabel: options?.confirmLabel,
+            resolve,
+         }
+      })
 }

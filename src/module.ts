@@ -12,12 +12,15 @@ import {
    addServerPlugin,
    addTemplate,
    addTypeTemplate,
+   addVitePlugin,
    createResolver,
    defineNuxtModule,
    extendPages,
    resolvePath,
    useLogger,
 } from '@nuxt/kit'
+import tailwindcss from '@tailwindcss/vite'
+import svgLoader from 'vite-svg-loader'
 import { buildSchema, introspectionFromSchema } from 'graphql'
 import { minifyIntrospection, outputIntrospectionFile } from 'gql.tada/internal'
 import { createJiti } from 'jiti'
@@ -63,23 +66,7 @@ export default defineNuxtModule<ModuleOptions>({
       configKey: 'cms',
    },
    moduleDependencies: {
-      '@nuxt/ui': {},
       'nuxt-auth-utils': {},
-      '@nuxtjs/i18n': {
-         defaults: {
-            locales: [
-               { code: 'en', name: 'English' },
-               { code: 'it', name: 'Italiano' },
-            ],
-            defaultLocale: 'en',
-            strategy: 'no_prefix',
-            detectBrowserLanguage: {
-               useCookie: true,
-               cookieKey: 'cms-locale',
-               fallbackLocale: 'en',
-            },
-         },
-      },
    },
    defaults: {
       configPath: 'cms.config',
@@ -229,16 +216,6 @@ export default defineNuxtModule<ModuleOptions>({
          { name: '$cmsQuery', from: resolver.resolve('./runtime/app/composables/cms-query') },
       ])
 
-      nuxt.hook('i18n:registerModule', (register) => {
-         register({
-            langDir: resolver.resolve('./runtime/app/i18n'),
-            locales: [
-               { code: 'en', file: 'en.json' },
-               { code: 'it', file: 'it.json' },
-            ],
-         })
-      })
-
       const {
          driver = 'sqlite',
          path: dbPath = 'data/cms.db',
@@ -273,7 +250,9 @@ export default defineNuxtModule<ModuleOptions>({
                driver === 'postgres'
                   ? `  dbCredentials: { url: process.env.NUXT_CMS_DATABASE_URL ?? '${databaseUrl}' },`
                   : driver === 'libsql'
-                    ? `  dbCredentials: { url: process.env.NUXT_CMS_DATABASE_URL ?? '${databaseUrl || `file:${toPosix(resolvedDbPath)}`}', authToken: process.env.NUXT_CMS_DATABASE_AUTH_TOKEN ?? '${databaseAuthToken}' || undefined },`
+                    ? `  dbCredentials: { url: process.env.NUXT_CMS_DATABASE_URL ?? '${
+                         databaseUrl || `file:${toPosix(resolvedDbPath)}`
+                      }', authToken: process.env.NUXT_CMS_DATABASE_AUTH_TOKEN ?? '${databaseAuthToken}' || undefined },`
                     : `  dbCredentials: { url: '${toPosix(resolvedDbPath)}' },`,
                `}`,
                ``,
@@ -371,6 +350,10 @@ export default defineNuxtModule<ModuleOptions>({
          { nuxt: true, nitro: true }
       )
 
+      addVitePlugin(tailwindcss())
+      // defaultImport 'url' keeps the host's own `import x from './x.svg'` returning a
+      // URL (unchanged); CmsIcon opts in explicitly via the `?component` query.
+      addVitePlugin(svgLoader({ defaultImport: 'url', svgoConfig: { plugins: ['prefixIds'] } }))
       nuxt.options.css.push(resolver.resolve('./runtime/assets/main.css'))
 
       addLayout({ src: resolver.resolve('./runtime/app/layouts/cms-admin.vue') }, 'cms-admin')

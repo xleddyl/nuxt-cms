@@ -9,54 +9,52 @@
             <button
                type="button"
                class="cms-kicker flex grow items-center gap-1.5 text-left"
-               :aria-label="
-                  isCollapsed(item) ? t('cms.form.expandBlock') : t('cms.form.collapseBlock')
-               "
+               :aria-label="isCollapsed(item) ? 'Expand block' : 'Collapse block'"
                @click="toggleCollapsed(item)"
             >
-               <UIcon
-                  :name="isCollapsed(item) ? 'i-lucide-chevron-right' : 'i-lucide-chevron-down'"
+               <CmsIcon
+                  :name="isCollapsed(item) ? 'chevron-right' : 'chevron-down'"
                   class="size-3.5"
                />
                {{ blocks[item.type as string]?.label ?? item.type }}
             </button>
-            <UButton
-               icon="i-lucide-chevron-up"
+            <CmsButton
+               icon="chevron-up"
                size="xs"
                variant="ghost"
                color="neutral"
-               :aria-label="t('cms.form.moveUp')"
+               aria-label="Move up"
                :disabled="index === 0"
                @click="move(index, -1)"
             />
-            <UButton
-               icon="i-lucide-chevron-down"
+            <CmsButton
+               icon="chevron-down"
                size="xs"
                variant="ghost"
                color="neutral"
-               :aria-label="t('cms.form.moveDown')"
+               aria-label="Move down"
                :disabled="index === items.length - 1"
                @click="move(index, 1)"
             />
-            <UButton
-               icon="i-lucide-copy"
+            <CmsButton
+               icon="document-duplicate"
                size="xs"
                variant="ghost"
                color="neutral"
-               :aria-label="t('cms.form.duplicateBlock')"
+               aria-label="Duplicate block"
                @click="duplicate(index)"
             />
-            <UButton
-               icon="i-lucide-trash-2"
+            <CmsButton
+               icon="trash"
                size="xs"
                variant="ghost"
                color="error"
-               :aria-label="t('cms.form.removeBlock')"
+               aria-label="Remove block"
                @click="remove(index)"
             />
          </div>
          <template v-if="!isCollapsed(item)">
-            <UFormField
+            <CmsFormField
                v-for="(blockField, blockKey) in blocks[item.type as string]?.fields"
                :key="blockKey"
                :label="blockField.label"
@@ -68,30 +66,28 @@
                   :field="blockField"
                   @update:model-value="(value: unknown) => updateField(index, blockKey, value)"
                />
-            </UFormField>
+            </CmsFormField>
          </template>
       </div>
-      <UDropdownMenu :items="addItems">
-         <UButton
-            :label="t('cms.form.addBlock')"
-            icon="i-lucide-plus"
+      <CmsDropdownMenu :items="addItems">
+         <CmsButton
+            label="Add block"
+            icon="plus"
             variant="subtle"
             class="self-start rounded-full px-4"
          />
-      </UDropdownMenu>
+      </CmsDropdownMenu>
    </div>
 </template>
 
 <script setup lang="ts">
 import type { FieldConfig } from '#nuxt-cms'
-import { computed, ref, useI18n } from '#imports'
+import { computed, ref } from '#imports'
 import { CMS_FIELD_UI } from '../../utils/ui'
 
 const props = defineProps<{ field: FieldConfig }>()
 
 const model = defineModel<Record<string, unknown>[] | null>({ required: true })
-
-const { t } = useI18n()
 
 const blocks = computed(() => props.field.blocks ?? {})
 const items = computed(() => (Array.isArray(model.value) ? model.value : []))

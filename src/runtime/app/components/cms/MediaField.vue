@@ -4,7 +4,7 @@
          v-if="kind === 'image' && url"
          :src="url"
          alt=""
-         class="bg-(--cms-field) max-h-56 w-full object-cover"
+         class="max-h-56 w-full bg-(--cms-field) object-cover"
       />
       <video
          v-else-if="kind === 'video' && url"
@@ -12,49 +12,49 @@
          controls
          preload="metadata"
          playsinline
-         class="bg-(--cms-field) max-h-56 w-full"
+         class="max-h-56 w-full bg-(--cms-field)"
       />
       <div class="flex items-center gap-2.5 px-4 py-3">
-         <UIcon :name="icon" class="text-(--ui-text-dimmed) size-4 shrink-0" />
+         <CmsIcon :name="icon" class="size-4 shrink-0 text-(--ui-text-dimmed)" />
          <span class="min-w-0 flex-1 truncate text-[13px] font-medium" :title="model">{{
             mediaFilename(model)
          }}</span>
-         <UButton
-            icon="i-lucide-images"
+         <CmsButton
+            icon="photo"
             variant="ghost"
             color="neutral"
             size="xs"
             class="rounded-full"
-            :aria-label="t('cms.form.mediaChange')"
+            aria-label="Change"
             @click="openGallery"
          />
-         <UButton
-            icon="i-lucide-x"
+         <CmsButton
+            icon="x-mark"
             variant="ghost"
             color="neutral"
             size="xs"
             class="rounded-full"
-            :aria-label="t('cms.form.mediaRemove')"
+            aria-label="Remove"
             @click="clear"
          />
       </div>
    </div>
 
    <button v-else type="button" class="cms-dropzone is-dense" @click="openGallery">
-      <UIcon name="i-lucide-images" class="size-5 shrink-0" />
-      <span class="text-[13px] font-medium">{{ t('cms.form.mediaChoose') }}</span>
+      <CmsIcon name="photo" class="size-5 shrink-0" />
+      <span class="text-[13px] font-medium">Choose from the gallery</span>
    </button>
 
-   <UModal v-model:open="galleryOpen" :title="t('cms.media.title')" :ui="CMS_MODAL_UI">
+   <CmsModal v-model:open="galleryOpen" title="Media" :ui="CMS_MODAL_UI">
       <template #body>
          <CmsMediaGallery selectable :media-type="mediaType" :accept="accept" @select="onSelect" />
       </template>
-   </UModal>
+   </CmsModal>
 </template>
 
 <script setup lang="ts">
 import type { MediaType } from '#nuxt-cms'
-import { computed, ref, useI18n } from '#imports'
+import { computed, ref } from '#imports'
 import { mediaFilename, mediaIconFor, mediaPublicUrl, mediaTypeForKey } from '#nuxt-cms'
 import { useCmsRuntime } from '../../composables/cms-runtime'
 import { CMS_MODAL_UI } from '../../utils/ui'
@@ -66,7 +66,6 @@ defineProps<{
 
 const model = defineModel<string | null>({ required: true })
 
-const { t } = useI18n()
 const { mediaBaseUrl } = useCmsRuntime()
 
 const galleryOpen = ref(false)

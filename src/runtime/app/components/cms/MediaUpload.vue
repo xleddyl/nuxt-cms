@@ -18,16 +18,18 @@
          @change="onChange"
          @click.stop
       />
-      <UIcon
-         :name="uploading ? 'i-lucide-loader-circle' : 'i-lucide-upload-cloud'"
+      <CmsIcon
+         :name="uploading ? 'arrow-path' : 'cloud-arrow-up'"
          class="size-5 shrink-0"
          :class="{ 'animate-spin': uploading }"
       />
       <span class="text-[13px] font-medium">
          {{
             uploading
-               ? t('cms.media.uploading', { done: Math.min(done + 1, total), total })
-               : t(multiple ? 'cms.media.dropHint' : 'cms.media.dropHintSingle')
+               ? `Uploading ${Math.min(done + 1, total)} of ${total}…`
+               : multiple
+                 ? 'Drop files here or click to browse'
+                 : 'Drop a file here or click to browse'
          }}
       </span>
    </button>
@@ -35,7 +37,8 @@
 
 <script setup lang="ts">
 import type { MediaItem, MediaType } from '#nuxt-cms'
-import { computed, ref, useI18n, useToast } from '#imports'
+import { computed, ref } from '#imports'
+import { useCmsToast } from '../../composables/cms-toast'
 
 const props = withDefaults(
    defineProps<{
@@ -49,8 +52,7 @@ const props = withDefaults(
 
 const emit = defineEmits<{ uploaded: [items: MediaItem[]] }>()
 
-const { t } = useI18n()
-const toast = useToast()
+const toast = useCmsToast()
 
 interface PresignResponse {
    key: string
@@ -131,7 +133,7 @@ async function handleFiles(list: FileList) {
    let files = Array.from(list).filter(matchesAccept)
    const tooLarge = files.filter((file) => file.size > MAX_FILE_SIZE)
    for (const file of tooLarge) {
-      toast.add({ title: t('cms.media.tooLarge', { name: file.name }), color: 'error' })
+      toast.add({ title: `File too large (max 10 MB): ${file.name}`, color: 'error' })
    }
    files = files.filter((file) => file.size <= MAX_FILE_SIZE)
    if (!props.multiple) files = files.slice(0, 1)
@@ -144,7 +146,8 @@ async function handleFiles(list: FileList) {
       const results = await Promise.allSettled(files.map(uploadOne))
       const ok = results.filter((r) => r.status === 'fulfilled').map((r) => r.value)
       const failed = results.length - ok.length
-      if (failed) toast.add({ title: t('cms.media.uploadFailed', failed), color: 'error' })
+      if (failed)
+         toast.add({ title: `${failed} upload${failed > 1 ? 's' : ''} failed`, color: 'error' })
       if (ok.length) emit('uploaded', ok)
    } finally {
       uploading.value = false

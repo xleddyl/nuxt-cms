@@ -2,11 +2,11 @@
    <div class="cms-scope cms-canvas cms-grain min-h-screen">
       <div class="mx-auto flex min-h-screen w-full max-w-5xl flex-col px-6 py-10 sm:py-14">
          <section class="cms-rise" style="animation-delay: 60ms">
-            <h1 class="cms-display max-w-3xl text-balance text-4xl font-bold sm:text-6xl">
+            <h1 class="cms-display max-w-3xl text-4xl font-bold text-balance sm:text-6xl">
                {{ data?.homepage?.heroTitle ?? 'Content, served from your own server' }}
             </h1>
 
-            <p class="text-(--ui-text-muted) mt-4 max-w-xl text-base sm:text-lg">
+            <p class="mt-4 max-w-xl text-base text-(--ui-text-muted) sm:text-lg">
                {{
                   data?.homepage?.heroSubtitle ??
                   'Everything on this page is fetched from the CMS GraphQL endpoint.'
@@ -18,24 +18,22 @@
          </section>
 
          <section
-            class="cms-rise border-(--cms-line) mt-14 flex flex-wrap items-center gap-x-10 gap-y-4 border-y py-5"
+            class="cms-rise mt-14 flex flex-wrap items-center gap-x-10 gap-y-4 border-y border-(--cms-line) py-5"
             style="animation-delay: 120ms"
          >
             <div v-for="stat in stats" :key="stat.label" class="flex items-baseline gap-2.5">
-               <span class="cms-display text-(--ui-text-highlighted) text-2xl font-semibold">
+               <span class="cms-display text-2xl font-semibold text-(--ui-text-highlighted)">
                   {{ stat.value }}
                </span>
                <span class="cms-kicker">{{ stat.label }}</span>
             </div>
-            <UButton
+            <NuxtLink
                to="/cms"
-               label="Open admin"
-               icon="i-lucide-settings"
-               color="neutral"
-               variant="outline"
-               size="sm"
-               class="ml-auto"
-            />
+               class="ml-auto inline-flex items-center gap-2 rounded-full border border-(--cms-line-strong) px-4 py-1.5 text-sm font-medium text-(--ui-text-highlighted) transition-colors hover:bg-(--ui-bg-elevated)"
+            >
+               <CmsIcon name="cog-6-tooth" class="size-4" />
+               Open admin
+            </NuxtLink>
          </section>
 
          <section class="mt-14 flex-1">
@@ -46,8 +44,8 @@
                class="cms-empty cms-rise mt-6 flex flex-col items-center gap-3 px-6 py-16 text-center"
                style="animation-delay: 220ms"
             >
-               <UIcon name="i-lucide-calendar-off" class="text-(--ui-text-dimmed) size-6" />
-               <p class="text-(--ui-text-muted) text-sm">
+               <CmsIcon name="calendar" class="size-6 text-(--ui-text-dimmed)" />
+               <p class="text-sm text-(--ui-text-muted)">
                   No published events yet — create one in the admin and it will show up here.
                </p>
             </div>
@@ -61,7 +59,7 @@
                   :style="{ animationDelay: `${220 + index * 70}ms` }"
                >
                   <div
-                     class="bg-(--cms-sage) relative aspect-[5/2] shrink-0 overflow-hidden"
+                     class="relative aspect-[5/2] shrink-0 overflow-hidden bg-(--cms-sage)"
                      :class="event.featured ? 'sm:aspect-auto sm:w-2/5' : ''"
                   >
                      <img
@@ -72,13 +70,13 @@
                      />
                      <span
                         v-else
-                        class="cms-display text-(--cms-fern) absolute inset-0 flex items-center justify-center text-5xl font-bold opacity-30"
+                        class="cms-display absolute inset-0 flex items-center justify-center text-5xl font-bold text-(--cms-fern) opacity-30"
                      >
                         {{ event.title.slice(0, 1).toUpperCase() }}
                      </span>
                      <span
                         v-if="event.featured"
-                        class="cms-badge is-published bg-(--cms-surface) absolute left-3 top-3"
+                        class="cms-badge is-published absolute top-3 left-3 bg-(--cms-surface)"
                      >
                         featured
                      </span>
@@ -94,14 +92,14 @@
                         </span>
                      </div>
                      <h3
-                        class="cms-display text-(--ui-text-highlighted) text-xl font-semibold"
+                        class="cms-display text-xl font-semibold text-(--ui-text-highlighted)"
                         :class="{ 'sm:text-2xl': event.featured }"
                      >
                         {{ event.title }}
                      </h3>
                      <p
                         v-if="excerpt(event.description)"
-                        class="text-(--ui-text-muted) line-clamp-2 text-sm"
+                        class="line-clamp-2 text-sm text-(--ui-text-muted)"
                      >
                         {{ excerpt(event.description) }}
                      </p>

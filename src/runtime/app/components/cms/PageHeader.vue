@@ -5,7 +5,7 @@
             {{ kicker }}
          </div>
          <div class="flex items-center gap-3">
-            <h1 class="cms-display text-(--ui-text-highlighted) text-[32px]/none font-medium">
+            <h1 class="cms-display text-[32px]/none font-medium text-(--ui-text-highlighted)">
                {{ title }}
             </h1>
             <slot name="badge" />

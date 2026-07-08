@@ -67,7 +67,7 @@ export function mediaTypeFor(mime: string | null | undefined, key: string): Medi
 }
 
 export function mediaIconFor(type: MediaType): string {
-   return type === 'image' ? 'i-lucide-image' : type === 'video' ? 'i-lucide-film' : 'i-lucide-file'
+   return type === 'image' ? 'photo' : type === 'video' ? 'film' : 'document'
 }
 
 export function mediaPublicUrl(baseUrl: string | null | undefined, key: string): string | null {

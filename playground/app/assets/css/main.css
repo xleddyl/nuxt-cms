@@ -1,0 +1,4 @@
+/* The playground is a host app: it brings its own Tailwind (the module's vendored
+   Tailwind only compiles utilities used inside the CMS admin panel). */
+@import 'tailwindcss';
+@source '../../';

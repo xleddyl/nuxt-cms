@@ -1,45 +1,41 @@
 <template>
    <div class="cms-rise flex flex-col gap-7">
       <CmsPageHeader :kicker="kicker" :title="config.label">
-         <UButton
+         <CmsButton
             v-if="config.kind === 'single'"
             type="submit"
             :form="FORM_ID"
-            :label="t('cms.form.save')"
+            label="Save"
             :loading="saving"
             class="rounded-full px-6"
          />
          <div v-if="config.kind === 'collection'" class="flex items-center gap-2">
-            <UDropdownMenu
+            <CmsDropdownMenu
                v-if="rows.length"
                :items="columnItems"
                :content="{ align: 'end' }"
                :ui="{ content: 'w-48' }"
             >
-               <UButton
-                  :label="t('cms.collection.columns')"
-                  icon="i-lucide-columns-3"
+               <CmsButton
+                  label="Columns"
+                  icon="view-columns"
                   variant="subtle"
                   class="rounded-full px-4"
                />
-            </UDropdownMenu>
-            <UButton
-               :label="t('cms.collection.new')"
-               icon="i-lucide-plus"
+            </CmsDropdownMenu>
+            <CmsButton
+               label="New entry"
+               icon="plus"
                class="rounded-full px-4"
                @click="openCreate"
             />
          </div>
       </CmsPageHeader>
 
-      <CmsEmptyState
-         v-if="error"
-         icon="i-lucide-triangle-alert"
-         :title="t('cms.collection.loadError')"
-      >
-         <UButton
-            :label="t('cms.collection.retry')"
-            icon="i-lucide-refresh-cw"
+      <CmsEmptyState v-if="error" icon="exclamation-triangle" title="Could not load entries">
+         <CmsButton
+            label="Retry"
+            icon="arrow-path"
             variant="subtle"
             class="mt-3 rounded-full px-4"
             :loading="status === 'pending'"
@@ -58,16 +54,16 @@
       </div>
 
       <template v-else>
-         <UInput
+         <CmsInput
             v-if="total || searchTerm"
             v-model="search"
-            icon="i-lucide-search"
-            :placeholder="t('cms.collection.searchPlaceholder')"
+            icon="magnifying-glass"
+            placeholder="Search…"
             class="max-w-xs"
          />
 
          <div v-if="rows.length" class="cms-card overflow-hidden">
-            <UTable
+            <CmsTable
                v-model:column-visibility="columnVisibility"
                :data="rows"
                :columns="columns"
@@ -79,24 +75,16 @@
                      type="button"
                      class="cms-badge"
                      :class="row.original.status === 'published' ? 'is-published' : 'is-draft'"
-                     :title="
-                        row.original.status === 'published'
-                           ? t('cms.status.unpublish')
-                           : t('cms.status.publish')
-                     "
+                     :title="row.original.status === 'published' ? 'Make draft' : 'Publish'"
                      @click.stop="toggleStatus(row.original)"
                   >
-                     {{
-                        row.original.status === 'published'
-                           ? t('cms.status.published')
-                           : t('cms.status.draft')
-                     }}
+                     {{ row.original.status === 'published' ? 'Published' : 'Draft' }}
                   </button>
                </template>
                <template #actions-cell="{ row }">
                   <div class="flex justify-end">
-                     <UButton
-                        icon="i-lucide-trash-2"
+                     <CmsButton
+                        icon="trash"
                         variant="ghost"
                         color="error"
                         size="xs"
@@ -105,31 +93,28 @@
                      />
                   </div>
                </template>
-            </UTable>
+            </CmsTable>
          </div>
 
          <div v-else-if="status === 'pending'" class="flex justify-center py-10">
-            <UIcon
-               name="i-lucide-loader-circle"
-               class="text-(--ui-text-dimmed) size-6 animate-spin"
-            />
+            <CmsIcon name="arrow-path" class="size-6 animate-spin text-(--ui-text-dimmed)" />
          </div>
 
          <CmsEmptyState
             v-else-if="searchTerm"
-            icon="i-lucide-search-x"
-            :title="t('cms.collection.noResults')"
+            icon="magnifying-glass"
+            title="No matching entries"
          />
 
          <CmsEmptyState
             v-else
-            icon="i-lucide-sprout"
-            :title="t('cms.collection.emptyTitle')"
-            :body="t('cms.collection.emptyBody')"
+            icon="sparkles"
+            title="Nothing here yet"
+            body="Entries you create will show up here."
          >
-            <UButton
-               :label="t('cms.collection.new')"
-               icon="i-lucide-plus"
+            <CmsButton
+               label="New entry"
+               icon="plus"
                variant="subtle"
                class="mt-3 rounded-full px-4"
                @click="openCreate"
@@ -137,14 +122,13 @@
          </CmsEmptyState>
 
          <div v-if="total > PAGE_SIZE" class="flex justify-center">
-            <UPagination v-model:page="page" :total="total" :items-per-page="PAGE_SIZE" />
+            <CmsPagination v-model:page="page" :total="total" :items-per-page="PAGE_SIZE" />
          </div>
       </template>
    </div>
 </template>
 
 <script setup lang="ts">
-import type { TableRow } from '@nuxt/ui'
 import type { CmsConfig, FieldConfig } from '#nuxt-cms'
 import { isTranslatableField } from '#nuxt-cms'
 import {
@@ -155,14 +139,13 @@ import {
    onMounted,
    ref,
    useFetch,
-   useI18n,
    useRoute,
-   useToast,
    watch,
 } from '#imports'
 import cmsConfig from '#cms-config'
 import { useCmsConfirm } from '../composables/cms-confirm'
 import { useCmsRuntime } from '../composables/cms-runtime'
+import { useCmsToast } from '../composables/cms-toast'
 import { cmsApi } from '../utils/api'
 import { errorMessage } from '../utils/ui'
 
@@ -176,8 +159,7 @@ definePageMeta({
 const FORM_ID = 'cms-single-form'
 
 const route = useRoute()
-const toast = useToast()
-const { t } = useI18n()
+const toast = useCmsToast()
 
 const name = route.params.collection as string
 const config = (cmsConfig as CmsConfig)[name]
@@ -262,7 +244,7 @@ async function submit(action: () => Promise<unknown>) {
       return true
    } catch (error) {
       toast.add({
-         title: t('cms.toast.saveFailed'),
+         title: 'Save failed',
          description: errorMessage(error),
          color: 'error',
       })
@@ -279,7 +261,7 @@ if (config.kind === 'single') {
 
 async function saveSingle() {
    const ok = await submit(() => cmsApi(endpoint, { method: 'PUT', body: formState.value }))
-   if (ok) toast.add({ title: t('cms.toast.saved'), color: 'success' })
+   if (ok) toast.add({ title: 'Saved', color: 'success' })
 }
 
 const { i18n: contentI18n } = useCmsRuntime()
@@ -322,7 +304,7 @@ const columns = computed(() => [
       accessorFn: (row: Row) => displayValue(config.fields[key]!, row[key]),
       header: config.fields[key]!.label,
    })),
-   ...(drafts ? [{ accessorKey: 'status', header: t('cms.collection.status') }] : []),
+   ...(drafts ? [{ accessorKey: 'status', header: 'Status' }] : []),
    { id: 'actions', header: '' },
 ])
 
@@ -367,11 +349,11 @@ const columnItems = computed(() =>
 
 const kicker = computed(() =>
    config.kind === 'single'
-      ? t('cms.collection.kickerSingle')
-      : t('cms.collection.kicker', total.value)
+      ? 'single document'
+      : `collection · ${total.value} ${total.value === 1 ? 'entry' : 'entries'}`
 )
 
-function onSelect(_event: Event, row: TableRow<Row>) {
+function onSelect(_event: Event, row: { original: Row }) {
    navigateTo(`/cms/${name}/${row.original.id}`)
 }
 
@@ -393,7 +375,7 @@ function openCreate() {
 const confirmAction = useCmsConfirm()
 
 async function deleteRow(row: Record<string, unknown>) {
-   if (!(await confirmAction(t('cms.collection.deleteConfirm')))) return
+   if (!(await confirmAction('Delete this row?'))) return
    const lastOnPage = rows.value.length === 1 && page.value > 1
    const ok = await submit(() => cmsApi(`${endpoint}/${row.id}`, { method: 'DELETE' }))
    if (ok && lastOnPage) page.value -= 1

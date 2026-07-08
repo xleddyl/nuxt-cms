@@ -1,5 +1,5 @@
 <template>
-   <UForm
+   <CmsForm
       :id="formId"
       :state="state"
       :schema="schema"
@@ -7,7 +7,7 @@
       @submit="emit('submit')"
       @error="emit('error')"
    >
-      <UFormField
+      <CmsFormField
          v-for="(field, key) in fields"
          :key="key"
          :label="field.label"
@@ -20,29 +20,24 @@
             :field="field"
             :slug-source="field.from ? (state[field.from] as string | null) : undefined"
          />
-      </UFormField>
+      </CmsFormField>
       <div v-if="footer" class="flex items-center justify-end gap-3 pt-1">
-         <UButton
-            type="submit"
-            :label="t('cms.form.save')"
-            :loading="loading"
-            class="rounded-full px-6"
-         />
-         <UButton
+         <CmsButton type="submit" label="Save" :loading="loading" class="rounded-full px-6" />
+         <CmsButton
             v-if="drafts"
             type="submit"
-            :label="published ? t('cms.status.unpublish') : t('cms.status.publish')"
+            :label="published ? 'Make draft' : 'Publish'"
             :loading="loading"
             class="rounded-full px-6"
             @click="togglePublished"
          />
       </div>
-   </UForm>
+   </CmsForm>
 </template>
 
 <script setup lang="ts">
 import type { CmsEntry } from '#nuxt-cms'
-import { computed, useI18n } from '#imports'
+import { computed } from '#imports'
 import { buildEntrySchema } from '../../../shared/validation'
 import { useCmsRuntime } from '../../composables/cms-runtime'
 import { CMS_FIELD_UI } from '../../utils/ui'
@@ -62,19 +57,10 @@ const state = defineModel<Record<string, unknown>>({ required: true })
 
 const emit = defineEmits<{ submit: []; error: [] }>()
 
-const { t } = useI18n()
-
 const { i18n } = useCmsRuntime()
 
 const schema = computed(() =>
-   buildEntrySchema({ fields: props.fields, drafts: props.drafts }, i18n, {
-      required: t('cms.validation.required'),
-      invalidDate: t('cms.validation.invalidDate'),
-      invalidEmail: t('cms.validation.invalidEmail'),
-      invalidSlug: t('cms.validation.invalidSlug'),
-      unknownLocale: t('cms.validation.unknownLocale'),
-      requiredLocale: (locale: string) => t('cms.validation.requiredLocale', { locale }),
-   })
+   buildEntrySchema({ fields: props.fields, drafts: props.drafts }, i18n)
 )
 
 const published = computed({

@@ -1,37 +1,34 @@
 <template>
    <div class="cms-rise flex flex-col gap-7">
-      <CmsPageHeader
-         :kicker="config.label"
-         :title="isNew ? t('cms.collection.new') : t('cms.collection.edit')"
-      >
+      <CmsPageHeader :kicker="config.label" :title="isNew ? 'New entry' : 'Edit entry'">
          <template v-if="drafts" #badge>
             <span
                class="cms-badge pointer-events-none"
                :class="published ? 'is-published' : 'is-draft'"
             >
-               {{ published ? t('cms.status.published') : t('cms.status.draft') }}
+               {{ published ? 'Published' : 'Draft' }}
             </span>
          </template>
          <div class="flex items-center gap-3">
-            <UButton
-               :label="t('cms.collection.back')"
-               icon="i-lucide-arrow-left"
+            <CmsButton
+               label="Back"
+               icon="arrow-left"
                variant="subtle"
                class="rounded-full px-4"
                @click="goBack"
             />
-            <UButton
+            <CmsButton
                type="submit"
                :form="FORM_ID"
-               :label="t('cms.form.save')"
+               label="Save"
                :loading="saving"
                class="rounded-full px-6"
             />
-            <UButton
+            <CmsButton
                v-if="drafts"
                type="submit"
                :form="FORM_ID"
-               :label="published ? t('cms.status.unpublish') : t('cms.status.publish')"
+               :label="published ? 'Make draft' : 'Publish'"
                :loading="saving"
                class="rounded-full px-6"
                @click="togglePublished"
@@ -64,13 +61,12 @@ import {
    onBeforeUnmount,
    ref,
    useFetch,
-   useI18n,
    useRoute,
-   useToast,
    watch,
 } from '#imports'
 import cmsConfig from '#cms-config'
 import { useCmsConfirm } from '../composables/cms-confirm'
+import { useCmsToast } from '../composables/cms-toast'
 import { cmsApi } from '../utils/api'
 import { errorMessage } from '../utils/ui'
 
@@ -84,8 +80,7 @@ definePageMeta({
 })
 
 const route = useRoute()
-const toast = useToast()
-const { t } = useI18n()
+const toast = useCmsToast()
 
 const name = route.params.collection as string
 const config = (cmsConfig as CmsConfig)[name]
@@ -143,7 +138,8 @@ onBeforeUnmount(() => window.removeEventListener('beforeunload', onBeforeUnload)
 const confirmAction = useCmsConfirm()
 
 onBeforeRouteLeave(async () => {
-   if (dirty.value && !(await confirmAction(t('cms.entry.unsavedChanges')))) return false
+   if (dirty.value && !(await confirmAction('You have unsaved changes. Leave anyway?')))
+      return false
 })
 
 const published = computed({
@@ -173,11 +169,11 @@ async function save() {
          ? cmsApi(endpoint, { method: 'POST', body: formState.value })
          : cmsApi(`${endpoint}/${id}`, { method: 'PUT', body: formState.value }))
       snapshot.value = JSON.stringify(formState.value)
-      toast.add({ title: t('cms.toast.saved'), color: 'success' })
+      toast.add({ title: 'Saved', color: 'success' })
       goBack()
    } catch (error) {
       toast.add({
-         title: t('cms.toast.saveFailed'),
+         title: 'Save failed',
          description: errorMessage(error),
          color: 'error',
       })

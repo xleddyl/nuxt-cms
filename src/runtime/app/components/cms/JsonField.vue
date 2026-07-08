@@ -1,6 +1,6 @@
 <template>
    <div class="flex flex-col gap-1">
-      <UTextarea
+      <CmsTextarea
          v-model="text"
          :rows="6"
          size="lg"
@@ -9,18 +9,14 @@
          @blur="commit"
          @update:model-value="invalid = false"
       />
-      <p v-if="invalid" class="text-(--ui-error) text-xs">
-         {{ t('cms.form.invalidJson') }}
-      </p>
+      <p v-if="invalid" class="text-xs text-(--ui-error)">Invalid JSON</p>
    </div>
 </template>
 
 <script setup lang="ts">
-import { ref, useI18n, watch } from '#imports'
+import { ref, watch } from '#imports'
 
 const model = defineModel<unknown>({ required: true })
-
-const { t } = useI18n()
 
 function serialize(value: unknown) {
    return value == null ? '' : JSON.stringify(value, null, 2)

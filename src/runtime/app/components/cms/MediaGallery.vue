@@ -1,9 +1,9 @@
 <template>
    <CmsEmptyState
       v-if="notConfigured"
-      icon="i-lucide-plug-zap"
-      :title="t('cms.media.notConfiguredTitle')"
-      :body="t('cms.media.notConfiguredBody')"
+      icon="bolt"
+      title="Media storage not configured"
+      body="Set cms.media in nuxt.config to enable uploads."
    />
 
    <div v-else class="flex flex-col gap-5">
@@ -24,10 +24,10 @@
             :class="{ 'is-active': filter === f }"
             @click="filter = f"
          >
-            {{ t(`cms.media.filter.${f}`) }}
+            {{ filterLabels[f] }}
          </button>
          <template v-if="folders.length">
-            <span class="bg-(--cms-line) mx-1 h-4 w-px" />
+            <span class="mx-1 h-4 w-px bg-(--cms-line)" />
             <button
                v-for="f in folders"
                :key="f"
@@ -36,13 +36,13 @@
                :class="{ 'is-active': folder === f }"
                @click="folder = folder === f ? null : f"
             >
-               <UIcon name="i-lucide-folder" class="mr-1 size-3" />{{ f }}
+               <CmsIcon name="folder" class="mr-1 size-3" />{{ f }}
             </button>
          </template>
       </div>
 
       <div v-if="loading" class="flex justify-center py-10">
-         <UIcon name="i-lucide-loader-circle" class="text-(--ui-text-dimmed) size-6 animate-spin" />
+         <CmsIcon name="arrow-path" class="size-6 animate-spin text-(--ui-text-dimmed)" />
       </div>
 
       <div
@@ -63,7 +63,7 @@
             }"
             @click="selectable && emit('select', { key: item.key, url: item.url })"
          >
-            <div class="bg-(--cms-field) relative flex aspect-square items-center justify-center">
+            <div class="relative flex aspect-square items-center justify-center bg-(--cms-field)">
                <img
                   v-if="item.type === 'image' && item.url"
                   :src="item.url"
@@ -79,40 +79,40 @@
                   playsinline
                   class="absolute inset-0 size-full object-cover"
                />
-               <UIcon
+               <CmsIcon
                   v-else
                   :name="mediaIconFor(item.type)"
-                  class="text-(--ui-text-dimmed) size-8"
+                  class="size-8 text-(--ui-text-dimmed)"
                />
                <div
                   v-if="!selectable"
-                  class="absolute right-2 top-2 flex gap-1 opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100"
+                  class="absolute top-2 right-2 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100"
                >
-                  <UButton
-                     icon="i-lucide-pencil"
+                  <CmsButton
+                     icon="pencil-square"
                      size="xs"
                      color="neutral"
                      variant="solid"
                      class="rounded-full shadow-sm"
-                     :aria-label="t('cms.media.edit')"
+                     aria-label="Edit details"
                      @click="openEdit(item)"
                   />
-                  <UButton
-                     icon="i-lucide-copy"
+                  <CmsButton
+                     icon="document-duplicate"
                      size="xs"
                      color="neutral"
                      variant="solid"
                      class="rounded-full shadow-sm"
-                     :aria-label="t('cms.media.copy')"
+                     aria-label="Copy URL"
                      @click="copy(item)"
                   />
-                  <UButton
-                     icon="i-lucide-trash-2"
+                  <CmsButton
+                     icon="trash"
                      size="xs"
                      color="error"
                      variant="solid"
                      class="rounded-full shadow-sm"
-                     :aria-label="t('cms.media.delete')"
+                     aria-label="Delete"
                      @click="remove(item)"
                   />
                </div>
@@ -131,14 +131,10 @@
          </component>
       </div>
 
-      <CmsEmptyState
-         v-else-if="loadError"
-         icon="i-lucide-triangle-alert"
-         :title="t('cms.media.loadError')"
-      >
-         <UButton
-            :label="t('cms.media.retry')"
-            icon="i-lucide-refresh-cw"
+      <CmsEmptyState v-else-if="loadError" icon="exclamation-triangle" title="Could not load media">
+         <CmsButton
+            label="Retry"
+            icon="arrow-path"
             variant="subtle"
             class="mt-3 rounded-full px-4"
             @click="reload"
@@ -147,12 +143,12 @@
 
       <CmsEmptyState
          v-else
-         icon="i-lucide-image"
-         :title="t('cms.media.emptyTitle')"
-         :body="t('cms.media.emptyBody')"
+         icon="photo"
+         title="No media yet"
+         body="Files you upload will show up here."
       />
 
-      <UModal
+      <CmsModal
          :open="!!editing"
          :title="editing ? mediaFilename(editing.key) : ''"
          :ui="CMS_MODAL_UI"
@@ -164,15 +160,15 @@
       >
          <template #body>
             <div class="flex flex-col gap-4">
-               <UFormField :label="t('cms.media.alt')">
-                  <UInput v-model="editAlt" size="lg" class="w-full" />
-               </UFormField>
-               <UFormField :label="t('cms.media.folder')">
-                  <UInput v-model="editFolder" size="lg" class="w-full" />
-               </UFormField>
+               <CmsFormField label="Alt text">
+                  <CmsInput v-model="editAlt" size="lg" class="w-full" />
+               </CmsFormField>
+               <CmsFormField label="Folder">
+                  <CmsInput v-model="editFolder" size="lg" class="w-full" />
+               </CmsFormField>
                <div class="flex justify-end">
-                  <UButton
-                     :label="t('cms.form.save')"
+                  <CmsButton
+                     label="Save"
                      :loading="editSaving"
                      class="rounded-full px-6"
                      @click="saveEdit"
@@ -180,16 +176,24 @@
                </div>
             </div>
          </template>
-      </UModal>
+      </CmsModal>
    </div>
 </template>
 
 <script setup lang="ts">
 import type { MediaItem, MediaType } from '#nuxt-cms'
-import { computed, onMounted, ref, useI18n, useToast } from '#imports'
+import { computed, onMounted, ref } from '#imports'
 import { MEDIA_TYPES, mediaFilename, mediaIconFor } from '#nuxt-cms'
 import { useCmsConfirm } from '../../composables/cms-confirm'
+import { useCmsToast } from '../../composables/cms-toast'
 import { CMS_MODAL_UI, errorMessage } from '../../utils/ui'
+
+const filterLabels: Record<string, string> = {
+   all: 'All',
+   image: 'Images',
+   video: 'Videos',
+   file: 'Files',
+}
 
 const props = defineProps<{
    selectable?: boolean
@@ -199,8 +203,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{ select: [item: { key: string; url: string | null }] }>()
 
-const { t } = useI18n()
-const toast = useToast()
+const toast = useCmsToast()
 
 const endpoint = '/api/cms/admin/media'
 
@@ -279,7 +282,7 @@ async function saveEdit() {
       await reload()
    } catch (err) {
       toast.add({
-         title: t('cms.toast.saveFailed'),
+         title: 'Save failed',
          description: errorMessage(err),
          color: 'error',
       })
@@ -307,9 +310,9 @@ function formatSize(bytes: number | null) {
 async function copy(item: MediaItem) {
    try {
       await navigator.clipboard.writeText(item.url ?? item.key)
-      toast.add({ title: t('cms.media.copied'), color: 'success' })
+      toast.add({ title: 'Copied', color: 'success' })
    } catch {
-      toast.add({ title: t('cms.media.copyError'), color: 'error' })
+      toast.add({ title: 'Copy failed', color: 'error' })
    }
 }
 
@@ -318,14 +321,15 @@ const removing = ref(false)
 
 async function remove(item: MediaItem) {
    if (removing.value) return
-   if (!(await confirmAction(t('cms.media.deleteConfirm')))) return
+   if (!(await confirmAction('Delete this file? Entries referencing it will keep a broken link.')))
+      return
    removing.value = true
    try {
       await $fetch(endpoint, { method: 'DELETE', query: { key: item.key } })
       await reload()
    } catch (err) {
       toast.add({
-         title: t('cms.media.deleteFailed'),
+         title: 'Delete failed',
          description: errorMessage(err),
          color: 'error',
       })

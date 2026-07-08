@@ -1,65 +1,65 @@
 <template>
    <div class="cms-richtext">
       <div class="cms-richtext-toolbar">
-         <UButton
+         <CmsButton
             v-for="action in actions"
             :key="action.icon"
             :icon="action.icon"
             size="xs"
             :variant="editor?.isActive(action.mark, action.attrs) ? 'soft' : 'ghost'"
             color="neutral"
-            :aria-label="t(action.label)"
-            :title="t(action.label)"
+            :aria-label="action.label"
+            :title="action.label"
             @click="action.run"
          />
-         <UPopover v-model:open="linkOpen">
-            <UButton
-               icon="i-lucide-link"
+         <CmsPopover v-model:open="linkOpen">
+            <CmsButton
+               icon="link"
                size="xs"
                :variant="editor?.isActive('link') ? 'soft' : 'ghost'"
                color="neutral"
-               :aria-label="t('cms.richtext.link')"
-               :title="t('cms.richtext.link')"
+               aria-label="Link"
+               title="Link"
             />
             <template #content>
                <div class="flex items-center gap-2 p-2">
-                  <UInput
+                  <CmsInput
                      v-model="linkUrl"
                      size="sm"
                      placeholder="https://"
                      class="w-64"
                      @keydown.enter.prevent="applyLink"
                   />
-                  <UButton size="xs" :label="t('cms.richtext.setLink')" @click="applyLink" />
-                  <UButton
+                  <CmsButton size="xs" label="Apply" @click="applyLink" />
+                  <CmsButton
                      v-if="editor?.isActive('link')"
                      size="xs"
                      variant="subtle"
                      color="error"
-                     :label="t('cms.richtext.unsetLink')"
+                     label="Remove link"
                      @click="removeLink"
                   />
                </div>
             </template>
-         </UPopover>
+         </CmsPopover>
          <span class="grow" />
-         <UButton
-            icon="i-lucide-undo-2"
+         <CmsButton
+            icon="arrow-uturn-left"
             size="xs"
             variant="ghost"
             color="neutral"
-            :aria-label="t('cms.richtext.undo')"
-            :title="t('cms.richtext.undo')"
+            aria-label="Undo"
+            title="Undo"
             :disabled="!editor?.can().undo()"
             @click="undo"
          />
-         <UButton
-            icon="i-lucide-redo-2"
+         <CmsButton
+            icon="arrow-uturn-right"
             size="xs"
             variant="ghost"
             color="neutral"
-            :aria-label="t('cms.richtext.redo')"
-            :title="t('cms.richtext.redo')"
+            aria-label="Redo"
+            title="Redo"
             :disabled="!editor?.can().redo()"
             @click="redo"
          />
@@ -71,11 +71,9 @@
 <script setup lang="ts">
 import StarterKit from '@tiptap/starter-kit'
 import { EditorContent, useEditor } from '@tiptap/vue-3'
-import { ref, useI18n, watch } from '#imports'
+import { ref, watch } from '#imports'
 
 const model = defineModel<string | null>({ required: true })
-
-const { t } = useI18n()
 
 const editor = useEditor({
    content: model.value ?? '',
@@ -98,67 +96,67 @@ watch(model, (value) => {
 
 const actions = [
    {
-      icon: 'i-lucide-bold',
+      icon: 'bold',
       mark: 'bold',
-      label: 'cms.richtext.bold',
+      label: 'Bold',
       run: () => {
          editor.value?.chain().focus().toggleBold().run()
       },
    },
    {
-      icon: 'i-lucide-italic',
+      icon: 'italic',
       mark: 'italic',
-      label: 'cms.richtext.italic',
+      label: 'Italic',
       run: () => {
          editor.value?.chain().focus().toggleItalic().run()
       },
    },
    {
-      icon: 'i-lucide-strikethrough',
+      icon: 'strikethrough',
       mark: 'strike',
-      label: 'cms.richtext.strike',
+      label: 'Strikethrough',
       run: () => {
          editor.value?.chain().focus().toggleStrike().run()
       },
    },
    {
-      icon: 'i-lucide-heading-2',
+      icon: 'h2',
       mark: 'heading',
       attrs: { level: 2 },
-      label: 'cms.richtext.h2',
+      label: 'Heading 2',
       run: () => {
          editor.value?.chain().focus().toggleHeading({ level: 2 }).run()
       },
    },
    {
-      icon: 'i-lucide-heading-3',
+      icon: 'h3',
       mark: 'heading',
       attrs: { level: 3 },
-      label: 'cms.richtext.h3',
+      label: 'Heading 3',
       run: () => {
          editor.value?.chain().focus().toggleHeading({ level: 3 }).run()
       },
    },
    {
-      icon: 'i-lucide-list',
+      icon: 'list-bullet',
       mark: 'bulletList',
-      label: 'cms.richtext.bulletList',
+      label: 'Bullet list',
       run: () => {
          editor.value?.chain().focus().toggleBulletList().run()
       },
    },
    {
-      icon: 'i-lucide-list-ordered',
+      icon: 'numbered-list',
       mark: 'orderedList',
-      label: 'cms.richtext.orderedList',
+      label: 'Numbered list',
       run: () => {
          editor.value?.chain().focus().toggleOrderedList().run()
       },
    },
    {
-      icon: 'i-lucide-text-quote',
+      icon: 'chat-bubble-bottom-center-text',
       mark: 'blockquote',
-      label: 'cms.richtext.blockquote',
+      label: 'Quote',
       run: () => {
          editor.value?.chain().focus().toggleBlockquote().run()
       },

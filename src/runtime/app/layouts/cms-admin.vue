@@ -2,15 +2,13 @@
    <div class="cms-scope cms-canvas cms-grain min-h-screen">
       <div class="flex min-h-screen">
          <aside
-            class="border-(--cms-line) sticky top-0 flex h-screen w-64 shrink-0 flex-col gap-7 border-r px-4 py-7"
+            class="sticky top-0 flex h-screen w-64 shrink-0 flex-col gap-7 border-r border-(--cms-line) px-4 py-7"
          >
             <div class="px-3">
-               <div class="cms-display text-(--ui-text-highlighted) text-[22px] font-semibold">
+               <div class="cms-display text-[22px] font-semibold text-(--ui-text-highlighted)">
                   nuxt<span class="text-(--cms-fern)">·</span>cms
                </div>
-               <div class="cms-kicker mt-1.5">
-                  {{ t('cms.sidebar.tagline') }}
-               </div>
+               <div class="cms-kicker mt-1.5">content studio</div>
             </div>
 
             <nav class="flex flex-1 flex-col gap-6 overflow-y-auto">
@@ -25,22 +23,22 @@
                      class="cms-navlink"
                      :class="{ 'is-active': route.path === link.to }"
                   >
-                     <UIcon
+                     <CmsIcon
                         :name="group.icon"
-                        class="cms-navlink-icon text-(--ui-text-dimmed) size-4 shrink-0"
+                        class="cms-navlink-icon size-4 shrink-0 text-(--ui-text-dimmed)"
                      />
                      <span class="truncate">{{ link.label }}</span>
                   </NuxtLink>
                </div>
             </nav>
 
-            <div class="border-(--cms-line) flex flex-col gap-3 border-t px-3 pt-5">
-               <div class="text-(--ui-text-muted) truncate text-[11px] font-medium">
+            <div class="flex flex-col gap-3 border-t border-(--cms-line) px-3 pt-5">
+               <div class="truncate text-[11px] font-medium text-(--ui-text-muted)">
                   {{ user?.email }}
                </div>
-               <UButton
-                  :label="t('cms.sidebar.signOut')"
-                  icon="i-lucide-log-out"
+               <CmsButton
+                  label="Sign out"
+                  icon="arrow-right-on-rectangle"
                   variant="ghost"
                   color="neutral"
                   size="xs"
@@ -56,17 +54,19 @@
             </div>
          </main>
       </div>
+
+      <CmsToaster />
+      <CmsConfirmModal />
    </div>
 </template>
 
 <script setup lang="ts">
 import type { CmsConfig } from '#nuxt-cms'
-import { computed, navigateTo, useI18n, useRoute, useUserSession } from '#imports'
+import { computed, navigateTo, useRoute, useUserSession } from '#imports'
 import cmsConfig from '#cms-config'
 
 const route = useRoute()
 const { user, clear } = useUserSession()
-const { t } = useI18n()
 
 const links = Object.entries(cmsConfig as CmsConfig).map(([name, entry]) => ({
    name,
@@ -78,19 +78,19 @@ const links = Object.entries(cmsConfig as CmsConfig).map(([name, entry]) => ({
 const groups = computed(() =>
    [
       {
-         title: t('cms.sidebar.collections'),
-         icon: 'i-lucide-layers',
+         title: 'Collections',
+         icon: 'square-3-stack-3d',
          links: links.filter((l) => l.kind === 'collection'),
       },
       {
-         title: t('cms.sidebar.singles'),
-         icon: 'i-lucide-file-text',
+         title: 'Singles',
+         icon: 'document-text',
          links: links.filter((l) => l.kind === 'single'),
       },
       {
-         title: t('cms.sidebar.library'),
-         icon: 'i-lucide-image',
-         links: [{ name: 'media', label: t('cms.sidebar.media'), kind: 'media', to: '/cms/media' }],
+         title: 'Library',
+         icon: 'photo',
+         links: [{ name: 'media', label: 'Media', kind: 'media', to: '/cms/media' }],
       },
    ].filter((g) => g.links.length)
 )

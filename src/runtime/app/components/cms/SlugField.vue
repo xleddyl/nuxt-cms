@@ -1,25 +1,25 @@
 <template>
-   <UInput
+   <CmsInput
       :model-value="(model ?? '') as string"
       size="lg"
       class="w-full font-mono"
       @update:model-value="
-         (v: string) => {
-            model = v || null
+         (v) => {
+            model = (v as string) || null
             touched = true
          }
       "
    >
       <template v-if="source !== undefined" #trailing>
-         <UButton
-            icon="i-lucide-refresh-cw"
+         <CmsButton
+            icon="arrow-path"
             size="xs"
             variant="ghost"
             color="neutral"
             @click="regenerate"
          />
       </template>
-   </UInput>
+   </CmsInput>
 </template>
 
 <script setup lang="ts">

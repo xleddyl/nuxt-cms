@@ -1,10 +1,10 @@
 <template>
    <div class="cms-empty flex flex-col items-center gap-2 p-14 text-center">
-      <UIcon :name="icon" class="text-(--cms-fern) mb-1 size-6" />
-      <p class="cms-display text-(--ui-text-highlighted) text-xl">
+      <CmsIcon :name="icon" class="mb-1 size-6 text-(--cms-fern)" />
+      <p class="cms-display text-xl text-(--ui-text-highlighted)">
          {{ title }}<span class="text-(--cms-fern)">.</span>
       </p>
-      <p v-if="body" class="text-(--ui-text-muted) max-w-md text-sm">
+      <p v-if="body" class="max-w-md text-sm text-(--ui-text-muted)">
          {{ body }}
       </p>
       <slot />

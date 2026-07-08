@@ -1,5 +1,5 @@
 <template>
-   <USelectMenu
+   <CmsSelectMenu
       v-if="multiple"
       v-model="many"
       v-model:search-term="searchTerm"
@@ -11,7 +11,7 @@
       size="lg"
       class="w-full"
    />
-   <USelectMenu
+   <CmsSelectMenu
       v-else
       v-model="single"
       v-model:search-term="searchTerm"
@@ -27,9 +27,10 @@
 <script setup lang="ts">
 import type { CmsConfig } from '#nuxt-cms'
 import { isTranslatableField } from '#nuxt-cms'
-import { computed, onMounted, ref, useI18n, useToast, watch } from '#imports'
+import { computed, onMounted, ref, watch } from '#imports'
 import cmsConfig from '#cms-config'
 import { useCmsRuntime } from '../../composables/cms-runtime'
+import { useCmsToast } from '../../composables/cms-toast'
 import { errorMessage } from '../../utils/ui'
 
 const props = defineProps<{
@@ -40,8 +41,7 @@ const props = defineProps<{
 
 const model = defineModel<string | string[] | null>({ required: true })
 
-const { t } = useI18n()
-const toast = useToast()
+const toast = useCmsToast()
 
 type Row = Record<string, unknown>
 
@@ -62,7 +62,7 @@ async function fetchOptions() {
       fetched.value = page.items
    } catch (err) {
       toast.add({
-         title: t('cms.toast.loadFailed'),
+         title: 'Loading failed',
          description: errorMessage(err),
          color: 'error',
       })

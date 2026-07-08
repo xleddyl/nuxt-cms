@@ -2,41 +2,48 @@
    <CmsTranslatableField v-if="isTranslatableField(field)" v-model="translatable" :field="field" />
    <CmsBlocksField v-else-if="field.type === 'blocks'" v-model="blocksValue" :field="field" />
    <CmsRichTextField v-else-if="field.type === 'richtext'" v-model="strOrNull" />
-   <UTextarea
+   <CmsTextarea
       v-else-if="field.type === 'text' && field.textarea"
       v-model="str"
       :rows="4"
       size="lg"
       class="w-full"
    />
-   <UInput v-else-if="field.type === 'text'" v-model="str" size="lg" class="w-full" />
-   <UInput v-else-if="field.type === 'email'" v-model="str" type="email" size="lg" class="w-full" />
-   <CmsSlugField v-else-if="field.type === 'slug'" v-model="strOrNull" :source="slugSource" />
-   <USelect
-      v-else-if="field.type === 'select'"
-      v-model="sel"
-      :items="field.options"
+   <CmsInput v-else-if="field.type === 'text'" v-model="str" size="lg" class="w-full" />
+   <CmsInput
+      v-else-if="field.type === 'email'"
+      v-model="str"
+      type="email"
       size="lg"
       class="w-full"
    />
-   <USwitch
+   <CmsSlugField v-else-if="field.type === 'slug'" v-model="strOrNull" :source="slugSource" />
+   <CmsSelect
+      v-else-if="field.type === 'select'"
+      v-model="sel"
+      :items="field.options"
+      :required="field.required"
+      size="lg"
+      class="w-full"
+   />
+   <CmsSwitch
       v-else-if="field.type === 'boolean'"
       :model-value="!!model"
       @update:model-value="
-         (v: boolean) => {
-            model = v
+         (v) => {
+            model = !!v
          }
       "
    />
    <CmsJsonField v-else-if="field.type === 'json'" v-model="jsonValue" />
-   <UInput
+   <CmsInput
       v-else-if="field.type === 'number'"
       v-model.number="num"
       type="number"
       size="lg"
       class="w-full"
    />
-   <UInput v-else-if="field.type === 'date'" v-model="str" type="date" size="lg" class="w-full" />
+   <CmsInput v-else-if="field.type === 'date'" v-model="str" type="date" size="lg" class="w-full" />
    <CmsRelationField
       v-else-if="field.type === 'relation'"
       v-model="relationValue"

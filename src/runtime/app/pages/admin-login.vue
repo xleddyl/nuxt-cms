@@ -2,25 +2,23 @@
    <div class="cms-scope cms-canvas cms-grain flex min-h-screen items-center justify-center p-6">
       <div class="flex w-full max-w-sm flex-col gap-8">
          <header class="cms-rise flex flex-col items-center gap-3 text-center">
-            <h1 class="cms-display text-(--ui-text-highlighted) text-4xl font-medium">
-               {{ t('cms.login.title') }}<span class="text-(--cms-fern)">.</span>
+            <h1 class="cms-display text-4xl font-medium text-(--ui-text-highlighted)">
+               Welcome back<span class="text-(--cms-fern)">.</span>
             </h1>
-            <p class="text-(--ui-text-muted) text-sm">
-               {{ t('cms.login.subtitle') }}
-            </p>
+            <p class="text-sm text-(--ui-text-muted)">Sign in to manage your content.</p>
          </header>
 
          <div class="cms-card cms-rise p-6 sm:p-7" style="animation-delay: 90ms">
-            <UForm :state="state" class="flex flex-col gap-5" @submit="login">
-               <UAlert
+            <CmsForm :state="state" class="flex flex-col gap-5" @submit="login">
+               <CmsAlert
                   v-if="error"
                   color="error"
                   variant="subtle"
                   :title="error"
                   class="rounded-xl"
                />
-               <UFormField :label="t('cms.login.email')" name="email" required :ui="CMS_FIELD_UI">
-                  <UInput
+               <CmsFormField label="Email" name="email" required :ui="CMS_FIELD_UI">
+                  <CmsInput
                      v-model="state.email"
                      type="email"
                      size="lg"
@@ -28,14 +26,9 @@
                      placeholder="you@example.com"
                      class="w-full"
                   />
-               </UFormField>
-               <UFormField
-                  :label="t('cms.login.password')"
-                  name="password"
-                  required
-                  :ui="CMS_FIELD_UI"
-               >
-                  <UInput
+               </CmsFormField>
+               <CmsFormField label="Password" name="password" required :ui="CMS_FIELD_UI">
+                  <CmsInput
                      v-model="state.password"
                      type="password"
                      size="lg"
@@ -43,23 +36,23 @@
                      placeholder="••••••••"
                      class="w-full"
                   />
-               </UFormField>
-               <UButton
+               </CmsFormField>
+               <CmsButton
                   type="submit"
-                  :label="t('cms.login.submit')"
+                  label="Sign in"
                   size="lg"
                   block
                   :loading="loading"
                   class="mt-1 rounded-full"
                />
-            </UForm>
+            </CmsForm>
          </div>
       </div>
    </div>
 </template>
 
 <script setup lang="ts">
-import { definePageMeta, navigateTo, ref, useI18n, useUserSession } from '#imports'
+import { definePageMeta, navigateTo, ref, useUserSession } from '#imports'
 import { CMS_FIELD_UI, errorMessage } from '../utils/ui'
 
 definePageMeta({ layout: false })
@@ -68,8 +61,6 @@ const { loggedIn, fetch: refreshSession } = useUserSession()
 if (loggedIn.value) {
    await navigateTo('/cms', { replace: true })
 }
-
-const { t } = useI18n()
 
 const state = ref({ email: '', password: '' })
 const error = ref<string | null>(null)
@@ -85,7 +76,9 @@ async function login() {
    } catch (e) {
       const status = (e as { statusCode?: number }).statusCode
       error.value =
-         status === 401 ? t('cms.login.invalid') : errorMessage(e) ?? t('cms.login.failed')
+         status === 401
+            ? 'Invalid email or password.'
+            : errorMessage(e) ?? 'Login failed. Please try again.'
    } finally {
       loading.value = false
    }
