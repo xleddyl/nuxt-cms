@@ -34,7 +34,7 @@ import { CMS_MODAL_UI } from '../../utils/ui'
 
 const state = useCmsConfirmState()
 
-const ui = { ...CMS_MODAL_UI, content: 'rounded-2xl shadow-xl sm:max-w-md' }
+const ui = { ...CMS_MODAL_UI, content: 'rounded-2xl sm:max-w-md' }
 
 // Settles the pending promise exactly once. Buttons call finish() directly;
 // closing via backdrop/escape triggers the modal's after:leave -> finish(false).

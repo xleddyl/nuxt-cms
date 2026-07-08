@@ -1,5 +1,5 @@
 <template>
-   <component :is="icon" v-if="icon" />
+   <component :is="icon" v-if="icon" class="size-5 stroke-[1.5]" />
 </template>
 
 <script setup lang="ts">

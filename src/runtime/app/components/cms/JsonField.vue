@@ -9,7 +9,7 @@
          @blur="commit"
          @update:model-value="invalid = false"
       />
-      <p v-if="invalid" class="text-xs text-(--ui-error)">Invalid JSON</p>
+      <p v-if="invalid" class="text-sm text-(--ui-error)">Invalid JSON</p>
    </div>
 </template>
 

@@ -22,7 +22,7 @@
          </CmsButton>
          <span
             v-if="props.field.required && active === i18n.defaultLocale"
-            class="ml-auto font-mono text-xs text-(--ui-text-muted)"
+            class="ml-auto font-mono text-sm text-(--ui-text-muted)"
          >
             {{ i18n.defaultLocale }} *
          </span>

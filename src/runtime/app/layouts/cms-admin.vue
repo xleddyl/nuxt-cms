@@ -33,7 +33,7 @@
             </nav>
 
             <div class="flex flex-col gap-3 border-t border-(--cms-line) px-3 pt-5">
-               <div class="truncate text-[11px] font-medium text-(--ui-text-muted)">
+               <div class="truncate text-sm font-medium text-(--ui-text-muted)">
                   {{ user?.email }}
                </div>
                <CmsButton

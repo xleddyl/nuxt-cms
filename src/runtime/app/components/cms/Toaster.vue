@@ -13,10 +13,10 @@
             >
                <div class="flex items-start gap-3">
                   <div class="min-w-0 flex-1">
-                     <p class="text-[13px] font-medium text-(--ui-text-highlighted)">
+                     <p class="text-sm font-medium text-(--ui-text-highlighted)">
                         {{ toast.title }}
                      </p>
-                     <p v-if="toast.description" class="mt-0.5 text-xs text-(--ui-text-muted)">
+                     <p v-if="toast.description" class="mt-0.5 text-sm text-(--ui-text-muted)">
                         {{ toast.description }}
                      </p>
                   </div>

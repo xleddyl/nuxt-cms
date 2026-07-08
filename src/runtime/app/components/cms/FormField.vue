@@ -1,10 +1,10 @@
 <template>
    <div class="flex flex-col gap-1.5">
-      <label v-if="label" :class="ui?.label ?? 'text-[13px] font-medium text-(--ui-text-toned)'">
+      <label v-if="label" :class="ui?.label ?? 'text-sm font-medium text-(--ui-text-toned)'">
          {{ label }}<span v-if="required" class="text-(--ui-error)"> *</span>
       </label>
       <slot />
-      <p v-if="error" class="text-xs text-(--ui-error)">{{ error }}</p>
+      <p v-if="error" class="text-sm text-(--ui-error)">{{ error }}</p>
    </div>
 </template>
 

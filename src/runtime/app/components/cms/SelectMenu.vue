@@ -15,11 +15,11 @@
          </template>
          <input
             ref="input"
-            class="min-w-16 flex-1 bg-transparent outline-none"
-            :value="search"
+            class="min-w-16 flex-1 bg-transparent text-(--ui-text-highlighted) outline-none"
+            :value="displayValue"
             :placeholder="placeholder"
-            @input="search = ($event.target as HTMLInputElement).value"
-            @focus="open = true"
+            @input="onInput"
+            @focus="onFocus"
          />
          <CmsIcon
             v-if="loading"
@@ -29,7 +29,7 @@
       </div>
       <div v-if="open" class="cms-selectmenu-panel">
          <button
-            v-for="item in items"
+            v-for="item in visibleItems"
             :key="String(item[valueKey])"
             type="button"
             class="cms-menu-item"
@@ -37,12 +37,12 @@
          >
             <span class="truncate">{{ item.label }}</span>
             <CmsIcon
-               v-if="isSelected(item[valueKey])"
+               v-if="!multiple && isSelected(item[valueKey])"
                name="check"
                class="cms-menu-check size-3.5"
             />
          </button>
-         <div v-if="!items.length" class="cms-menu-item pointer-events-none opacity-60">
+         <div v-if="!visibleItems.length" class="cms-menu-item pointer-events-none opacity-60">
             No results
          </div>
       </div>
@@ -62,6 +62,7 @@ const props = withDefaults(
       ignoreFilter?: boolean
       loading?: boolean
       size?: string
+      placeholder?: string
    }>(),
    { valueKey: 'value' }
 )
@@ -83,7 +84,43 @@ const selectedLabel = computed(() => {
    return current == null ? '' : labelFor(current)
 })
 
-const placeholder = computed(() => (props.multiple ? '' : selectedLabel.value))
+const placeholder = computed(() => {
+   if (props.multiple) return modelArray.value.length ? '' : props.placeholder ?? ''
+   return selectedLabel.value || props.placeholder || ''
+})
+
+/** In single mode the field doubles as a combobox: while open the user types to
+ *  search; while closed it shows the current selection in solid (not placeholder)
+ *  text so the chosen value reads black, not grey. */
+const displayValue = computed(() => {
+   if (props.multiple) return search.value
+   return open.value ? search.value : selectedLabel.value
+})
+
+function onInput(event: Event) {
+   search.value = (event.target as HTMLInputElement).value
+   open.value = true
+}
+
+function onFocus() {
+   if (!props.multiple) search.value = ''
+   open.value = true
+}
+
+/** Items shown in the dropdown: filtered by the search term (unless the parent
+ *  filters externally) and, in multiple mode, with already-selected values
+ *  removed so picked tags disappear from the list. */
+const visibleItems = computed<Item[]>(() => {
+   let list = props.items
+   if (!props.ignoreFilter) {
+      const query = search.value.trim().toLowerCase()
+      if (query) list = list.filter((item) => item.label.toLowerCase().includes(query))
+   }
+   if (props.multiple) {
+      list = list.filter((item) => !modelArray.value.includes(item[props.valueKey] as string))
+   }
+   return list
+})
 
 function labelFor(value: string) {
    return props.items.find((item) => item[props.valueKey] === value)?.label ?? `#${value}`
@@ -108,6 +145,8 @@ function pick(item: Item) {
    const value = item[props.valueKey] as string | null
    if (props.multiple) {
       if (value != null) toggle(value)
+      search.value = ''
+      focusInput()
    } else {
       model.value = value
       search.value = ''

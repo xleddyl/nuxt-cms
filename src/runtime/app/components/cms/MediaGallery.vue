@@ -59,7 +59,7 @@
             :type="selectable ? 'button' : undefined"
             class="cms-card group overflow-hidden text-left"
             :class="{
-               'hover:border-(--cms-fern) hover:shadow-md': selectable,
+               'hover:border-(--cms-line-strong)': selectable,
             }"
             @click="selectable && emit('select', { key: item.key, url: item.url })"
          >
@@ -93,7 +93,7 @@
                      size="xs"
                      color="neutral"
                      variant="solid"
-                     class="rounded-full shadow-sm"
+                     class="rounded-full"
                      aria-label="Edit details"
                      @click="openEdit(item)"
                   />
@@ -102,7 +102,7 @@
                      size="xs"
                      color="neutral"
                      variant="solid"
-                     class="rounded-full shadow-sm"
+                     class="rounded-full"
                      aria-label="Copy URL"
                      @click="copy(item)"
                   />
@@ -111,14 +111,14 @@
                      size="xs"
                      color="error"
                      variant="solid"
-                     class="rounded-full shadow-sm"
+                     class="rounded-full"
                      aria-label="Delete"
                      @click="remove(item)"
                   />
                </div>
             </div>
             <div class="flex flex-col gap-1 px-3.5 py-2.5">
-               <div class="truncate text-[13px] font-medium" :title="item.key">
+               <div class="truncate text-sm font-medium" :title="item.key">
                   {{ mediaFilename(item.key) }}
                </div>
                <div class="cms-kicker">

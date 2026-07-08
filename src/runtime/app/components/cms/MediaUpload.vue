@@ -23,7 +23,7 @@
          class="size-5 shrink-0"
          :class="{ 'animate-spin': uploading }"
       />
-      <span class="text-[13px] font-medium">
+      <span class="text-sm font-medium">
          {{
             uploading
                ? `Uploading ${Math.min(done + 1, total)} of ${total}…`

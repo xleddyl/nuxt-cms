@@ -18,11 +18,11 @@
       class="w-full"
    />
    <CmsSlugField v-else-if="field.type === 'slug'" v-model="strOrNull" :source="slugSource" />
-   <CmsSelect
+   <CmsSelectMenu
       v-else-if="field.type === 'select'"
-      v-model="sel"
-      :items="field.options"
-      :required="field.required"
+      v-model="selValue"
+      :items="selectItems"
+      placeholder="Select…"
       size="lg"
       class="w-full"
    />
@@ -59,12 +59,17 @@ import type { FieldConfig } from '#nuxt-cms'
 import { isTranslatableField } from '#nuxt-cms'
 import { computed } from '#imports'
 
-defineProps<{
+const props = defineProps<{
    field: FieldConfig
    slugSource?: string | null
 }>()
 
 const model = defineModel<unknown>({ required: true })
+
+const selectItems = computed(() => [
+   ...(props.field.required ? [] : [{ label: '—', value: null }]),
+   ...(props.field.options ?? []).map((option) => ({ label: option, value: option })),
+])
 
 function proxy<T>(fromModel: (v: unknown) => T, toModel: (v: T) => unknown = (v) => v) {
    return computed<T>({
@@ -80,10 +85,7 @@ const str = proxy<string>(
    (v) => (v === '' ? null : v)
 )
 const strOrNull = proxy<string | null>((v) => v as string | null)
-const sel = proxy<string | undefined>(
-   (v) => (v as string | null) ?? undefined,
-   (v) => v ?? null
-)
+const selValue = proxy<string | null>((v) => (v as string | null) ?? null)
 const num = proxy<number | undefined>(
    (v) => (v as number | null) ?? undefined,
    (v) => (typeof v === 'number' && !Number.isNaN(v) ? v : null)

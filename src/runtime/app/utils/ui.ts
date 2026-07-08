@@ -1,9 +1,9 @@
 import type { InjectionKey, Reactive } from 'vue'
 
-export const CMS_FIELD_UI = { label: 'text-[13px] font-medium text-(--ui-text-toned)' }
+export const CMS_FIELD_UI = { label: 'text-sm font-medium text-(--ui-text-toned)' }
 
 export const CMS_MODAL_UI = {
-   content: 'rounded-2xl shadow-xl sm:max-w-3xl',
+   content: 'rounded-2xl sm:max-w-3xl',
    title: 'cms-display text-xl font-medium text-(--ui-text-highlighted)',
 }
 

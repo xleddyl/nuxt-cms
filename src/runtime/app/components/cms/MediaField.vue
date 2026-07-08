@@ -16,7 +16,7 @@
       />
       <div class="flex items-center gap-2.5 px-4 py-3">
          <CmsIcon :name="icon" class="size-4 shrink-0 text-(--ui-text-dimmed)" />
-         <span class="min-w-0 flex-1 truncate text-[13px] font-medium" :title="model">{{
+         <span class="min-w-0 flex-1 truncate text-sm font-medium" :title="model">{{
             mediaFilename(model)
          }}</span>
          <CmsButton
@@ -42,7 +42,7 @@
 
    <button v-else type="button" class="cms-dropzone is-dense" @click="openGallery">
       <CmsIcon name="photo" class="size-5 shrink-0" />
-      <span class="text-[13px] font-medium">Choose from the gallery</span>
+      <span class="text-sm font-medium">Choose from the gallery</span>
    </button>
 
    <CmsModal v-model:open="galleryOpen" title="Media" :ui="CMS_MODAL_UI">
