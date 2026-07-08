@@ -1,6 +1,19 @@
 # Changelog
 
 
+## v0.1.11
+
+[compare changes](https://github.com/xleddyl/nuxt-cms/compare/v0.1.10...v0.1.11)
+
+### 🚀 Enhancements
+
+- Llm.txt and readme improvement ([0d9f966](https://github.com/xleddyl/nuxt-cms/commit/0d9f966))
+- Docs and libsql ([c8cb4d1](https://github.com/xleddyl/nuxt-cms/commit/c8cb4d1))
+
+### ❤️ Contributors
+
+- Edoardo Alberti <edoalberti99@gmail.com>
+
 ## v0.1.10
 
 
