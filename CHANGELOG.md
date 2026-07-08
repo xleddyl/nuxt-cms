@@ -1,6 +1,18 @@
 # Changelog
 
 
+## v0.1.16
+
+[compare changes](https://github.com/xleddyl/nuxt-cms/compare/v0.1.15...v0.1.16)
+
+### 🩹 Fixes
+
+- Bundle ([4c8fd5d](https://github.com/xleddyl/nuxt-cms/commit/4c8fd5d))
+
+### ❤️ Contributors
+
+- Edoardo Alberti <edoalberti99@gmail.com>
+
 ## v0.1.15
 
 [compare changes](https://github.com/xleddyl/nuxt-cms/compare/v0.1.14...v0.1.15)
