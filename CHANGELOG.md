@@ -1,6 +1,18 @@
 # Changelog
 
 
+## v0.1.13
+
+[compare changes](https://github.com/xleddyl/nuxt-cms/compare/v0.1.12...v0.1.13)
+
+### 🩹 Fixes
+
+- Readded test (fake) ([1f731d1](https://github.com/xleddyl/nuxt-cms/commit/1f731d1))
+
+### ❤️ Contributors
+
+- Edoardo Alberti <edoalberti99@gmail.com>
+
 ## v0.1.12
 
 [compare changes](https://github.com/xleddyl/nuxt-cms/compare/v0.1.11...v0.1.12)
