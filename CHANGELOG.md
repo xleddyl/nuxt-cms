@@ -1,6 +1,18 @@
 # Changelog
 
 
+## v0.1.12
+
+[compare changes](https://github.com/xleddyl/nuxt-cms/compare/v0.1.11...v0.1.12)
+
+### 🚀 Enhancements
+
+- Removed nuxt ui and i18n ([fd5aaa0](https://github.com/xleddyl/nuxt-cms/commit/fd5aaa0))
+
+### ❤️ Contributors
+
+- Edoardo Alberti <edoalberti99@gmail.com>
+
 ## v0.1.11
 
 [compare changes](https://github.com/xleddyl/nuxt-cms/compare/v0.1.10...v0.1.11)
