@@ -23,7 +23,7 @@ import { minifyIntrospection, outputIntrospectionFile } from 'gql.tada/internal'
 import { createJiti } from 'jiti'
 import { renderGraphqlSdl } from './runtime/shared/graphql-sdl'
 import type { CmsConfig } from './runtime/shared/index'
-import type { Dialect } from './schema-codegen'
+import type { Driver } from './schema-codegen'
 import { renderSchemaFile, validateConfig } from './schema-codegen'
 import { renderTypesFile } from './types-codegen'
 
@@ -34,9 +34,10 @@ export interface ModuleOptions {
       password: string
    }
    database: {
-      driver?: Dialect
+      driver?: Driver
       path?: string
       url?: string
+      authToken?: string
    }
    media: {
       endpoint: string
@@ -90,6 +91,7 @@ export default defineNuxtModule<ModuleOptions>({
          driver: 'sqlite',
          path: 'data/cms.db',
          url: '',
+         authToken: '',
       },
       media: {
          endpoint: '',
@@ -154,7 +156,11 @@ export default defineNuxtModule<ModuleOptions>({
          filename: 'cms/schema.ts',
          write: true,
          getContents: () =>
-            renderSchemaFile(cmsConfig, options.database.driver ?? 'sqlite', resolveImport),
+            renderSchemaFile(
+               cmsConfig,
+               options.database.driver === 'postgres' ? 'postgres' : 'sqlite',
+               resolveImport
+            ),
       })
       nuxt.options.alias['#cms-tables'] = schemaTemplate.dst
 
@@ -237,14 +243,18 @@ export default defineNuxtModule<ModuleOptions>({
          driver = 'sqlite',
          path: dbPath = 'data/cms.db',
          url: databaseUrl = '',
+         authToken: databaseAuthToken = '',
       } = options.database
       nuxt.options.alias['#cms-db'] = resolver.resolve(
          driver === 'postgres'
             ? './runtime/server/utils/db-postgres'
-            : './runtime/server/utils/db-sqlite'
+            : driver === 'libsql'
+              ? './runtime/server/utils/db-libsql'
+              : './runtime/server/utils/db-sqlite'
       )
 
-      const dialect = driver === 'postgres' ? 'postgresql' : 'sqlite'
+      const dialect =
+         driver === 'postgres' ? 'postgresql' : driver === 'libsql' ? 'turso' : 'sqlite'
       const resolvedDbPath = isAbsolute(dbPath) ? dbPath : resolve(nuxt.options.rootDir, dbPath)
       const migrationsDir = resolve(nuxt.options.rootDir, `server/db/migrations/${driver}`)
       const relativeSchemaPath = relative(nuxt.options.rootDir, schemaTemplate.dst)
@@ -262,7 +272,9 @@ export default defineNuxtModule<ModuleOptions>({
                `  out: '${toPosix(migrationsDir)}',`,
                driver === 'postgres'
                   ? `  dbCredentials: { url: process.env.NUXT_CMS_DATABASE_URL ?? '${databaseUrl}' },`
-                  : `  dbCredentials: { url: '${toPosix(resolvedDbPath)}' },`,
+                  : driver === 'libsql'
+                    ? `  dbCredentials: { url: process.env.NUXT_CMS_DATABASE_URL ?? '${databaseUrl || `file:${toPosix(resolvedDbPath)}`}', authToken: process.env.NUXT_CMS_DATABASE_AUTH_TOKEN ?? '${databaseAuthToken}' || undefined },`
+                    : `  dbCredentials: { url: '${toPosix(resolvedDbPath)}' },`,
                `}`,
                ``,
             ].join('\n'),
@@ -272,7 +284,9 @@ export default defineNuxtModule<ModuleOptions>({
          resolver.resolve(
             driver === 'postgres'
                ? './runtime/server/plugins/migrate-postgres'
-               : './runtime/server/plugins/migrate-sqlite'
+               : driver === 'libsql'
+                 ? './runtime/server/plugins/migrate-libsql'
+                 : './runtime/server/plugins/migrate-sqlite'
          )
       )
 
@@ -308,6 +322,7 @@ export default defineNuxtModule<ModuleOptions>({
          adminEmail: options.admin.email,
          adminPassword: options.admin.password,
          databaseUrl,
+         databaseAuthToken,
          dbPath: resolvedDbPath,
          migrationsDir,
          ...existingConfig,

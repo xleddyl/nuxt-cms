@@ -20,6 +20,8 @@
       "headless-cms",
       "self-hosted",
       "sqlite",
+      "libsql",
+      "turso",
       "postgres",
       "drizzle",
       "graphql"
@@ -62,6 +64,7 @@
       "release": "changelogen --release --push"
    },
    "dependencies": {
+      "@libsql/client": "^0.17.4",
       "@nuxt/kit": "^4.4.8",
       "@nuxt/ui": "^4.0.0",
       "@nuxtjs/i18n": "^10.4.0",

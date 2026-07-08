@@ -8,13 +8,13 @@ Nuxt module embedding a CMS in the app's Nitro server. Content types are declare
 export default defineNuxtConfig({
    modules: ['@xleddyl/nuxt-cms'],
    cms: {
-      database: { driver: 'sqlite', path: 'data/cms.db' }, // or { driver: 'postgres', url: '...' }
+      database: { driver: 'sqlite', path: 'data/cms.db' }, // or 'postgres' { url } / 'libsql' { url, authToken } (remote or local file:)
       i18n: { locales: ['en', 'it'], defaultLocale: 'en' }, // only needed if using translatable fields
    },
 })
 ```
 
-Admin credentials come from `NUXT_CMS_ADMIN_EMAIL` / `NUXT_CMS_ADMIN_PASSWORD` env vars. Media (S3-compatible) is configured under `cms.media` or `NUXT_CMS_MEDIA_*` env vars.
+Admin credentials come from `NUXT_CMS_ADMIN_EMAIL` / `NUXT_CMS_ADMIN_PASSWORD` env vars. Media (S3-compatible) is configured under `cms.media` or `NUXT_CMS_MEDIA_*` env vars. Remote DB credentials (postgres/libsql) can be overridden at runtime with `NUXT_CMS_DATABASE_URL` / `NUXT_CMS_DATABASE_AUTH_TOKEN` (libsql only).
 
 ## 2. Schema definition (cms.config.ts, project root)
 

@@ -3,6 +3,7 @@ import type { CmsConfig, CmsEntry, CmsI18n, FieldConfig } from './runtime/shared
 import { isTranslatableField } from './runtime/shared/index'
 
 export type Dialect = 'sqlite' | 'postgres'
+export type Driver = Dialect | 'libsql'
 
 const IDENTIFIER = /^[a-z_]\w*$/i
 const RESERVED_ENTRY_KEYS = ['admin', 'auth', 'login', 'media', 'graphql', 'cms_media']
