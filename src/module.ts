@@ -252,7 +252,7 @@ export default defineNuxtModule<ModuleOptions>({
                   : driver === 'libsql'
                     ? `  dbCredentials: { url: process.env.NUXT_CMS_DATABASE_URL ?? '${
                          databaseUrl || `file:${toPosix(resolvedDbPath)}`
-                      }', authToken: process.env.NUXT_CMS_DATABASE_AUTH_TOKEN ?? '${databaseAuthToken}' || undefined },`
+                      }', authToken: (process.env.NUXT_CMS_DATABASE_AUTH_TOKEN ?? '${databaseAuthToken}') || undefined },`
                     : `  dbCredentials: { url: '${toPosix(resolvedDbPath)}' },`,
                `}`,
                ``,

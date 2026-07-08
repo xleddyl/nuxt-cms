@@ -39,6 +39,14 @@
       ".": {
          "types": "./dist/types.d.mts",
          "import": "./dist/module.mjs"
+      },
+      "./seed": {
+         "types": "./dist/runtime/seed.d.ts",
+         "import": "./dist/runtime/seed.js"
+      },
+      "./generate": {
+         "types": "./dist/runtime/generate.d.ts",
+         "import": "./dist/runtime/generate.js"
       }
    },
    "main": "./dist/module.mjs",
