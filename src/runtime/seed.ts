@@ -32,12 +32,19 @@ export async function createCmsSeeder(opts: CmsSeederOptions = {}) {
    const migrationsFolder = opts.migrationsDir ?? resolve(root, `server/db/migrations/${driver}`)
 
    if (driver === 'libsql') {
-      const { createClient } = await import('@libsql/client')
-      const { drizzle } = await import('drizzle-orm/libsql')
       const { migrate } = await import('drizzle-orm/libsql/migrator')
       const dbUrl = url || `file:${resolvedDbPath}`
-      if (dbUrl.startsWith('file:')) mkdirSync(dirname(resolvedDbPath), { recursive: true })
-      const db = drizzle(createClient({ url: dbUrl, authToken: authToken || undefined }))
+      let db
+      if (dbUrl.startsWith('file:')) {
+         mkdirSync(dirname(resolvedDbPath), { recursive: true })
+         const { createClient } = await import('@libsql/client')
+         const { drizzle } = await import('drizzle-orm/libsql')
+         db = drizzle(createClient({ url: dbUrl, authToken: authToken || undefined }))
+      } else {
+         const { createClient } = await import('@libsql/client/web')
+         const { drizzle } = await import('drizzle-orm/libsql/web')
+         db = drizzle(createClient({ url: dbUrl, authToken: authToken || undefined }))
+      }
       return { db, migrate: () => migrate(db, { migrationsFolder }) }
    }
 
