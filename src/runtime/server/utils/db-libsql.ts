@@ -25,7 +25,7 @@ export function useDb() {
          _db = drizzle(createClient({ url, authToken: databaseAuthToken || undefined }))
       }
    }
-   return _db
+   return _db!
 }
 
 type Db = ReturnType<typeof useDb>
