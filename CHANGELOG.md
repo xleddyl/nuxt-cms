@@ -1,6 +1,18 @@
 # Changelog
 
 
+## v0.1.15
+
+[compare changes](https://github.com/xleddyl/nuxt-cms/compare/v0.1.14...v0.1.15)
+
+### 🚀 Enhancements
+
+- Seeding ([99bf36c](https://github.com/xleddyl/nuxt-cms/commit/99bf36c))
+
+### ❤️ Contributors
+
+- Edoardo Alberti <edoalberti99@gmail.com>
+
 ## v0.1.14
 
 [compare changes](https://github.com/xleddyl/nuxt-cms/compare/v0.1.13...v0.1.14)
