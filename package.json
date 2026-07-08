@@ -1,6 +1,6 @@
 {
    "name": "@xleddyl/nuxt-cms",
-   "version": "0.1.13",
+   "version": "0.1.14",
    "description": "Lightweight CMS that ships with your Nuxt app: runs on the Nitro server, content types defined in code, /cms admin panel, GraphQL API, SQLite or Postgres. No external CMS needed!",
    "license": "MIT",
    "author": "Edoardo Alberti (https://github.com/xleddyl)",

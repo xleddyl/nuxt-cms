@@ -1,6 +1,18 @@
 # Changelog
 
 
+## v0.1.14
+
+[compare changes](https://github.com/xleddyl/nuxt-cms/compare/v0.1.13...v0.1.14)
+
+### 🚀 Enhancements
+
+- New ui ([dbcd894](https://github.com/xleddyl/nuxt-cms/commit/dbcd894))
+
+### ❤️ Contributors
+
+- Edoardo Alberti <edoalberti99@gmail.com>
+
 ## v0.1.13
 
 [compare changes](https://github.com/xleddyl/nuxt-cms/compare/v0.1.12...v0.1.13)
