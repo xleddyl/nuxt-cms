@@ -1,6 +1,18 @@
 # Changelog
 
 
+## v0.1.18
+
+[compare changes](https://github.com/xleddyl/nuxt-cms/compare/v0.1.17...v0.1.18)
+
+### 🩹 Fixes
+
+- Minor improvements and bug fixing ([e85201c](https://github.com/xleddyl/nuxt-cms/commit/e85201c))
+
+### ❤️ Contributors
+
+- Edoardo Alberti <edoalberti99@gmail.com>
+
 ## v0.1.17
 
 [compare changes](https://github.com/xleddyl/nuxt-cms/compare/v0.1.16...v0.1.17)
