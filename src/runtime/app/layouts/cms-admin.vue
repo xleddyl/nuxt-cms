@@ -8,7 +8,6 @@
                <div class="cms-display text-[22px] font-semibold text-(--ui-text-highlighted)">
                   nuxt<span class="text-(--cms-fern)">·</span>cms
                </div>
-               <div class="cms-kicker mt-1.5">content studio</div>
             </div>
 
             <nav class="flex flex-1 flex-col gap-6 overflow-y-auto">
@@ -33,16 +32,15 @@
             </nav>
 
             <div class="flex flex-col gap-3 border-t border-(--cms-line) px-3 pt-5">
-               <div class="truncate text-sm font-medium text-(--ui-text-muted)">
-                  {{ user?.email }}
-               </div>
                <CmsButton
                   label="Sign out"
                   icon="arrow-right-on-rectangle"
+                  trailing-icon
+                  block
                   variant="ghost"
                   color="neutral"
                   size="xs"
-                  class="-ml-2 justify-start rounded-full"
+                  class="rounded-full"
                   @click="logout"
                />
             </div>
@@ -66,7 +64,7 @@ import { computed, navigateTo, useRoute, useUserSession } from '#imports'
 import cmsConfig from '#cms-config'
 
 const route = useRoute()
-const { user, clear } = useUserSession()
+const { clear } = useUserSession()
 
 const links = Object.entries(cmsConfig as CmsConfig).map(([name, entry]) => ({
    name,

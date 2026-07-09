@@ -71,15 +71,12 @@
                @select="onSelect"
             >
                <template v-if="drafts" #status-cell="{ row }">
-                  <button
-                     type="button"
+                  <span
                      class="cms-badge"
                      :class="row.original.status === 'published' ? 'is-published' : 'is-draft'"
-                     :title="row.original.status === 'published' ? 'Make draft' : 'Publish'"
-                     @click.stop="toggleStatus(row.original)"
                   >
                      {{ row.original.status === 'published' ? 'Published' : 'Draft' }}
-                  </button>
+                  </span>
                </template>
                <template #actions-cell="{ row }">
                   <div class="flex justify-end">
@@ -355,17 +352,6 @@ const kicker = computed(() =>
 
 function onSelect(_event: Event, row: { original: Row }) {
    navigateTo(`/cms/${name}/${row.original.id}`)
-}
-
-async function toggleStatus(row: Record<string, unknown>) {
-   const next = row.status === 'published' ? 'draft' : 'published'
-   await submit(async () => {
-      const fresh = await cmsApi<Record<string, unknown>>(`${endpoint}/${row.id}`)
-      await cmsApi(`${endpoint}/${row.id}`, {
-         method: 'PUT',
-         body: { ...pickFields(fresh), status: next },
-      })
-   })
 }
 
 function openCreate() {

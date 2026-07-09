@@ -7,14 +7,23 @@ import { defineAsyncComponent, shallowRef, watch } from '#imports'
 
 const props = defineProps<{ name: string }>()
 
+type SvgGlob = (
+   pattern: string,
+   options: { query: string; import: string }
+) => Record<string, () => Promise<unknown>>
+
+const icons = (import.meta as unknown as { glob: SvgGlob }).glob('../../../assets/svg/*.svg', {
+   query: '?component',
+   import: 'default',
+})
+
 const icon = shallowRef()
 
 watch(
    () => props.name,
    (name) => {
-      icon.value = name
-         ? defineAsyncComponent(() => import(`../../../assets/svg/${name}.svg?component`))
-         : undefined
+      const loader = name ? icons[`../../../assets/svg/${name}.svg`] : undefined
+      icon.value = loader ? defineAsyncComponent(loader as never) : undefined
    },
    { immediate: true }
 )

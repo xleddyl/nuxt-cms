@@ -57,7 +57,7 @@ import { CMS_FIELD_UI, errorMessage } from '../utils/ui'
 
 definePageMeta({ layout: false })
 
-const { loggedIn, fetch: refreshSession } = useUserSession()
+const { loggedIn } = useUserSession()
 if (loggedIn.value) {
    await navigateTo('/cms', { replace: true })
 }
@@ -71,8 +71,7 @@ async function login() {
    error.value = null
    try {
       await $fetch('/api/cms/auth/login', { method: 'POST', body: state.value })
-      await refreshSession()
-      await navigateTo('/cms', { replace: true })
+      window.location.replace('/cms')
    } catch (e) {
       const status = (e as { statusCode?: number }).statusCode
       error.value =
