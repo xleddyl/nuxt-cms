@@ -1,6 +1,18 @@
 # Changelog
 
 
+## v0.1.22
+
+[compare changes](https://github.com/xleddyl/nuxt-cms/compare/v0.1.21...v0.1.22)
+
+### 🩹 Fixes
+
+- Register cms-admin layout from its real file instead of a virtual template ([821dc63](https://github.com/xleddyl/nuxt-cms/commit/821dc63))
+
+### ❤️ Contributors
+
+- Edoardo Alberti <edoalberti99@gmail.com>
+
 ## v0.1.21
 
 [compare changes](https://github.com/xleddyl/nuxt-cms/compare/v0.1.20...v0.1.21)
