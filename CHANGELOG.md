@@ -1,6 +1,18 @@
 # Changelog
 
 
+## v0.1.21
+
+[compare changes](https://github.com/xleddyl/nuxt-cms/compare/v0.1.20...v0.1.21)
+
+### 🩹 Fixes
+
+- Write cms-admin layout template to disk so vue-tracer resolves its client import ([5c2b79b](https://github.com/xleddyl/nuxt-cms/commit/5c2b79b))
+
+### ❤️ Contributors
+
+- Edoardo Alberti <edoalberti99@gmail.com>
+
 ## v0.1.20
 
 [compare changes](https://github.com/xleddyl/nuxt-cms/compare/v0.1.19...v0.1.20)
