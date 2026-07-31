@@ -37,6 +37,12 @@ export default defineCmsConfig({
             type: 'select',
             options: ['public', 'members', 'hidden'],
          },
+         species: {
+            label: 'Species',
+            type: 'select',
+            options: ['bass', 'trout', 'pike', 'carp', 'catfish'],
+            multiple: true,
+         },
          contactEmail: { label: 'Contact email', type: 'email' },
          metadata: { label: 'Metadata', type: 'json' },
          body: {

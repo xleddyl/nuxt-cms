@@ -27,6 +27,12 @@ export function sampleConfig(): CmsConfig {
             date: { label: 'Date', type: 'date', required: true },
             featured: { label: 'Featured', type: 'boolean' },
             visibility: { label: 'Visibility', type: 'select', options: ['public', 'hidden'] },
+            species: {
+               label: 'Species',
+               type: 'select',
+               options: ['bass', 'trout', 'pike'],
+               multiple: true,
+            },
             contactEmail: { label: 'Contact email', type: 'email' },
             metadata: { label: 'Metadata', type: 'json' },
             poster: { label: 'Poster', type: 'media', mediaType: 'image' },

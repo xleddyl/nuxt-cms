@@ -11,6 +11,7 @@ describe('renderSchemaFile', () => {
       expect(out).toContain("title: text('title').notNull()")
       expect(out).toContain("slug: text('slug').unique().notNull()")
       expect(out).toContain("description: text('description', { mode: 'json' })")
+      expect(out).toContain("species: text('species', { mode: 'json' })")
       expect(out).toContain("seats: integer('seats')")
       expect(out).toContain("featured: integer('featured', { mode: 'boolean' })")
       expect(out).toContain(
@@ -27,9 +28,11 @@ describe('renderSchemaFile', () => {
       expect(out).toContain("export const events = pgTable('events'")
       expect(out).not.toContain('import { sql }')
       expect(out).toContain("description: jsonb('description')")
+      expect(out).toContain("species: jsonb('species')")
       expect(out).toContain("date: date('date', { mode: 'string' }).notNull()")
       expect(out).toContain("featured: boolean('featured')")
       expect(out).toContain("createdAt: timestamp('created_at', { mode: 'string' })")
+      expect(out).toMatch(/import \{ [^}]*\bjsonb\b[^}]* \} from 'drizzle-orm\/pg-core'/)
    })
 
    it('marks required relations as restrict by default', () => {

@@ -33,6 +33,8 @@ function filterScalarFor(field: FieldConfig): string | null {
          return null
       case 'blocks':
          return null
+      case 'select':
+         return field.multiple ? null : 'StringFilter'
       case 'relation':
          return field.cardinality === 'many-to-many' ? null : 'StringFilter'
       case 'number':
@@ -62,6 +64,7 @@ function fieldSdl(config: CmsConfig, entryName: string, key: string, field: Fiel
       return `  ${key}: ${target}${nonNull ? '!' : ''}`
    }
    if (field.type === 'media') return `  ${key}: CmsMedia`
+   if (field.type === 'select' && field.multiple) return `  ${key}: [String!]!`
    if (field.type === 'blocks')
       return `  ${key}: [${blockUnionName(entryName, key)}!]${field.required ? '!' : ''}`
    return `  ${key}: ${scalarFor(field)}${field.required ? '!' : ''}`

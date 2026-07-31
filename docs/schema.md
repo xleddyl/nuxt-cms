@@ -46,11 +46,29 @@ Every field has `label: string` and optional `required?: boolean`. Type-specific
 | `date`     | —                                                                                   | String `yyyy-mm-dd` |
 | `email`    | —                                                                                   | String              |
 | `slug`     | `from: '<fieldKey>'` (required; auto-generated from that text field)                | String (unique)     |
-| `select`   | `options: string[]` (required, unique)                                              | String (enum)       |
+| `select`   | `options: string[]` (required, unique), `multiple?: boolean`                        | String (enum) or `[String!]!` |
 | `json`     | —                                                                                   | JSON                |
 | `media`    | `mediaType?: 'image' \| 'video' \| 'file'`, `accept?: string[]`                     | CmsMedia object     |
 | `relation` | see [Relations](#relations)                                                         | related entry / list |
 | `blocks`   | `blocks: Record<name, { label, fields }>` (required)                                | array of typed blocks |
+
+## Multi-select fields
+
+`select` fields support a `multiple: true` option to allow selecting multiple options:
+
+```ts
+tags: {
+   label: 'Tags',
+   type: 'select',
+   options: ['featured', 'news', 'tutorial', 'guide'],
+   multiple: true,
+   required: true,  // when true, at least one option must be selected
+}
+```
+
+Multi-select fields are stored as JSON arrays and queried as `[String!]!` in GraphQL. They are **excluded from filtering and sorting** and **not allowed inside blocks**.
+
+When `required: true`, the field must have at least one item (an empty array is invalid).
 
 ## Relations
 
@@ -90,7 +108,7 @@ body: {
 }
 ```
 
-Block fields accept every field type **except** `slug`, `relation`, `blocks`, and `translatable`.
+Block fields accept every field type **except** `slug`, `relation`, `blocks`, `translatable`, and multi-select (`select` with `multiple: true`).
 See [Querying → Blocks](querying.md#blocks) for how to read them.
 
 ## Translatable fields
@@ -128,6 +146,7 @@ export default defineCmsConfig({
          seats: { label: 'Seats', type: 'number', integer: true },
          date: { label: 'Date', type: 'date', required: true },
          visibility: { label: 'Visibility', type: 'select', options: ['public', 'hidden'] },
+         topics: { label: 'Topics', type: 'select', options: ['tech', 'science', 'art'], multiple: true },
          poster: { label: 'Poster', type: 'media', mediaType: 'image' },
          category: { label: 'Category', type: 'relation', to: 'categories' },
          tags: { label: 'Tags', type: 'relation', to: 'tags', cardinality: 'many-to-many' },
@@ -157,6 +176,7 @@ export default defineCmsConfig({
 - `drafts` is only valid on collections.
 - `titleField` must reference a declared field.
 - `select` needs a non-empty array of unique `options`.
+- Multi-select (`select` with `multiple: true`) is not allowed inside `blocks` and is excluded from filters and sorting.
 - `slug.from` must point to a non-translatable `text` field.
 - A relation `to` must reference an existing collection.
 

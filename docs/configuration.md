@@ -8,6 +8,7 @@ so it can be provided as a `NUXT_CMS_*` environment variable instead of being ha
 
 ```ts
 cms: {
+   enabled: true,                   // false keeps only the no-op composable stubs
    configPath: 'cms.config',        // path to the content-types file (without extension)
    admin: {
       email: '',                    // prefer NUXT_CMS_ADMIN_EMAIL
@@ -37,6 +38,28 @@ cms: {
    },
 }
 ```
+
+### `enabled`
+
+Whether the CMS is active. It exists so the module can stay in `modules[]` unconditionally, which
+keeps `useCms` / `$cmsQuery` defined even in builds that ship no CMS. The value is resolved in this
+order:
+
+1. `cms.enabled` in `nuxt.config.ts`, when it is set to a boolean.
+2. The `NUXT_CMS_ENABLED` env var, when it is defined: `1` / `true` enable, `0` / `false` / empty
+   disable.
+3. Enabled.
+
+When disabled the module registers **only** stubs for `useCms` and `$cmsQuery`, with the same
+signatures as the real ones. `useCms` returns a resolved `useAsyncData` result whose `data` is
+`null`, `$cmsQuery` resolves to `{}`. Everything else is skipped: the admin pages, layout,
+components and route middleware, all server handlers and plugins, the database aliases, the Drizzle
+schema/config templates, migrations and the `nuxt-auth-utils` dependency. Components can therefore
+call the composables unconditionally and render their empty states, with no crash at build, SSR
+prerender or on the client.
+
+Note that the generated aliases (`#cms-types`, `#cms-graphql`, `#cms-tables`, `#cms-db`) are not
+registered when disabled, so application code must not import from them directly.
 
 ### `configPath`
 

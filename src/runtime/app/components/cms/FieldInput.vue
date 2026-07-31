@@ -21,6 +21,7 @@
    <CmsSelectMenu
       v-else-if="field.type === 'select'"
       v-model="selValue"
+      :multiple="field.multiple"
       :items="selectItems"
       placeholder="Select…"
       size="lg"
@@ -67,7 +68,7 @@ const props = defineProps<{
 const model = defineModel<unknown>({ required: true })
 
 const selectItems = computed(() => [
-   ...(props.field.required ? [] : [{ label: '—', value: null }]),
+   ...(props.field.required || props.field.multiple ? [] : [{ label: '—', value: null }]),
    ...(props.field.options ?? []).map((option) => ({ label: option, value: option })),
 ])
 
@@ -85,7 +86,9 @@ const str = proxy<string>(
    (v) => (v === '' ? null : v)
 )
 const strOrNull = proxy<string | null>((v) => v as string | null)
-const selValue = proxy<string | null>((v) => (v as string | null) ?? null)
+const selValue = proxy<string | string[] | null>((v) =>
+   props.field.multiple ? (v as string[] | null) ?? [] : (v as string | null) ?? null
+)
 const num = proxy<number | undefined>(
    (v) => (v as number | null) ?? undefined,
    (v) => (typeof v === 'number' && !Number.isNaN(v) ? v : null)

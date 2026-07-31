@@ -110,6 +110,7 @@ export interface FieldConfig {
    integer?: boolean
    translatable?: boolean
    options?: string[]
+   multiple?: boolean
    from?: string
    blocks?: Record<string, BlockConfig>
    mediaType?: MediaType
@@ -121,6 +122,10 @@ export interface FieldConfig {
 
 export function isTranslatableField(field: FieldConfig): boolean {
    return !!field.translatable && (field.type === 'text' || field.type === 'richtext')
+}
+
+export function isMultiSelect(field: FieldConfig): boolean {
+   return field.type === 'select' && !!field.multiple
 }
 
 export function translatableFieldKeys(entry: CmsEntry): string[] {
@@ -182,6 +187,7 @@ export interface SlugFieldInput extends FieldInputBase {
 export interface SelectFieldInput extends FieldInputBase {
    type: 'select'
    options: string[]
+   multiple?: boolean
 }
 
 export interface JsonFieldInput extends FieldInputBase {

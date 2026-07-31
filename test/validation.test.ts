@@ -13,6 +13,7 @@ function validEvent() {
       date: '2026-08-01',
       featured: true,
       visibility: 'public',
+      species: ['bass', 'trout'],
       contactEmail: 'info@example.com',
       metadata: { any: 'thing' },
       poster: '2026/07/poster.png',
@@ -61,6 +62,20 @@ describe('buildEntrySchema', () => {
 
    it('rejects values outside the select options', () => {
       expect(schema.safeParse({ ...validEvent(), visibility: 'secret' }).success).toBe(false)
+   })
+
+   it('accepts a valid multi-select array', () => {
+      expect(schema.safeParse({ ...validEvent(), species: ['pike'] }).success).toBe(true)
+   })
+
+   it('normalizes omitted multi-select fields to empty arrays', () => {
+      const entry = validEvent() as Record<string, unknown>
+      delete entry.species
+      expect(schema.parse(entry).species).toEqual([])
+   })
+
+   it('rejects a multi-select array containing an unknown option', () => {
+      expect(schema.safeParse({ ...validEvent(), species: ['shark'] }).success).toBe(false)
    })
 
    it('rejects unknown locale keys on translatable fields', () => {

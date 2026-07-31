@@ -10,6 +10,7 @@ export const valid = defineCmsConfig({
          name: { label: 'Name', type: 'text', required: true },
          slug: { label: 'Slug', type: 'slug', from: 'name' },
          kind: { label: 'Kind', type: 'select', options: ['a', 'b'] },
+         tags: { label: 'Tags', type: 'select', options: ['a', 'b'], multiple: true },
          parent: { label: 'Parent', type: 'relation', to: 'categories' },
          body: {
             label: 'Body',

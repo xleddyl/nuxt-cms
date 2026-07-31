@@ -26,4 +26,8 @@ describe('renderGraphqlSdl', () => {
       expect(sdl).toContain('tags: [Categories!]!')
       expect(sdl).toContain('poster: CmsMedia')
    })
+
+   it('renders multi-select fields as non-null string lists', () => {
+      expect(sdl).toContain('species: [String!]!')
+   })
 })

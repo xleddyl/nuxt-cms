@@ -29,6 +29,10 @@ function fieldTsType(
       return field.required && !config[field.to!]?.drafts ? target : `${target} | null`
    }
    if (field.type === 'media') return 'CmsMedia | null'
+   if (field.type === 'select' && field.multiple) {
+      const union = field.options!.map((o) => JSON.stringify(o)).join(' | ')
+      return `(${union})[]`
+   }
    if (field.type === 'blocks') {
       const union = blockUnionName(entryName, key)
       return field.required ? `${union}[]` : `${union}[] | null`

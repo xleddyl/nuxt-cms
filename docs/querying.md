@@ -15,6 +15,10 @@ const result = await $cmsQuery(`{ ... }`, variables?)
 `useCms` keys the cache on the query + variables and returns Nuxt's `AsyncData`. `$cmsQuery` throws
 if the response contains GraphQL errors.
 
+With [`cms.enabled: false`](configuration.md#enabled) both composables stay defined but become
+no-ops: `useCms().data` is `null` and `$cmsQuery()` resolves to `{}`. Callers therefore never need a
+`typeof useCms === 'function'` guard, they just render their empty state.
+
 ## Generated queries
 
 For each **collection** (e.g. `events`, GraphQL type `Events`):
@@ -49,11 +53,16 @@ homepage(locale: String): Homepage
 
 ## Media
 
-`media` fields resolve to:
+`media` fields resolve to a `CmsMedia` object:
 
 ```graphql
 poster { key url type alt folder mime size width height }
 ```
+
+- **`key`** — the object key in your S3-compatible storage (the media field stores only this).
+- **`url`** — the public URL, constructed as `publicBaseUrl` + "/" + `key`. When `publicBaseUrl` is not configured or relative (e.g. `/images`), `url` is `null` and you must construct it yourself.
+- **`type`** — derived from the mime type: `image`, `video`, or `file`.
+- Other fields — metadata set at upload time (alt text, folder, dimensions, etc.).
 
 ## Blocks
 
@@ -98,4 +107,8 @@ const { data } = useCms(`query ($cat: String!) {
 - Relations resolve nested entries (localized with the parent's `locale`). A required many-to-one
   pointing to a drafted (unpublished) entry can still resolve to `null`.
 - Query nesting depth is capped by `cms.graphql.maxDepth` (default 8); deeper queries are rejected.
+- **SSR and hydration:** `useCms` queries must be awaited at the top level of `<script setup>` (or inside `await definePageMeta()` lifecycle) to ship server-rendered data to the client. Without awaiting, the page loads without the data until hydration:
+  ```ts
+  const { data } = await useCms(`{ ... }`)
+  ```
 - In development a GraphiQL explorer is served at `/api/cms/graphql`.

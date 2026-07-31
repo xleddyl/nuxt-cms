@@ -1,6 +1,6 @@
 import { typeName } from './runtime/shared/graphql-sdl'
 import type { CmsConfig, CmsEntry, CmsI18n, FieldConfig } from './runtime/shared/index'
-import { isTranslatableField } from './runtime/shared/index'
+import { isMultiSelect, isTranslatableField } from './runtime/shared/index'
 
 export type Dialect = 'sqlite' | 'postgres'
 export type Driver = Dialect | 'libsql'
@@ -126,6 +126,9 @@ export function validateConfig(config: CmsConfig, i18n?: CmsI18n): string[] {
                   if (blockField.type === 'select' && !blockField.options?.length) {
                      errors.push(`${bfat}: select requires a non-empty options array`)
                   }
+                  if (blockField.type === 'select' && blockField.multiple) {
+                     errors.push(`${bfat}: multiple select is not supported inside blocks`)
+                  }
                }
             }
          }
@@ -218,6 +221,9 @@ function columnExpr(key: string, field: FieldConfig, dialect: Dialect): string {
       case 'json':
       case 'blocks':
          expr = jsonExpr(col, dialect)
+         break
+      case 'select':
+         expr = field.multiple ? jsonExpr(col, dialect) : `text('${col}')`
          break
       case 'slug':
          expr = `text('${col}').unique()`
@@ -318,7 +324,13 @@ export function renderSchemaFile(
       core.add(pg ? 'doublePrecision' : 'real')
    if (pg && fields.some((f) => f.type === 'date')) core.add('date')
    if (pg && fields.some((f) => f.type === 'boolean')) core.add('boolean')
-   if (pg && fields.some((f) => f.type === 'json' || f.type === 'blocks' || isTranslatableField(f)))
+   if (
+      pg &&
+      fields.some(
+         (f) =>
+            f.type === 'json' || f.type === 'blocks' || isTranslatableField(f) || isMultiSelect(f)
+      )
+   )
       core.add('jsonb')
    if (pg) core.add('timestamp')
    if (fields.some(isManyToMany)) core.add('primaryKey')

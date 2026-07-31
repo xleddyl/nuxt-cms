@@ -84,6 +84,13 @@ export function buildEntrySchema(
             : list.nullish().transform((v) => v ?? [])
          continue
       }
+      if (field.type === 'select' && field.multiple) {
+         const list = z.array(z.enum(field.options as [string, ...string[]]))
+         shape[key] = field.required
+            ? list.min(1, m.required)
+            : list.nullish().transform((v) => v ?? [])
+         continue
+      }
       if (field.type === 'blocks') {
          const list = blocksSchema(field, m)
          shape[key] = field.required

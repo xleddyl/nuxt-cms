@@ -19,6 +19,7 @@ import {
    resolvePath,
    useLogger,
 } from '@nuxt/kit'
+import type { ModuleDependencies, Nuxt } from '@nuxt/schema'
 import tailwindcss from '@tailwindcss/vite'
 import svgLoader from 'vite-svg-loader'
 import { buildSchema, introspectionFromSchema } from 'graphql'
@@ -29,8 +30,10 @@ import type { CmsConfig } from './runtime/shared/index'
 import type { Driver } from './schema-codegen'
 import { renderSchemaFile, validateConfig } from './schema-codegen'
 import { renderTypesFile } from './types-codegen'
+import { CMS_ENABLED_ENV, resolveCmsEnabled } from './enabled'
 
 export interface ModuleOptions {
+   enabled?: boolean
    configPath: string
    admin: {
       email: string
@@ -65,9 +68,13 @@ export default defineNuxtModule<ModuleOptions>({
       name: '@xleddyl/nuxt-cms',
       configKey: 'cms',
    },
-   moduleDependencies: {
-      'nuxt-auth-utils': {},
-   },
+   moduleDependencies: (nuxt: Nuxt): ModuleDependencies =>
+      resolveCmsEnabled(
+         (nuxt.options as unknown as { cms?: { enabled?: boolean } }).cms?.enabled,
+         process.env[CMS_ENABLED_ENV]
+      )
+         ? { 'nuxt-auth-utils': {} }
+         : {},
    defaults: {
       configPath: 'cms.config',
       admin: {
@@ -100,6 +107,22 @@ export default defineNuxtModule<ModuleOptions>({
    async setup(options, nuxt) {
       const resolver = createResolver(import.meta.url)
       const logger = useLogger('nuxt-cms')
+
+      if (!resolveCmsEnabled(options.enabled, process.env[CMS_ENABLED_ENV])) {
+         const stub = resolver.resolve('./runtime/app/composables/cms-query-disabled')
+         addImports([
+            { name: 'useCms', from: stub },
+            { name: '$cmsQuery', from: stub },
+         ])
+         nuxt.options.runtimeConfig.public.cms = {
+            mediaBaseUrl: options.media.publicBaseUrl,
+            i18n: options.i18n,
+         }
+         logger.info(
+            '[nuxt-cms] disabled: registering no-op useCms/$cmsQuery stubs, skipping admin, server and database setup'
+         )
+         return
+      }
 
       const configPath = await resolvePath(options.configPath, { cwd: nuxt.options.rootDir })
       nuxt.options.alias['#nuxt-cms'] = resolver.resolve('./runtime/shared/index')
@@ -246,7 +269,7 @@ export default defineNuxtModule<ModuleOptions>({
                `export default {`,
                `  dialect: '${dialect}',`,
                `  schema: '${toPosix(schemaTemplate.dst)}',`,
-               `  out: '${toPosix(migrationsDir)}',`,
+               `  out: '${toPosix(relativeMigrationsDir)}',`,
                driver === 'postgres'
                   ? `  dbCredentials: { url: process.env.NUXT_CMS_DATABASE_URL ?? '${databaseUrl}' },`
                   : driver === 'libsql'

@@ -34,12 +34,28 @@ export default defineNuxtConfig({
 
 Then declare your content types in a `cms.config.ts` at the project root with `defineCmsConfig()`.
 
+### Disabling the CMS
+
+Keep the module in `modules[]` at all times and turn it off with the `enabled` option or the
+`NUXT_CMS_ENABLED` env var. When disabled the module registers no-op `useCms` / `$cmsQuery` stubs and
+nothing else, so components can call them unconditionally and simply render their empty states:
+
+```ts
+export default defineNuxtConfig({
+   modules: ['@xleddyl/nuxt-cms'],
+   cms: { enabled: false },
+})
+```
+
+See [Configuration](docs/configuration.md#enabled) for the resolution order.
+
 ### Environment variables
 
 Every secret maps to runtime config, so it can be set as an env var instead of in `nuxt.config.ts`:
 
 | Variable | Required | Purpose |
 | --- | --- | --- |
+| `NUXT_CMS_ENABLED` | no | set to `0` / `false` to disable the CMS (default enabled) |
 | `NUXT_CMS_ADMIN_EMAIL` | yes | admin login email |
 | `NUXT_CMS_ADMIN_PASSWORD` | yes | admin login password |
 | `NUXT_SESSION_PASSWORD` | in production | session encryption key (32+ chars) |
