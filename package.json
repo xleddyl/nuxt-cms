@@ -69,7 +69,7 @@
       "test": "vitest run",
       "test:types": "vue-tsc --noEmit && cd playground && vue-tsc --noEmit",
       "format": "prettier --write \"**/*.{ts,tsx,js,jsx,md,html,json,sql,vue}\" --log-level error",
-      "release": "changelogen --release --push"
+      "release": "changelogen --release && git push origin main && git push origin v$(node -p \"require('./package.json').version\")"
    },
    "dependencies": {
       "@libsql/client": "^0.17.4",
