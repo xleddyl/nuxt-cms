@@ -1,6 +1,18 @@
 # Changelog
 
 
+## v0.1.20
+
+[compare changes](https://github.com/xleddyl/nuxt-cms/compare/v0.1.19...v0.1.20)
+
+### 🩹 Fixes
+
+- Push release tag only after branch push ([929095d](https://github.com/xleddyl/nuxt-cms/commit/929095d))
+
+### ❤️ Contributors
+
+- Edoardo Alberti <edoalberti99@gmail.com>
+
 ## v0.1.19
 
 [compare changes](https://github.com/xleddyl/nuxt-cms/compare/v0.1.18...v0.1.19)
