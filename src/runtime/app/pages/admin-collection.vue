@@ -1,5 +1,5 @@
 <template>
-   <div class="cms-rise flex flex-col gap-7">
+   <div class="cms-page" :class="{ 'is-fill': config.kind === 'collection' && !error }">
       <CmsPageHeader :kicker="kicker" :title="config.label">
          <CmsButton
             v-if="config.kind === 'single'"
@@ -7,29 +7,7 @@
             :form="FORM_ID"
             label="Save"
             :loading="saving"
-            class="rounded-full px-6"
          />
-         <div v-if="config.kind === 'collection'" class="flex items-center gap-2">
-            <CmsDropdownMenu
-               v-if="rows.length"
-               :items="columnItems"
-               :content="{ align: 'end' }"
-               :ui="{ content: 'w-48' }"
-            >
-               <CmsButton
-                  label="Columns"
-                  icon="view-columns"
-                  variant="subtle"
-                  class="rounded-full px-4"
-               />
-            </CmsDropdownMenu>
-            <CmsButton
-               label="New entry"
-               icon="plus"
-               class="rounded-full px-4"
-               @click="openCreate"
-            />
-         </div>
       </CmsPageHeader>
 
       <CmsEmptyState v-if="error" icon="exclamation-triangle" title="Could not load entries">
@@ -37,13 +15,12 @@
             label="Retry"
             icon="arrow-path"
             variant="subtle"
-            class="mt-3 rounded-full px-4"
             :loading="status === 'pending'"
             @click="reload"
          />
       </CmsEmptyState>
 
-      <div v-else-if="config.kind === 'single'" class="cms-card p-7">
+      <div v-else-if="config.kind === 'single'" class="cms-card cms-panel">
          <CmsEntryForm
             v-model="formState"
             :fields="config.fields"
@@ -54,53 +31,56 @@
       </div>
 
       <template v-else>
-         <CmsInput
-            v-if="total || searchTerm"
-            v-model="search"
-            icon="magnifying-glass"
-            placeholder="Search…"
-            class="max-w-xs"
-         />
-
-         <div v-if="rows.length" class="cms-card overflow-hidden">
-            <CmsTable
-               v-model:column-visibility="columnVisibility"
-               :data="rows"
-               :columns="columns"
-               :ui="tableUi"
-               @select="onSelect"
-            >
-               <template v-if="drafts" #status-cell="{ row }">
-                  <span
-                     class="cms-badge"
-                     :class="row.original.status === 'published' ? 'is-published' : 'is-draft'"
-                  >
-                     {{ row.original.status === 'published' ? 'Published' : 'Draft' }}
-                  </span>
-               </template>
-               <template #actions-cell="{ row }">
-                  <div class="flex justify-end">
-                     <CmsButton
-                        icon="trash"
-                        variant="ghost"
-                        color="error"
-                        size="xs"
-                        class="rounded-full"
-                        @click.stop="deleteRow(row.original)"
-                     />
-                  </div>
-               </template>
-            </CmsTable>
+         <div class="cms-toolbar">
+            <CmsInput
+               v-if="total || searchTerm"
+               v-model="search"
+               icon="magnifying-glass"
+               placeholder="Search…"
+               class="flex-1"
+            />
+            <div class="cms-toolbar-actions">
+               <CmsDropdownMenu v-if="rows.length" :items="columnItems" :content="{ align: 'end' }">
+                  <CmsButton label="Columns" icon="view-columns" variant="subtle" />
+               </CmsDropdownMenu>
+               <CmsButton label="New entry" icon="plus" @click="openCreate" />
+            </div>
          </div>
 
-         <div v-else-if="status === 'pending'" class="flex justify-center py-10">
-            <CmsIcon name="arrow-path" class="size-6 animate-spin text-(--ui-text-dimmed)" />
-         </div>
+         <CmsTable
+            v-if="rows.length"
+            v-model:column-visibility="columnVisibility"
+            :data="rows"
+            :columns="columns"
+            @select="onSelect"
+            @reorder="reorderColumns"
+         >
+            <template v-for="key in mediaKeys" #[`${key}-cell`]="{ row }" :key="key">
+               <CmsMediaThumb :value="row.original[key] as string | null" />
+            </template>
+            <template v-if="drafts" #status-cell="{ row }">
+               <CmsStatusBadge :published="row.original.status === 'published'" />
+            </template>
+            <template #actions-cell="{ row }">
+               <div class="cms-table-cell-actions">
+                  <CmsButton
+                     icon="trash"
+                     variant="ghost"
+                     color="error"
+                     size="xs"
+                     @click.stop="deleteRow(row.original)"
+                  />
+               </div>
+            </template>
+         </CmsTable>
+
+         <CmsSpinner v-else-if="status === 'pending'" />
 
          <CmsEmptyState
             v-else-if="searchTerm"
             icon="magnifying-glass"
             title="No matching entries"
+            fill
          />
 
          <CmsEmptyState
@@ -108,19 +88,21 @@
             icon="sparkles"
             title="Nothing here yet"
             body="Entries you create will show up here."
+            fill
          >
-            <CmsButton
-               label="New entry"
-               icon="plus"
-               variant="subtle"
-               class="mt-3 rounded-full px-4"
-               @click="openCreate"
-            />
+            <CmsButton label="New entry" icon="plus" variant="subtle" @click="openCreate" />
          </CmsEmptyState>
 
-         <div v-if="total > PAGE_SIZE" class="flex justify-center">
-            <CmsPagination v-model:page="page" :total="total" :items-per-page="PAGE_SIZE" />
-         </div>
+         <CmsPagination v-model:page="page" :total="total" :items-per-page="PAGE_SIZE" />
+
+         <CmsEntryDrawer
+            v-model:open="drawerOpen"
+            :collection="name"
+            :config="config"
+            :entry-id="drawerEntryId"
+            @saved="refresh"
+            @deleted="onDrawerDeleted"
+         />
       </template>
    </div>
 </template>
@@ -132,7 +114,6 @@ import {
    computed,
    createError,
    definePageMeta,
-   navigateTo,
    onMounted,
    ref,
    useFetch,
@@ -164,6 +145,7 @@ if (!config) {
    throw createError({ statusCode: 404, statusMessage: 'Unknown collection', fatal: true })
 }
 const fieldKeys = Object.keys(config.fields)
+const mediaKeys = fieldKeys.filter((key) => config.fields[key]!.type === 'media')
 const drafts = config.kind === 'collection' && !!config.drafts
 const formKeys = drafts ? [...fieldKeys, 'status'] : fieldKeys
 
@@ -187,6 +169,7 @@ watch(search, (value) => {
 interface ListResponse {
    items: Row[]
    total: number
+   relations?: Record<string, Record<string, unknown>>
 }
 
 const listQuery = computed(() => ({
@@ -205,6 +188,7 @@ function isList(value: ListResponse | Row | null | undefined): value is ListResp
 
 const rows = computed<Row[]>(() => (isList(data.value) ? data.value.items : []))
 const total = computed(() => (isList(data.value) ? data.value.total : 0))
+const relations = computed(() => (isList(data.value) ? data.value.relations ?? {} : {}))
 
 const reload = async () => {
    await refresh()
@@ -212,13 +196,6 @@ const reload = async () => {
       formState.value =
          data.value && !isList(data.value) ? pickFields(data.value as Row) : emptyState()
    }
-}
-
-const tableUi = {
-   thead: 'border-b border-(--cms-line)',
-   th: 'cms-kicker px-5 py-3 font-normal',
-   td: 'px-5 py-3.5 text-sm text-(--ui-text)',
-   tr: '__clickable hover:bg-(--cms-paper)/50',
 }
 
 const saving = ref(false)
@@ -274,11 +251,24 @@ function truncate(value: string) {
    return value.length > 60 ? `${value.slice(0, 57)}…` : value
 }
 
-function displayValue(field: FieldConfig, value: unknown): string {
+function localized(value: unknown): string {
+   const record = value as Record<string, string>
+   return record[contentI18n.defaultLocale] ?? Object.values(record)[0] ?? ''
+}
+
+function relationLabel(field: FieldConfig, key: string, id: unknown): string {
+   const title = relations.value[key]?.[String(id)]
+   if (title == null || title === '') return `#${id}`
+   const target = (cmsConfig as CmsConfig)[field.to!]
+   const titleField = target?.titleField ? target.fields[target.titleField] : undefined
+   const label = titleField && isTranslatableField(titleField) ? localized(title) : String(title)
+   return label || `#${id}`
+}
+
+function displayValue(field: FieldConfig, key: string, value: unknown): string {
    if (value == null || value === '') return ''
    if (isTranslatableField(field)) {
-      const record = value as Record<string, string>
-      const raw = record[contentI18n.defaultLocale] ?? Object.values(record)[0] ?? ''
+      const raw = localized(value)
       return truncate(field.type === 'richtext' ? stripHtml(raw) : raw)
    }
    switch (field.type) {
@@ -290,48 +280,86 @@ function displayValue(field: FieldConfig, value: unknown): string {
          return truncate(JSON.stringify(value))
       case 'blocks':
          return `${(value as unknown[]).length} ▤`
+      case 'relation': {
+         const ids = Array.isArray(value) ? value : [value]
+         if (!ids.length) return ''
+         return truncate(ids.map((id) => relationLabel(field, key, id)).join(', '))
+      }
       default:
          return truncate(String(value))
    }
 }
 
+const columnOrder = ref<string[]>([...fieldKeys])
+
+const orderedKeys = computed(() => {
+   const known = columnOrder.value.filter((key) => fieldKeys.includes(key))
+   return [...known, ...fieldKeys.filter((key) => !known.includes(key))]
+})
+
 const columns = computed(() => [
-   ...fieldKeys.map((key) => ({
+   ...orderedKeys.value.map((key) => ({
       id: key,
-      accessorFn: (row: Row) => displayValue(config.fields[key]!, row[key]),
+      accessorFn: (row: Row) => displayValue(config.fields[key]!, key, row[key]),
       header: config.fields[key]!.label,
+      reorderable: true,
    })),
    ...(drafts ? [{ accessorKey: 'status', header: 'Status' }] : []),
    { id: 'actions', header: '' },
 ])
 
+function reorderColumns(from: string, to: string) {
+   const next = [...orderedKeys.value]
+   const fromIndex = next.indexOf(from)
+   const toIndex = next.indexOf(to)
+   if (fromIndex === -1 || toIndex === -1) return
+   next.splice(toIndex, 0, ...next.splice(fromIndex, 1))
+   columnOrder.value = next
+}
+
 const DEFAULT_VISIBLE_COLUMNS = 4
 const columnStorageKey = `cms:columns:${name}`
+const columnOrderStorageKey = `cms:column-order:${name}`
 const columnVisibility = ref<Record<string, boolean>>(
    Object.fromEntries(fieldKeys.map((key, index) => [key, index < DEFAULT_VISIBLE_COLUMNS]))
 )
 
-onMounted(() => {
-   const stored = localStorage.getItem(columnStorageKey)
-   if (stored) {
-      try {
-         const parsed = JSON.parse(stored) as Record<string, boolean>
-         columnVisibility.value = Object.fromEntries(
-            fieldKeys.map((key) => [key, parsed[key] ?? columnVisibility.value[key] ?? false])
-         )
-      } catch {
-         // ignore malformed storage
-      }
+function readStored<T>(key: string): T | undefined {
+   const stored = localStorage.getItem(key)
+   if (!stored) return undefined
+   try {
+      return JSON.parse(stored) as T
+   } catch {
+      return undefined
    }
+}
+
+onMounted(() => {
+   const storedVisibility = readStored<Record<string, boolean>>(columnStorageKey)
+   if (storedVisibility) {
+      columnVisibility.value = Object.fromEntries(
+         fieldKeys.map((key) => [
+            key,
+            storedVisibility[key] ?? columnVisibility.value[key] ?? false,
+         ])
+      )
+   }
+
+   const storedOrder = readStored<string[]>(columnOrderStorageKey)
+   if (Array.isArray(storedOrder)) {
+      columnOrder.value = storedOrder.filter((key) => typeof key === 'string')
+   }
+
    watch(
       columnVisibility,
       (value) => localStorage.setItem(columnStorageKey, JSON.stringify(value)),
       { deep: true }
    )
+   watch(orderedKeys, (value) => localStorage.setItem(columnOrderStorageKey, JSON.stringify(value)))
 })
 
 const columnItems = computed(() =>
-   fieldKeys.map((key) => ({
+   orderedKeys.value.map((key) => ({
       label: config.fields[key]!.label,
       type: 'checkbox' as const,
       checked: columnVisibility.value[key],
@@ -344,18 +372,24 @@ const columnItems = computed(() =>
    }))
 )
 
-const kicker = computed(() =>
-   config.kind === 'single'
-      ? 'single document'
-      : `collection · ${total.value} ${total.value === 1 ? 'entry' : 'entries'}`
-)
+const kicker = config.kind === 'single' ? 'single document' : undefined
+
+const drawerOpen = ref(false)
+const drawerEntryId = ref<string | null>(null)
 
 function onSelect(_event: Event, row: { original: Row }) {
-   navigateTo(`/cms/${name}/${row.original.id}`)
+   drawerEntryId.value = String(row.original.id)
+   drawerOpen.value = true
 }
 
 function openCreate() {
-   navigateTo(`/cms/${name}/new`)
+   drawerEntryId.value = null
+   drawerOpen.value = true
+}
+
+async function onDrawerDeleted() {
+   if (rows.value.length === 1 && page.value > 1) page.value -= 1
+   else await refresh()
 }
 
 const confirmAction = useCmsConfirm()

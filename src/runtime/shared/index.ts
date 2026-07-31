@@ -244,14 +244,24 @@ export type CmsFieldInput =
    | RelationFieldInput
    | BlocksFieldInput
 
-export interface CmsEntryInput {
+interface CmsEntryInputBase {
    id: string
    label: string
-   kind: 'collection' | 'single'
-   titleField?: string
    drafts?: boolean
    fields: Record<string, CmsFieldInput>
 }
+
+export interface CmsCollectionInput extends CmsEntryInputBase {
+   kind: 'collection'
+   titleField: string
+}
+
+export interface CmsSingleInput extends CmsEntryInputBase {
+   kind: 'single'
+   titleField?: never
+}
+
+export type CmsEntryInput = CmsCollectionInput | CmsSingleInput
 
 export type CmsConfigInput = Record<string, CmsEntryInput>
 

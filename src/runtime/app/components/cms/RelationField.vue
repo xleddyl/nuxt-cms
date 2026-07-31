@@ -8,8 +8,6 @@
       :items="options"
       value-key="value"
       :loading="loading"
-      size="lg"
-      class="w-full"
    />
    <CmsSelectMenu
       v-else
@@ -19,8 +17,6 @@
       :items="singleItems"
       value-key="value"
       :loading="loading"
-      size="lg"
-      class="w-full"
    />
 </template>
 

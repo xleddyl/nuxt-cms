@@ -1,42 +1,24 @@
 <template>
-   <div class="cms-rise flex flex-col gap-7">
+   <div class="cms-page">
       <CmsPageHeader :kicker="config.label" :title="isNew ? 'New entry' : 'Edit entry'">
          <template v-if="drafts" #badge>
-            <span
-               class="cms-badge pointer-events-none"
-               :class="published ? 'is-published' : 'is-draft'"
-            >
-               {{ published ? 'Published' : 'Draft' }}
-            </span>
+            <CmsStatusBadge :published="published" />
          </template>
-         <div class="flex items-center gap-3">
-            <CmsButton
-               label="Back"
-               icon="arrow-left"
-               variant="subtle"
-               class="rounded-full px-4"
-               @click="goBack"
-            />
-            <CmsButton
-               type="submit"
-               :form="FORM_ID"
-               label="Save"
-               :loading="saving"
-               class="rounded-full px-6"
-            />
+         <div class="cms-actions">
+            <CmsButton label="Back" icon="arrow-left" variant="subtle" @click="goBack" />
+            <CmsButton type="submit" :form="FORM_ID" label="Save" :loading="saving" />
             <CmsButton
                v-if="drafts"
                type="submit"
                :form="FORM_ID"
                :label="published ? 'Make draft' : 'Publish'"
                :loading="saving"
-               class="rounded-full px-6"
                @click="togglePublished"
             />
          </div>
       </CmsPageHeader>
 
-      <div class="cms-card p-7">
+      <div class="cms-card cms-panel">
          <CmsEntryForm
             v-model="formState"
             :fields="config.fields"

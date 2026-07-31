@@ -13,7 +13,7 @@ export default defineCmsConfig({
       id: '<entryKey>',            // must equal the object key
       label: 'Human label',
       kind: 'collection' | 'single',
-      titleField: 'name',          // collections: field shown as the entry title in admin
+      titleField: 'name',          // collections: required, field used as the entry title
       drafts: true,                // optional; adds draft/published status
       fields: { <fieldKey>: <FieldInput>, ... },
    },
@@ -25,7 +25,10 @@ export default defineCmsConfig({
 - **`collection`** — many rows, with list + detail + count queries.
 - **`single`** — one document, with a single query.
 - `id` (equal to the object key), `label`, `kind` and `fields` are required.
-- `titleField` (collections) picks the field shown as the entry title in the admin list.
+- `titleField` is **required on collections** and not allowed on singles. It picks the field used as
+  the entry title: in the admin list, in relation pickers, and to render relation columns (a
+  relation cell shows the target's title instead of its id). It must be a `text`, `slug`, `email`,
+  `number`, `date` or single `select` field, and it is the field the admin search matches on.
 - `drafts: true` (collections only) adds a draft/published status. **The public GraphQL API returns
   published rows only** — drafts are invisible to it.
 - `id`, `createdAt` (collections only) and `updatedAt` are managed automatically — never declare
@@ -174,7 +177,8 @@ export default defineCmsConfig({
   `login`, `media`, `graphql`, …) and so are the automatic columns (`id`, `status`, `created_at`,
   `updated_at`).
 - `drafts` is only valid on collections.
-- `titleField` must reference a declared field.
+- `titleField` is required on collections, must reference a declared field, and that field must be a
+  `text`, `slug`, `email`, `number`, `date` or single `select`.
 - `select` needs a non-empty array of unique `options`.
 - Multi-select (`select` with `multiple: true`) is not allowed inside `blocks` and is excluded from filters and sorting.
 - `slug.from` must point to a non-translatable `text` field.

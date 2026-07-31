@@ -3,11 +3,7 @@
       <div class="contents" @click="open = !open">
          <slot />
       </div>
-      <div
-         v-if="open"
-         class="cms-menu"
-         :class="[content?.align === 'end' && 'align-end', ui?.content]"
-      >
+      <div v-if="open" class="cms-menu" :class="{ 'align-end': content?.align === 'end' }">
          <button
             v-for="(item, index) in items"
             :key="index"
@@ -40,7 +36,6 @@ interface MenuItem {
 defineProps<{
    items: MenuItem[]
    content?: { align?: 'start' | 'end' }
-   ui?: { content?: string }
 }>()
 
 const open = ref(false)

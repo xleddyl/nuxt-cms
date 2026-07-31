@@ -1,5 +1,5 @@
 <template>
-   <form :id="id" @submit.prevent="onSubmit">
+   <form :id="id" class="cms-form" @submit.prevent="onSubmit">
       <slot />
    </form>
 </template>

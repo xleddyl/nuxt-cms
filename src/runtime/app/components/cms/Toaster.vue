@@ -11,18 +11,18 @@
                   'is-error': toast.color === 'error',
                }"
             >
-               <div class="flex items-start gap-3">
+               <div class="cms-toast-row">
                   <div class="min-w-0 flex-1">
-                     <p class="text-sm font-medium text-(--ui-text-highlighted)">
+                     <p class="cms-toast-title">
                         {{ toast.title }}
                      </p>
-                     <p v-if="toast.description" class="mt-0.5 text-sm text-(--ui-text-muted)">
+                     <p v-if="toast.description" class="cms-toast-description">
                         {{ toast.description }}
                      </p>
                   </div>
                   <button
                      type="button"
-                     class="shrink-0 text-(--ui-text-dimmed) hover:text-(--ui-text)"
+                     class="cms-toast-dismiss"
                      aria-label="Dismiss"
                      @click="remove(toast.id)"
                   >

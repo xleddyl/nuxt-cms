@@ -4,15 +4,15 @@
            once teleported outside the admin layout root. -->
       <div v-if="open" class="cms-scope">
          <div class="cms-overlay" @click.self="close">
-            <div class="cms-modal cms-rise" :class="ui?.content" role="dialog" aria-modal="true">
+            <div
+               class="cms-modal cms-rise"
+               :class="size ? `is-${size}` : undefined"
+               role="dialog"
+               aria-modal="true"
+            >
                <div v-if="title || $slots.header" class="cms-modal-header">
                   <slot name="header">
-                     <h2
-                        :class="
-                           ui?.title ??
-                           'cms-display text-xl font-medium text-(--ui-text-highlighted)'
-                        "
-                     >
+                     <h2 class="cms-title cms-title-sm">
                         {{ title }}
                      </h2>
                   </slot>
@@ -31,7 +31,7 @@ import { onBeforeUnmount, watch } from '#imports'
 
 defineProps<{
    title?: string
-   ui?: { content?: string; title?: string }
+   size?: 'sm' | 'lg'
 }>()
 
 const open = defineModel<boolean>('open', { default: false })

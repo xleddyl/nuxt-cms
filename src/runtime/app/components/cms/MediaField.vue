@@ -1,30 +1,22 @@
 <template>
-   <div v-if="model" class="cms-card overflow-hidden">
-      <img
-         v-if="kind === 'image' && url"
-         :src="url"
-         alt=""
-         class="max-h-56 w-full bg-(--cms-field) object-cover"
-      />
+   <div v-if="model" class="cms-card cms-media-tile">
+      <img v-if="kind === 'image' && url" :src="url" alt="" class="cms-media-preview-large" />
       <video
          v-else-if="kind === 'video' && url"
          :src="url"
          controls
          preload="metadata"
          playsinline
-         class="max-h-56 w-full bg-(--cms-field)"
+         class="cms-media-preview-large"
       />
-      <div class="flex items-center gap-2.5 px-4 py-3">
-         <CmsIcon :name="icon" class="size-4 shrink-0 text-(--ui-text-dimmed)" />
-         <span class="min-w-0 flex-1 truncate text-sm font-medium" :title="model">{{
-            mediaFilename(model)
-         }}</span>
+      <div class="cms-media-bar">
+         <CmsIcon :name="icon" class="cms-media-bar-icon size-4" />
+         <span class="cms-media-bar-name" :title="model">{{ mediaFilename(model) }}</span>
          <CmsButton
             icon="photo"
             variant="ghost"
             color="neutral"
             size="xs"
-            class="rounded-full"
             aria-label="Change"
             @click="openGallery"
          />
@@ -33,7 +25,6 @@
             variant="ghost"
             color="neutral"
             size="xs"
-            class="rounded-full"
             aria-label="Remove"
             @click="clear"
          />
@@ -45,7 +36,7 @@
       <span class="text-sm font-medium">Choose from the gallery</span>
    </button>
 
-   <CmsModal v-model:open="galleryOpen" title="Media" :ui="CMS_MODAL_UI">
+   <CmsModal v-model:open="galleryOpen" title="Media" size="lg">
       <template #body>
          <CmsMediaGallery selectable :media-type="mediaType" :accept="accept" @select="onSelect" />
       </template>
@@ -57,7 +48,6 @@ import type { MediaType } from '#nuxt-cms'
 import { computed, ref } from '#imports'
 import { mediaFilename, mediaIconFor, mediaPublicUrl, mediaTypeForKey } from '#nuxt-cms'
 import { useCmsRuntime } from '../../composables/cms-runtime'
-import { CMS_MODAL_UI } from '../../utils/ui'
 
 defineProps<{
    mediaType?: MediaType

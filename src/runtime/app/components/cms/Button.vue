@@ -8,7 +8,7 @@
          `cms-btn-${size ?? 'md'}`,
          `cms-btn-${color ?? 'primary'}`,
          `cms-btn-${variant ?? 'solid'}`,
-         { 'is-block': block },
+         { 'is-block': block, 'is-icon': iconOnly },
       ]"
    >
       <CmsIcon
@@ -28,7 +28,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from '#imports'
+import { computed, useSlots } from '#imports'
 
 const props = defineProps<{
    label?: string
@@ -47,4 +47,8 @@ const props = defineProps<{
 
 // The spinner takes over the icon slot while loading, keeping its leading/trailing position.
 const iconName = computed(() => (props.loading ? 'arrow-path' : props.icon))
+
+const slots = useSlots()
+
+const iconOnly = computed(() => !props.label && !props.block && !slots.default)
 </script>

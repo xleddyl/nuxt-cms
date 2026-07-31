@@ -4,7 +4,7 @@ import { defineEventHandler, getValidatedQuery } from 'h3'
 import { z } from 'zod'
 import { useDb } from '#cms-db'
 import { getRegistryEntry, idColumn, tableColumns } from '../utils/registry'
-import { attachManyToMany } from '../utils/relations'
+import { attachManyToMany, relationTitles } from '../utils/relations'
 import { requireAdmin } from '../utils/require-admin'
 
 const querySchema = z.object({
@@ -64,6 +64,12 @@ export default defineEventHandler(async (event) => {
       ? db.select({ total: count() }).from(table).where(where)
       : db.select({ total: count() }).from(table))
 
-   if (!light) await attachManyToMany(db, name, entry, items)
-   return { items, total: counted?.total ?? 0 }
+   if (light) return { items, total: counted?.total ?? 0, relations: {} }
+
+   await attachManyToMany(db, name, entry, items)
+   return {
+      items,
+      total: counted?.total ?? 0,
+      relations: await relationTitles(db, entry, items),
+   }
 })

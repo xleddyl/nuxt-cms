@@ -8,6 +8,7 @@ export type Driver = Dialect | 'libsql'
 const IDENTIFIER = /^[a-z_]\w*$/i
 const RESERVED_ENTRY_KEYS = ['admin', 'auth', 'login', 'media', 'graphql', 'cms_media']
 const RESERVED_COLUMNS = ['id', 'status', 'created_at', 'updated_at']
+const TITLE_FIELD_TYPES = ['text', 'slug', 'email', 'number', 'date', 'select']
 const RESERVED_TYPE_NAMES = [
    'Query',
    'Mutation',
@@ -64,8 +65,20 @@ export function validateConfig(config: CmsConfig, i18n?: CmsI18n): string[] {
          errors.push(`${at}: drafts are only supported on collections`)
       if (!entry.fields || !Object.keys(entry.fields).length)
          errors.push(`${at}: fields must not be empty`)
-      if (entry.titleField && !entry.fields?.[entry.titleField])
-         errors.push(`${at}: titleField '${entry.titleField}' is not a declared field`)
+      if (entry.kind === 'collection' && !entry.titleField) {
+         errors.push(`${at}: titleField is required on collections`)
+      } else if (entry.titleField) {
+         const titleField = entry.fields?.[entry.titleField]
+         if (!titleField) {
+            errors.push(`${at}: titleField '${entry.titleField}' is not a declared field`)
+         } else if (!TITLE_FIELD_TYPES.includes(titleField.type) || isMultiSelect(titleField)) {
+            errors.push(
+               `${at}: titleField '${entry.titleField}' must be one of ${TITLE_FIELD_TYPES.join(
+                  ', '
+               )} (got '${titleField.type}')`
+            )
+         }
+      }
 
       const columnNames = new Set<string>()
       for (const [key, field] of Object.entries(entry.fields ?? {})) {

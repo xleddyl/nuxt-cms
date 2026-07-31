@@ -47,6 +47,20 @@ describe('validateConfig', () => {
       expect(errors.some((e) => e.includes("titleField 'missing'"))).toBe(true)
    })
 
+   it('rejects a collection without a titleField', () => {
+      const config = sampleConfig()
+      delete config.categories!.titleField
+      const errors = validateConfig(config, I18N)
+      expect(errors.some((e) => e.includes('titleField is required on collections'))).toBe(true)
+   })
+
+   it('rejects a titleField of an undisplayable type', () => {
+      const config = sampleConfig()
+      config.events!.titleField = 'description'
+      const errors = validateConfig(config, I18N)
+      expect(errors.some((e) => e.includes("titleField 'description' must be one of"))).toBe(true)
+   })
+
    it('rejects select without options', () => {
       const config = sampleConfig()
       config.events!.fields.visibility = { label: 'Visibility', type: 'select', options: [] }

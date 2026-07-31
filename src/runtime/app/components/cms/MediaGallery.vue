@@ -6,7 +6,7 @@
       body="Set cms.media in nuxt.config to enable uploads."
    />
 
-   <div v-else class="flex flex-col gap-5">
+   <div v-else class="cms-media-gallery">
       <CmsMediaUpload
          v-if="!readOnly"
          :multiple="!selectable"
@@ -16,7 +16,7 @@
          @uploaded="onUploaded"
       />
 
-      <div v-if="!restricted && items.length" class="flex flex-wrap items-center gap-1">
+      <div v-if="!restricted && items.length" class="cms-media-filters">
          <button
             v-for="f in filters"
             :key="f"
@@ -28,7 +28,7 @@
             {{ filterLabels[f] }}
          </button>
          <template v-if="folders.length">
-            <span class="mx-1 h-4 w-px bg-(--cms-line)" />
+            <span class="cms-media-filter-separator" />
             <button
                v-for="f in folders"
                :key="f"
@@ -37,40 +37,29 @@
                :class="{ 'is-active': folder === f }"
                @click="folder = folder === f ? null : f"
             >
-               <CmsIcon name="folder" class="mr-1 size-3" />{{ f }}
+               <CmsIcon name="folder" class="size-3" />{{ f }}
             </button>
          </template>
       </div>
 
-      <div v-if="loading" class="flex justify-center py-10">
-         <CmsIcon name="arrow-path" class="size-6 animate-spin text-(--ui-text-dimmed)" />
-      </div>
+      <CmsSpinner v-if="loading" />
 
-      <div
-         v-else-if="visible.length"
-         class="grid gap-4"
-         :class="
-            selectable ? 'grid-cols-2 sm:grid-cols-3' : 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-4'
-         "
-      >
+      <div v-else-if="visible.length" class="cms-media-grid" :class="{ 'is-compact': selectable }">
          <component
             :is="selectable ? 'button' : 'div'"
-            v-for="item in visible"
+            v-for="item in paged"
             :key="item.key"
             :type="selectable ? 'button' : undefined"
-            class="cms-card group overflow-hidden text-left"
-            :class="{
-               'hover:border-(--cms-line-strong)': selectable,
-            }"
+            class="cms-card cms-media-tile"
+            :class="{ 'is-selectable': selectable }"
             @click="selectable && emit('select', { key: item.key, url: item.url })"
          >
-            <div class="relative flex aspect-square items-center justify-center bg-(--cms-field)">
+            <div class="cms-media-preview">
                <img
                   v-if="item.type === 'image' && item.url"
                   :src="item.url"
                   alt=""
                   loading="lazy"
-                  class="absolute inset-0 size-full object-cover"
                />
                <video
                   v-else-if="item.type === 'video' && item.url"
@@ -78,35 +67,17 @@
                   preload="metadata"
                   muted
                   playsinline
-                  class="absolute inset-0 size-full object-cover"
                />
-               <CmsIcon
-                  v-else
-                  :name="mediaIconFor(item.type)"
-                  class="size-8 text-(--ui-text-dimmed)"
-               />
-               <div
-                  v-if="!selectable"
-                  class="absolute top-2 right-2 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100"
-               >
+               <CmsIcon v-else :name="mediaIconFor(item.type)" class="size-8" />
+               <div v-if="!selectable" class="cms-media-actions">
                   <CmsButton
                      v-if="!readOnly"
                      icon="pencil-square"
                      size="xs"
                      color="neutral"
                      variant="solid"
-                     class="rounded-full"
                      aria-label="Edit details"
                      @click="openEdit(item)"
-                  />
-                  <CmsButton
-                     icon="document-duplicate"
-                     size="xs"
-                     color="neutral"
-                     variant="solid"
-                     class="rounded-full"
-                     aria-label="Copy URL"
-                     @click="copy(item)"
                   />
                   <CmsButton
                      v-if="!readOnly"
@@ -114,34 +85,27 @@
                      size="xs"
                      color="error"
                      variant="solid"
-                     class="rounded-full"
                      aria-label="Delete"
                      @click="remove(item)"
                   />
                </div>
-            </div>
-            <div class="flex flex-col gap-1 px-3.5 py-2.5">
-               <div class="truncate text-sm font-medium" :title="item.key">
-                  {{ mediaFilename(item.key) }}
-               </div>
-               <div class="cms-kicker">
+               <div class="cms-media-info">
                   {{ extension(item.key) }} · {{ formatSize(item.size)
                   }}<template v-if="item.width && item.height">
                      · {{ item.width }}×{{ item.height }}
                   </template>
                </div>
             </div>
+            <div class="cms-media-meta">
+               <div class="cms-media-name" :title="item.key">
+                  {{ mediaFilename(item.key) }}
+               </div>
+            </div>
          </component>
       </div>
 
       <CmsEmptyState v-else-if="loadError" icon="exclamation-triangle" title="Could not load media">
-         <CmsButton
-            label="Retry"
-            icon="arrow-path"
-            variant="subtle"
-            class="mt-3 rounded-full px-4"
-            @click="reload"
-         />
+         <CmsButton label="Retry" icon="arrow-path" variant="subtle" @click="reload" />
       </CmsEmptyState>
 
       <CmsEmptyState
@@ -151,11 +115,18 @@
          :body="readOnly ? 'No media registered.' : 'Files you upload will show up here.'"
       />
 
+      <CmsPagination
+         v-if="!loading && visible.length"
+         v-model:page="page"
+         :total="visible.length"
+         :items-per-page="PAGE_SIZE"
+      />
+
       <CmsModal
          v-if="!readOnly"
          :open="!!editing"
          :title="editing ? mediaFilename(editing.key) : ''"
-         :ui="CMS_MODAL_UI"
+         size="lg"
          @update:open="
             (open: boolean) => {
                if (!open) editing = null
@@ -163,20 +134,15 @@
          "
       >
          <template #body>
-            <div class="flex flex-col gap-4">
+            <div class="cms-form">
                <CmsFormField label="Alt text">
-                  <CmsInput v-model="editAlt" size="lg" class="w-full" />
+                  <CmsInput v-model="editAlt" />
                </CmsFormField>
                <CmsFormField label="Folder">
-                  <CmsInput v-model="editFolder" size="lg" class="w-full" />
+                  <CmsInput v-model="editFolder" />
                </CmsFormField>
-               <div class="flex justify-end">
-                  <CmsButton
-                     label="Save"
-                     :loading="editSaving"
-                     class="rounded-full px-6"
-                     @click="saveEdit"
-                  />
+               <div class="cms-actions is-end">
+                  <CmsButton label="Save" :loading="editSaving" @click="saveEdit" />
                </div>
             </div>
          </template>
@@ -186,12 +152,12 @@
 
 <script setup lang="ts">
 import type { MediaItem, MediaType } from '#nuxt-cms'
-import { computed, onMounted, ref } from '#imports'
+import { computed, onMounted, ref, watch } from '#imports'
 import { MEDIA_TYPES, mediaFilename, mediaIconFor } from '#nuxt-cms'
 import { useCmsConfirm } from '../../composables/cms-confirm'
 import { useCmsRuntime } from '../../composables/cms-runtime'
 import { useCmsToast } from '../../composables/cms-toast'
-import { CMS_MODAL_UI, errorMessage } from '../../utils/ui'
+import { errorMessage } from '../../utils/ui'
 
 const filterLabels: Record<string, string> = {
    all: 'All',
@@ -222,8 +188,8 @@ async function reload() {
    loading.value = true
    errorCode.value = null
    try {
-      const page = await $fetch<{ items: MediaItem[] }>(endpoint)
-      items.value = page.items
+      const result = await $fetch<{ items: MediaItem[] }>(endpoint)
+      items.value = result.items
    } catch (err) {
       errorCode.value = (err as { statusCode?: number }).statusCode ?? 500
    } finally {
@@ -253,6 +219,22 @@ const visible = computed(() => {
    if (folder.value) list = list.filter((item) => item.folder === folder.value)
    return list
 })
+
+const PAGE_SIZE = 24
+const page = ref(1)
+
+watch([filter, folder], () => {
+   page.value = 1
+})
+
+watch(visible, (list) => {
+   const pageCount = Math.max(1, Math.ceil(list.length / PAGE_SIZE))
+   if (page.value > pageCount) page.value = pageCount
+})
+
+const paged = computed(() =>
+   visible.value.slice((page.value - 1) * PAGE_SIZE, page.value * PAGE_SIZE)
+)
 
 function onUploaded(uploaded: MediaItem[]) {
    if (props.selectable && uploaded[0]) {
@@ -312,15 +294,6 @@ function formatSize(bytes: number | null) {
       if (value < 1024) return `${value < 10 ? value.toFixed(1) : Math.round(value)} ${unit}`
    }
    return `${Math.round(value / 1024)} TB`
-}
-
-async function copy(item: MediaItem) {
-   try {
-      await navigator.clipboard.writeText(item.url ?? item.key)
-      toast.add({ title: 'Copied', color: 'success' })
-   } catch {
-      toast.add({ title: 'Copy failed', color: 'error' })
-   }
 }
 
 const confirmAction = useCmsConfirm()

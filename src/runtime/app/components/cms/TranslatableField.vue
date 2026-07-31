@@ -1,56 +1,21 @@
 <template>
-   <div class="flex flex-col gap-2">
-      <div v-if="i18n.locales.length > 1" class="flex items-center gap-1">
-         <CmsButton
-            v-for="locale in i18n.locales"
-            :key="locale"
-            size="xs"
-            :variant="active === locale ? 'soft' : 'ghost'"
-            color="neutral"
-            class="font-mono uppercase"
-            @click="
-               () => {
-                  active = locale
-               }
-            "
-         >
-            {{ locale }}
-            <span
-               class="size-1.5 rounded-full"
-               :class="hasContent(locale) ? 'bg-(--cms-fern)' : 'bg-(--cms-line)'"
-            />
-         </CmsButton>
-         <span
-            v-if="props.field.required && active === i18n.defaultLocale"
-            class="ml-auto font-mono text-sm text-(--ui-text-muted)"
-         >
-            {{ i18n.defaultLocale }} *
-         </span>
-      </div>
-      <CmsRichTextField v-if="props.field.type === 'richtext'" v-model="current" />
-      <CmsTextarea
-         v-else-if="props.field.textarea"
-         v-model="current"
-         :rows="4"
-         size="lg"
-         class="w-full"
-      />
-      <CmsInput v-else v-model="current" size="lg" class="w-full" />
-   </div>
+   <CmsRichTextField v-if="props.field.type === 'richtext'" v-model="current" />
+   <CmsTextarea v-else-if="props.field.textarea" v-model="current" :rows="8" />
+   <CmsInput v-else v-model="current" />
 </template>
 
 <script setup lang="ts">
 import type { FieldConfig } from '#nuxt-cms'
-import { computed, ref } from '#imports'
+import { computed } from '#imports'
 import { useCmsRuntime } from '../../composables/cms-runtime'
 
-const props = defineProps<{ field: FieldConfig }>()
+const props = defineProps<{ field: FieldConfig; locale?: string }>()
 
 const model = defineModel<Record<string, string> | null>({ required: true })
 
 const { i18n } = useCmsRuntime()
 
-const active = ref(i18n.defaultLocale)
+const active = computed(() => props.locale ?? i18n.defaultLocale)
 
 const current = computed({
    get: () => model.value?.[active.value] ?? '',
@@ -62,8 +27,4 @@ const current = computed({
       model.value = Object.keys(next).length ? next : null
    },
 })
-
-function hasContent(locale: string) {
-   return !!model.value?.[locale]?.trim()
-}
 </script>

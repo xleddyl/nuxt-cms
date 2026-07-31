@@ -59,7 +59,6 @@
                :key="blockKey"
                :label="blockField.label"
                :required="blockField.required"
-               :ui="CMS_FIELD_UI"
             >
                <CmsFieldInput
                   :model-value="item[blockKey]"
@@ -69,13 +68,8 @@
             </CmsFormField>
          </template>
       </div>
-      <CmsDropdownMenu :items="addItems">
-         <CmsButton
-            label="Add block"
-            icon="plus"
-            variant="subtle"
-            class="self-start rounded-full px-4"
-         />
+      <CmsDropdownMenu :items="addItems" class="self-start">
+         <CmsButton label="Add block" icon="plus" variant="subtle" />
       </CmsDropdownMenu>
    </div>
 </template>
@@ -83,7 +77,6 @@
 <script setup lang="ts">
 import type { FieldConfig } from '#nuxt-cms'
 import { computed, ref } from '#imports'
-import { CMS_FIELD_UI } from '../../utils/ui'
 
 const props = defineProps<{ field: FieldConfig }>()
 

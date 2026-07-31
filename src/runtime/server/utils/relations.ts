@@ -1,6 +1,7 @@
 import { asc, eq, inArray } from 'drizzle-orm'
 import type { AnySQLiteColumn, SQLiteTable } from 'drizzle-orm/sqlite-core'
 import { createError } from 'h3'
+import cmsConfig from '#cms-config'
 import type { CmsDb } from '#cms-db'
 import { useDb } from '#cms-db'
 import * as cmsTables from '#cms-tables'
@@ -81,6 +82,43 @@ export async function saveManyToMany(
             .values(ids.map((targetId, position) => ({ sourceId, targetId, position })))
       }
    }
+}
+
+export async function relationTitles(
+   db: CmsDb,
+   entry: CmsEntry,
+   rows: Row[]
+): Promise<Record<string, Record<string, unknown>>> {
+   const config = cmsConfig as Record<string, CmsEntry>
+   const titles: Record<string, Record<string, unknown>> = {}
+
+   for (const [key, field] of Object.entries(entry.fields)) {
+      if (field.type !== 'relation' || !field.to) continue
+      const targetEntry = config[field.to]
+      const target = resolveTable(field.to)
+      if (!targetEntry?.titleField || !target) continue
+
+      const ids = new Set<string>()
+      for (const row of rows) {
+         const value = row[key]
+         for (const id of Array.isArray(value) ? value : [value]) {
+            if (id != null) ids.add(String(id))
+         }
+      }
+      if (!ids.size) continue
+
+      const columns = tableColumns(target)
+      const titleColumn = columns[targetEntry.titleField]
+      if (!titleColumn) continue
+
+      const found = (await db
+         .select({ id: columns.id!, title: titleColumn })
+         .from(target)
+         .where(inArray(columns.id!, [...ids]))) as { id: string; title: unknown }[]
+      titles[key] = Object.fromEntries(found.map((row) => [row.id, row.title]))
+   }
+
+   return titles
 }
 
 export async function attachManyToMany<T extends Row>(

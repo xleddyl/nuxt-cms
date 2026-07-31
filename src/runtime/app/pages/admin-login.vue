@@ -1,50 +1,31 @@
 <template>
-   <div class="cms-scope cms-canvas cms-grain flex min-h-screen items-center justify-center p-6">
-      <div class="flex w-full max-w-sm flex-col gap-8">
-         <header class="cms-rise flex flex-col items-center gap-3 text-center">
-            <h1 class="cms-display text-4xl font-medium text-(--ui-text-highlighted)">
-               Welcome back<span class="text-(--cms-fern)">.</span>
-            </h1>
-            <p class="text-sm text-(--ui-text-muted)">Sign in to manage your content.</p>
+   <div class="cms-scope cms-canvas cms-grain cms-auth">
+      <div class="cms-auth-panel">
+         <header class="cms-auth-header cms-rise">
+            <h1 class="cms-title cms-title-lg">Welcome back<span class="cms-accent">.</span></h1>
+            <p class="cms-subtitle">Sign in to manage your content.</p>
          </header>
 
-         <div class="cms-card cms-rise p-6 sm:p-7" style="animation-delay: 90ms">
-            <CmsForm :state="state" class="flex flex-col gap-5" @submit="login">
-               <CmsAlert
-                  v-if="error"
-                  color="error"
-                  variant="subtle"
-                  :title="error"
-                  class="rounded-xl"
-               />
-               <CmsFormField label="Email" name="email" required :ui="CMS_FIELD_UI">
+         <div class="cms-card cms-auth-card cms-rise is-delayed">
+            <CmsForm :state="state" @submit="login">
+               <CmsAlert v-if="error" color="error" variant="subtle" :title="error" />
+               <CmsFormField label="Email" name="email" required>
                   <CmsInput
                      v-model="state.email"
                      type="email"
-                     size="lg"
                      autocomplete="username"
                      placeholder="you@example.com"
-                     class="w-full"
                   />
                </CmsFormField>
-               <CmsFormField label="Password" name="password" required :ui="CMS_FIELD_UI">
+               <CmsFormField label="Password" name="password" required>
                   <CmsInput
                      v-model="state.password"
                      type="password"
-                     size="lg"
                      autocomplete="current-password"
                      placeholder="••••••••"
-                     class="w-full"
                   />
                </CmsFormField>
-               <CmsButton
-                  type="submit"
-                  label="Sign in"
-                  size="lg"
-                  block
-                  :loading="loading"
-                  class="mt-1 rounded-full"
-               />
+               <CmsButton type="submit" label="Sign in" block :loading="loading" />
             </CmsForm>
          </div>
       </div>
@@ -53,7 +34,7 @@
 
 <script setup lang="ts">
 import { definePageMeta, navigateTo, ref, useUserSession } from '#imports'
-import { CMS_FIELD_UI, errorMessage } from '../utils/ui'
+import { errorMessage } from '../utils/ui'
 
 definePageMeta({ layout: false })
 

@@ -1,6 +1,10 @@
 <template>
    <div ref="root" class="relative w-full">
-      <div class="cms-field cms-field-lg flex flex-wrap items-center gap-1" @click="focusInput">
+      <div
+         class="cms-field flex flex-wrap items-center gap-1"
+         :class="`cms-field-${size ?? 'md'}`"
+         @click="focusInput"
+      >
          <template v-if="multiple">
             <span v-for="value in modelArray" :key="value" class="cms-tag">
                {{ labelFor(value) }}
@@ -15,7 +19,7 @@
          </template>
          <input
             ref="input"
-            class="min-w-16 flex-1 bg-transparent text-(--ui-text-highlighted) outline-none"
+            class="cms-selectmenu-input"
             :value="displayValue"
             :placeholder="placeholder"
             @input="onInput"
@@ -24,8 +28,19 @@
          <CmsIcon
             v-if="loading"
             name="arrow-path"
-            class="ml-auto size-4 shrink-0 animate-spin text-(--ui-text-dimmed)"
+            class="cms-selectmenu-affix ml-auto size-4 animate-spin"
          />
+         <button
+            v-else
+            type="button"
+            tabindex="-1"
+            aria-label="Toggle options"
+            class="cms-select-chevron cms-selectmenu-affix ml-auto"
+            :class="{ 'is-open': open }"
+            @click.stop="toggleOpen"
+         >
+            <CmsIcon name="chevron-down" class="size-4" />
+         </button>
       </div>
       <div v-if="open" class="cms-selectmenu-panel">
          <button
@@ -132,6 +147,12 @@ function isSelected(value: unknown) {
 
 function focusInput() {
    input.value?.focus()
+   open.value = true
+}
+
+function toggleOpen() {
+   if (open.value) open.value = false
+   else focusInput()
 }
 
 function toggle(value: string) {

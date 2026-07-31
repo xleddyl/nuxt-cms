@@ -1,15 +1,14 @@
 <template>
-   <div class="flex flex-col gap-1">
+   <div class="cms-form-field">
       <CmsTextarea
          v-model="text"
          :rows="6"
-         size="lg"
-         class="w-full font-mono"
+         class="font-mono"
          :color="invalid ? 'error' : undefined"
          @blur="commit"
          @update:model-value="invalid = false"
       />
-      <p v-if="invalid" class="text-sm text-(--ui-error)">Invalid JSON</p>
+      <p v-if="invalid" class="cms-form-error">Invalid JSON</p>
    </div>
 </template>
 

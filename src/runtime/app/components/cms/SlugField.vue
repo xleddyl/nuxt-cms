@@ -1,8 +1,7 @@
 <template>
    <CmsInput
       :model-value="(model ?? '') as string"
-      size="lg"
-      class="w-full font-mono"
+      class="font-mono"
       @update:model-value="
          (v) => {
             model = (v as string) || null

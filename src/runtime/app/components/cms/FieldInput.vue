@@ -1,22 +1,15 @@
 <template>
-   <CmsTranslatableField v-if="isTranslatableField(field)" v-model="translatable" :field="field" />
+   <CmsTranslatableField
+      v-if="isTranslatableField(field)"
+      v-model="translatable"
+      :field="field"
+      :locale="locale"
+   />
    <CmsBlocksField v-else-if="field.type === 'blocks'" v-model="blocksValue" :field="field" />
    <CmsRichTextField v-else-if="field.type === 'richtext'" v-model="strOrNull" />
-   <CmsTextarea
-      v-else-if="field.type === 'text' && field.textarea"
-      v-model="str"
-      :rows="4"
-      size="lg"
-      class="w-full"
-   />
-   <CmsInput v-else-if="field.type === 'text'" v-model="str" size="lg" class="w-full" />
-   <CmsInput
-      v-else-if="field.type === 'email'"
-      v-model="str"
-      type="email"
-      size="lg"
-      class="w-full"
-   />
+   <CmsTextarea v-else-if="field.type === 'text' && field.textarea" v-model="str" :rows="8" />
+   <CmsInput v-else-if="field.type === 'text'" v-model="str" />
+   <CmsInput v-else-if="field.type === 'email'" v-model="str" type="email" />
    <CmsSlugField v-else-if="field.type === 'slug'" v-model="strOrNull" :source="slugSource" />
    <CmsSelectMenu
       v-else-if="field.type === 'select'"
@@ -24,8 +17,6 @@
       :multiple="field.multiple"
       :items="selectItems"
       placeholder="Select…"
-      size="lg"
-      class="w-full"
    />
    <CmsSwitch
       v-else-if="field.type === 'boolean'"
@@ -37,14 +28,8 @@
       "
    />
    <CmsJsonField v-else-if="field.type === 'json'" v-model="jsonValue" />
-   <CmsInput
-      v-else-if="field.type === 'number'"
-      v-model.number="num"
-      type="number"
-      size="lg"
-      class="w-full"
-   />
-   <CmsInput v-else-if="field.type === 'date'" v-model="str" type="date" size="lg" class="w-full" />
+   <CmsInput v-else-if="field.type === 'number'" v-model.number="num" type="number" />
+   <CmsInput v-else-if="field.type === 'date'" v-model="str" type="date" />
    <CmsRelationField
       v-else-if="field.type === 'relation'"
       v-model="relationValue"
@@ -63,6 +48,7 @@ import { computed } from '#imports'
 const props = defineProps<{
    field: FieldConfig
    slugSource?: string | null
+   locale?: string
 }>()
 
 const model = defineModel<unknown>({ required: true })

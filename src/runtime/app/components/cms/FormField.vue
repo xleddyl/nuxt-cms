@@ -1,10 +1,13 @@
 <template>
-   <div class="flex flex-col gap-1.5">
-      <label v-if="label" :class="ui?.label ?? 'text-sm font-medium text-(--ui-text-toned)'">
-         {{ label }}<span v-if="required" class="text-(--ui-error)"> *</span>
-      </label>
+   <div class="cms-form-field">
+      <div v-if="label || $slots['label-actions']" class="cms-form-label-row">
+         <label v-if="label" class="cms-form-label">
+            {{ label }}<span v-if="required" class="cms-form-required"> *</span>
+         </label>
+         <slot name="label-actions" />
+      </div>
       <slot />
-      <p v-if="error" class="text-sm text-(--ui-error)">{{ error }}</p>
+      <p v-if="error" class="cms-form-error">{{ error }}</p>
    </div>
 </template>
 
@@ -16,7 +19,6 @@ const props = defineProps<{
    label?: string
    name?: string
    required?: boolean
-   ui?: { label?: string }
 }>()
 
 const errors = inject(CMS_FORM_ERRORS, null)

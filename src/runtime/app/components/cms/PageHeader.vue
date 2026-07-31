@@ -1,11 +1,11 @@
 <template>
-   <header class="flex items-end justify-between gap-4">
-      <div class="flex flex-col gap-2">
-         <div class="cms-kicker">
+   <header class="cms-page-header">
+      <div class="cms-page-heading">
+         <div v-if="kicker" class="cms-kicker">
             {{ kicker }}
          </div>
-         <div class="flex items-center gap-3">
-            <h1 class="cms-display text-[32px]/none font-medium text-(--ui-text-highlighted)">
+         <div class="cms-actions">
+            <h1 class="cms-title cms-title-md">
                {{ title }}
             </h1>
             <slot name="badge" />
@@ -17,7 +17,7 @@
 
 <script setup lang="ts">
 defineProps<{
-   kicker: string
+   kicker?: string
    title: string
 }>()
 </script>
