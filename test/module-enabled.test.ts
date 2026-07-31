@@ -3,7 +3,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 const kit = vi.hoisted(() => ({
    addComponentsDir: vi.fn(),
    addImports: vi.fn(),
-   addLayout: vi.fn(),
    addRouteMiddleware: vi.fn(),
    addServerHandler: vi.fn(),
    addServerPlugin: vi.fn(),
@@ -92,7 +91,7 @@ describe('module setup when disabled', () => {
       expect(kit.addServerPlugin).not.toHaveBeenCalled()
       expect(kit.extendPages).not.toHaveBeenCalled()
       expect(kit.addComponentsDir).not.toHaveBeenCalled()
-      expect(kit.addLayout).not.toHaveBeenCalled()
+      expect(nuxt.hook).not.toHaveBeenCalledWith('app:templates', expect.any(Function))
       expect(kit.addRouteMiddleware).not.toHaveBeenCalled()
       expect(kit.addTemplate).not.toHaveBeenCalled()
       expect(kit.addTypeTemplate).not.toHaveBeenCalled()
@@ -148,8 +147,16 @@ describe('module setup when enabled', () => {
       expect(kit.addServerPlugin).toHaveBeenCalled()
       expect(kit.extendPages).toHaveBeenCalled()
       expect(kit.addComponentsDir).toHaveBeenCalled()
-      expect(kit.addLayout).toHaveBeenCalled()
       expect(kit.addTemplate).toHaveBeenCalled()
+
+      const templatesHook = nuxt.hook.mock.calls.find((call) => call[0] === 'app:templates')
+      expect(templatesHook).toBeDefined()
+      const app = { layouts: {} as AnyRecord }
+      templatesHook![1](app)
+      expect(app.layouts['cms-admin']).toEqual({
+         name: 'cms-admin',
+         file: expect.stringContaining('layouts/cms-admin.vue'),
+      })
 
       const routes = kit.addServerHandler.mock.calls.map((call) => (call[0] as AnyRecord).route)
       expect(routes).toContain('/api/cms/graphql')

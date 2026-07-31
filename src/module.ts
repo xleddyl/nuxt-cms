@@ -6,7 +6,6 @@ import { fileURLToPath } from 'node:url'
 import {
    addComponentsDir,
    addImports,
-   addLayout,
    addRouteMiddleware,
    addServerHandler,
    addServerPlugin,
@@ -379,7 +378,12 @@ export default defineNuxtModule<ModuleOptions>({
       addVitePlugin(svgLoader({ defaultImport: 'url', svgoConfig: { plugins: ['prefixIds'] } }))
       nuxt.options.css.push(resolver.resolve('./runtime/assets/main.css'))
 
-      addLayout({ src: resolver.resolve('./runtime/app/layouts/cms-admin.vue'), write: true }, 'cms-admin')
+      nuxt.hook('app:templates', (app) => {
+         app.layouts['cms-admin'] = {
+            name: 'cms-admin',
+            file: resolver.resolve('./runtime/app/layouts/cms-admin.vue'),
+         }
+      })
       addComponentsDir({ path: resolver.resolve('./runtime/app/components') })
       addRouteMiddleware({
          name: 'cms-auth',
