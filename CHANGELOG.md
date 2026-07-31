@@ -1,6 +1,18 @@
 # Changelog
 
 
+## v0.1.23
+
+[compare changes](https://github.com/xleddyl/nuxt-cms/compare/v0.1.22...v0.1.23)
+
+### 🚀 Enhancements
+
+- Add media.storage option with read-only local mode ([7d10615](https://github.com/xleddyl/nuxt-cms/commit/7d10615))
+
+### ❤️ Contributors
+
+- Edoardo Alberti <edoalberti99@gmail.com>
+
 ## v0.1.22
 
 [compare changes](https://github.com/xleddyl/nuxt-cms/compare/v0.1.21...v0.1.22)
