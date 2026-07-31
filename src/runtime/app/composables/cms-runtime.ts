@@ -1,6 +1,10 @@
 import { useRuntimeConfig } from '#imports'
-import type { CmsI18n } from '../../shared/index'
+import type { CmsI18n, MediaStorageMode } from '../../shared/index'
 
 export function useCmsRuntime() {
-   return useRuntimeConfig().public.cms as unknown as { mediaBaseUrl: string; i18n: CmsI18n }
+   return useRuntimeConfig().public.cms as unknown as {
+      mediaBaseUrl: string
+      mediaStorage: MediaStorageMode
+      i18n: CmsI18n
+   }
 }

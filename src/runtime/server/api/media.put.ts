@@ -4,7 +4,7 @@ import { z } from 'zod'
 import { useDb } from '#cms-db'
 import { cms_media } from '#cms-tables'
 import type { MediaItem } from '../../shared/index'
-import { toMediaItem, useMediaConfig } from '../utils/media'
+import { assertMediaWritable, toMediaItem, useMediaConfig } from '../utils/media'
 import { requireAdmin } from '../utils/require-admin'
 
 const bodySchema = z.object({
@@ -15,7 +15,8 @@ const bodySchema = z.object({
 
 export default defineEventHandler(async (event): Promise<MediaItem> => {
    await requireAdmin(event)
-   const { publicUrl } = useMediaConfig(event)
+   const { media, publicUrl } = useMediaConfig(event)
+   assertMediaWritable(media)
    const body = await readValidatedBody(event, bodySchema.parse)
 
    const updates: { alt?: string | null; folder?: string | null } = {}

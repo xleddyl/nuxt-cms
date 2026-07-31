@@ -106,6 +106,19 @@ describe('module setup when disabled', () => {
       expect(nuxt.options.runtimeConfig.cms).toBeUndefined()
    })
 
+   it('still exposes the media storage mode on the public runtime config', async () => {
+      const nuxt = createNuxt()
+      await moduleDefinition.setup(
+         options({
+            enabled: false,
+            media: { ...moduleDefinition.defaults.media, storage: 'local' },
+         }),
+         nuxt
+      )
+
+      expect(nuxt.options.runtimeConfig.public.cms.mediaStorage).toBe('local')
+   })
+
    it('is disabled by the NUXT_CMS_ENABLED env variable alone', async () => {
       process.env.NUXT_CMS_ENABLED = '0'
       const nuxt = createNuxt()
@@ -193,5 +206,28 @@ describe('module setup when enabled', () => {
 
       expect(kit.addServerHandler).toHaveBeenCalled()
       expect(nuxt.options.alias['#cms-db']).toBeDefined()
+   })
+
+   it('defaults media.storage to s3', () => {
+      expect(moduleDefinition.defaults.media.storage).toBe('s3')
+   })
+
+   it('writes the default s3 storage mode into the server and public runtime config', async () => {
+      const nuxt = createNuxt()
+      await moduleDefinition.setup(options(), nuxt)
+
+      expect(nuxt.options.runtimeConfig.cms.media.storage).toBe('s3')
+      expect(nuxt.options.runtimeConfig.public.cms.mediaStorage).toBe('s3')
+   })
+
+   it('carries a local storage mode into the server and public runtime config', async () => {
+      const nuxt = createNuxt()
+      await moduleDefinition.setup(
+         options({ media: { ...moduleDefinition.defaults.media, storage: 'local' } }),
+         nuxt
+      )
+
+      expect(nuxt.options.runtimeConfig.cms.media.storage).toBe('local')
+      expect(nuxt.options.runtimeConfig.public.cms.mediaStorage).toBe('local')
    })
 })

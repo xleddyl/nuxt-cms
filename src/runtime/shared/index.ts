@@ -22,6 +22,8 @@ export interface CmsI18n {
    defaultLocale: string
 }
 
+export type MediaStorageMode = 's3' | 'local'
+
 export const MEDIA_TYPES = ['image', 'video', 'file'] as const
 
 export type MediaType = (typeof MEDIA_TYPES)[number]

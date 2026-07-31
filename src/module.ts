@@ -25,7 +25,7 @@ import { buildSchema, introspectionFromSchema } from 'graphql'
 import { minifyIntrospection, outputIntrospectionFile } from 'gql.tada/internal'
 import { createJiti } from 'jiti'
 import { renderGraphqlSdl } from './runtime/shared/graphql-sdl'
-import type { CmsConfig } from './runtime/shared/index'
+import type { CmsConfig, MediaStorageMode } from './runtime/shared/index'
 import type { Driver } from './schema-codegen'
 import { renderSchemaFile, validateConfig } from './schema-codegen'
 import { renderTypesFile } from './types-codegen'
@@ -45,6 +45,7 @@ export interface ModuleOptions {
       authToken?: string
    }
    media: {
+      storage: MediaStorageMode
       endpoint: string
       region: string
       bucket: string
@@ -87,6 +88,7 @@ export default defineNuxtModule<ModuleOptions>({
          authToken: '',
       },
       media: {
+         storage: 's3',
          endpoint: '',
          region: 'auto',
          bucket: '',
@@ -115,6 +117,7 @@ export default defineNuxtModule<ModuleOptions>({
          ])
          nuxt.options.runtimeConfig.public.cms = {
             mediaBaseUrl: options.media.publicBaseUrl,
+            mediaStorage: options.media.storage,
             i18n: options.i18n,
          }
          logger.info(
@@ -333,6 +336,7 @@ export default defineNuxtModule<ModuleOptions>({
             ...((existingConfig.graphql as Record<string, unknown>) ?? {}),
          },
          media: {
+            storage: options.media.storage,
             endpoint: options.media.endpoint,
             region: options.media.region,
             bucket: options.media.bucket,
@@ -344,6 +348,7 @@ export default defineNuxtModule<ModuleOptions>({
       }
       nuxt.options.runtimeConfig.public.cms = {
          mediaBaseUrl: options.media.publicBaseUrl,
+         mediaStorage: options.media.storage,
          i18n: options.i18n,
       }
 

@@ -8,6 +8,7 @@
 
    <div v-else class="flex flex-col gap-5">
       <CmsMediaUpload
+         v-if="!readOnly"
          :multiple="!selectable"
          :dense="selectable"
          :media-type="mediaType"
@@ -89,6 +90,7 @@
                   class="absolute top-2 right-2 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100"
                >
                   <CmsButton
+                     v-if="!readOnly"
                      icon="pencil-square"
                      size="xs"
                      color="neutral"
@@ -107,6 +109,7 @@
                      @click="copy(item)"
                   />
                   <CmsButton
+                     v-if="!readOnly"
                      icon="trash"
                      size="xs"
                      color="error"
@@ -144,11 +147,12 @@
       <CmsEmptyState
          v-else
          icon="photo"
-         title="No media yet"
-         body="Files you upload will show up here."
+         :title="readOnly ? 'No media' : 'No media yet'"
+         :body="readOnly ? 'No media registered.' : 'Files you upload will show up here.'"
       />
 
       <CmsModal
+         v-if="!readOnly"
          :open="!!editing"
          :title="editing ? mediaFilename(editing.key) : ''"
          :ui="CMS_MODAL_UI"
@@ -185,6 +189,7 @@ import type { MediaItem, MediaType } from '#nuxt-cms'
 import { computed, onMounted, ref } from '#imports'
 import { MEDIA_TYPES, mediaFilename, mediaIconFor } from '#nuxt-cms'
 import { useCmsConfirm } from '../../composables/cms-confirm'
+import { useCmsRuntime } from '../../composables/cms-runtime'
 import { useCmsToast } from '../../composables/cms-toast'
 import { CMS_MODAL_UI, errorMessage } from '../../utils/ui'
 
@@ -204,6 +209,8 @@ const props = defineProps<{
 const emit = defineEmits<{ select: [item: { key: string; url: string | null }] }>()
 
 const toast = useCmsToast()
+const runtime = useCmsRuntime()
+const readOnly = computed(() => runtime.mediaStorage === 'local')
 
 const endpoint = '/api/cms/admin/media'
 

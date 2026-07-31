@@ -21,6 +21,7 @@ cms: {
       authToken: '',                // libsql/Turso auth token (remote only)
    },
    media: {
+      storage: 's3',                // 's3' | 'local' — 'local' is a read-only media library
       endpoint: '',                 // S3-compatible endpoint
       region: 'auto',
       bucket: '',
@@ -75,8 +76,10 @@ together. See [Database](database.md) for the details of each driver.
 
 ### `media`
 
-S3-compatible object storage for the media library. When it is not configured, media endpoints
-return `501` and media fields simply cannot be uploaded to. See [Media](media.md).
+S3-compatible object storage for the media library by default (`storage: 's3'`). When it is not
+configured, media endpoints return `501` and media fields simply cannot be uploaded to. Set
+`storage: 'local'` to make the media library read-only, listing files served from `publicBaseUrl`
+by the host app instead of a bucket — no S3 config needed. See [Media](media.md).
 
 ### `i18n`
 

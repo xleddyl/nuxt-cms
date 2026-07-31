@@ -2,10 +2,11 @@ import type { H3Event } from 'h3'
 import { AwsClient } from 'aws4fetch'
 import { createError } from 'h3'
 import { useRuntimeConfig } from '#imports'
-import type { MediaItem } from '../../shared/index'
+import type { MediaItem, MediaStorageMode } from '../../shared/index'
 import { mediaPublicUrl, mediaTypeFor } from '../../shared/index'
 
 interface MediaConfig {
+   storage: MediaStorageMode
    endpoint: string
    region: string
    bucket: string
@@ -49,15 +50,29 @@ export function encodeKey(key: string) {
    return key.split('/').map(encodeURIComponent).join('/')
 }
 
-export function useMediaConfig(event: H3Event) {
-   const config = useRuntimeConfig(event)
-   const media = config.cms.media as MediaConfig
+export function assertMediaConfigured(media: MediaConfig) {
+   if (media.storage !== 's3') return
    if (!media.endpoint || !media.bucket || !media.accessKeyId || !media.secretAccessKey) {
       throw createError({
          statusCode: 501,
          statusMessage: 'Media storage is not configured (cms.media in nuxt.config)',
       })
    }
+}
+
+export function assertMediaWritable(media: MediaConfig) {
+   if (media.storage === 'local') {
+      throw createError({
+         statusCode: 501,
+         statusMessage: 'Media storage is local; the media library is read-only',
+      })
+   }
+}
+
+export function useMediaConfig(event: H3Event) {
+   const config = useRuntimeConfig(event)
+   const media = config.cms.media as MediaConfig
+   assertMediaConfigured(media)
    const { mediaBaseUrl } = config.public.cms as { mediaBaseUrl: string }
    const publicUrl = (key: string) => mediaPublicUrl(mediaBaseUrl, key)
    return { media, publicUrl }
@@ -65,6 +80,7 @@ export function useMediaConfig(event: H3Event) {
 
 export function useMediaStorage(event: H3Event) {
    const { media, publicUrl } = useMediaConfig(event)
+   assertMediaWritable(media)
 
    const client = new AwsClient({
       accessKeyId: media.accessKeyId,

@@ -13,7 +13,7 @@ deploy.
 4. [Schema](schema.md) — `defineCmsConfig`, entries, field types, relations, blocks, i18n.
 5. [Querying content](querying.md) — GraphQL API, `useCms` / `$cmsQuery`, filters, sorting, pagination.
 6. [Admin panel & security](admin.md) — pages, authentication, sessions, admin REST API.
-7. [Media](media.md) — S3-compatible storage, upload flow, allowed file types.
+7. [Media](media.md) — S3-compatible storage or read-only local mode, upload flow, allowed file types.
 
 ## How it works in one paragraph
 

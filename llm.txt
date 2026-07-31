@@ -14,7 +14,7 @@ export default defineNuxtConfig({
 })
 ```
 
-Admin credentials come from `NUXT_CMS_ADMIN_EMAIL` / `NUXT_CMS_ADMIN_PASSWORD` env vars. Media (S3-compatible) is configured under `cms.media` or `NUXT_CMS_MEDIA_*` env vars. Remote DB credentials (postgres/libsql) can be overridden at runtime with `NUXT_CMS_DATABASE_URL` / `NUXT_CMS_DATABASE_AUTH_TOKEN` (libsql only).
+Admin credentials come from `NUXT_CMS_ADMIN_EMAIL` / `NUXT_CMS_ADMIN_PASSWORD` env vars. Media is configured under `cms.media` or `NUXT_CMS_MEDIA_*` env vars: `storage: 's3'` (default) uses S3-compatible object storage; `storage: 'local'` makes the media library read-only (no uploads/edits/deletes, listing only), serving files from `publicBaseUrl` instead of a bucket. Remote DB credentials (postgres/libsql) can be overridden at runtime with `NUXT_CMS_DATABASE_URL` / `NUXT_CMS_DATABASE_AUTH_TOKEN` (libsql only).
 
 ## 2. Schema definition (cms.config.ts, project root)
 
