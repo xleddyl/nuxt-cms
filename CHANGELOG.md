@@ -1,6 +1,18 @@
 # Changelog
 
 
+## v0.1.24
+
+[compare changes](https://github.com/xleddyl/nuxt-cms/compare/v0.1.23...v0.1.24)
+
+### 🚀 Enhancements
+
+- Ui improvements ([61d206d](https://github.com/xleddyl/nuxt-cms/commit/61d206d))
+
+### ❤️ Contributors
+
+- Edoardo Alberti <edoalberti99@gmail.com>
+
 ## v0.1.23
 
 [compare changes](https://github.com/xleddyl/nuxt-cms/compare/v0.1.22...v0.1.23)
