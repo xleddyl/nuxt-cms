@@ -1,6 +1,18 @@
 # Changelog
 
 
+## v0.1.25
+
+[compare changes](https://github.com/xleddyl/nuxt-cms/compare/v0.1.24...v0.1.25)
+
+### 🩹 Fixes
+
+- Inline tailwind theme tokens so host app css is never overridden ([4306b3f](https://github.com/xleddyl/nuxt-cms/commit/4306b3f))
+
+### ❤️ Contributors
+
+- Edoardo Alberti <edoalberti99@gmail.com>
+
 ## v0.1.24
 
 [compare changes](https://github.com/xleddyl/nuxt-cms/compare/v0.1.23...v0.1.24)
