@@ -1,6 +1,18 @@
 # Changelog
 
 
+## v0.1.26
+
+[compare changes](https://github.com/xleddyl/nuxt-cms/compare/v0.1.25...v0.1.26)
+
+### 🚀 Enhancements
+
+- Sync local media library with the public media folder on server start ([027df53](https://github.com/xleddyl/nuxt-cms/commit/027df53))
+
+### ❤️ Contributors
+
+- Edoardo Alberti <edoalberti99@gmail.com>
+
 ## v0.1.25
 
 [compare changes](https://github.com/xleddyl/nuxt-cms/compare/v0.1.24...v0.1.25)
