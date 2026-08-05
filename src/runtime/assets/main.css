@@ -2,10 +2,12 @@
 
 /* Vendored Tailwind, scoped to the CMS admin panel only.
    Preflight (the global reset) and utilities are confined under .cms-scope so
-   installing this module never restyles the host app. source(none) disables
+   installing this module never restyles the host app. theme(inline) inlines token
+   values into our utilities instead of emitting :root variables, so the host's own
+   Tailwind theme (fonts, colors) is never overridden. source(none) disables
    automatic content detection; @source below limits scanning to our own files. */
 @layer theme, base, components, utilities;
-@import 'tailwindcss/theme.css' layer(theme);
+@import 'tailwindcss/theme.css' layer(theme) theme(inline);
 .cms-scope {
    @import 'tailwindcss/preflight.css' layer(base);
    @import 'tailwindcss/utilities.css' layer(utilities) source(none);
