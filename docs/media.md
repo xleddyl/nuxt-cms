@@ -8,9 +8,10 @@ Media (images, video, documents) can be stored two ways, selected with `cms.medi
   configured, media endpoints return `501` and `media` fields cannot be uploaded to.
 - **`'local'`** — the media library is **read-only**: no bucket, no credentials, no uploads. Files
   are expected to already live wherever `publicBaseUrl` points (e.g. your app's own `public/`
-  directory, or any URL you serve yourself), and the admin gallery only lists/selects rows already
-  registered in the database. Use this when you manage files outside the CMS (deploy-time assets,
-  a separate pipeline, …) but still want to pick them from the media field picker.
+  directory, or any URL you serve yourself). When `publicBaseUrl` is a root-relative path, the
+  library is **synced from disk at server startup**, so the gallery always mirrors the folder. Use
+  this when you manage files outside the CMS (deploy-time assets, a separate pipeline, …) but still
+  want to pick them from the media field picker.
 
 ## Configuration
 
@@ -41,13 +42,16 @@ NUXT_PUBLIC_CMS_MEDIA_BASE_URL=https://cdn.example.com
 ```
 
 - **`storage`** — `'s3'` (default) enables uploads against object storage; `'local'` turns the
-  media library read-only and skips the S3 connection checks entirely (`endpoint` / `bucket` /
-  `accessKeyId` / `secretAccessKey` are ignored).
+  media library read-only, syncs it from the folder `publicBaseUrl` points to at server startup, and
+  skips the S3 connection checks entirely (`endpoint` / `bucket` / `accessKeyId` /
+  `secretAccessKey` are ignored).
 - **`endpoint` / `bucket` / `accessKeyId` / `secretAccessKey`** — S3 connection, required when
   `storage` is `'s3'`.
 - **`publicBaseUrl`** (`NUXT_PUBLIC_CMS_MEDIA_BASE_URL`) — the public base URL prepended to object
   keys to build the URL returned in queries. Point it at your bucket's public domain or CDN in
-  `'s3'` mode, or at wherever your host app serves the files from in `'local'` mode.
+  `'s3'` mode, or at wherever your host app serves the files from in `'local'` mode. A root-relative
+  value (`/images`) in `'local'` mode also selects the folder synced at startup
+  (`<rootDir>/public/images`).
 - **`region`** — S3 region (default `auto`, which suits R2). Unused in `'local'` mode.
 - **`presignExpiry`** — how many seconds a presigned upload URL stays valid (default 600). Unused
   in `'local'` mode.
@@ -62,8 +66,40 @@ With `storage: 'local'`:
   and the edit/delete actions, and the corresponding server endpoints (`presign`, `POST`, `PUT`,
   `DELETE`) respond with `501` ("Media storage is local; the media library is read-only") if called
   directly.
-- Rows still need to exist in the `cms_media` table for editors to see and pick them; how they get
-  there (a seed script, a migration, a separate admin tool) is up to your app.
+- The library is filled automatically by the **startup sync** below: you add and remove files in the
+  folder, the CMS keeps `cms_media` in step.
+
+### Startup sync from disk
+
+When `storage` is `'local'` **and** `publicBaseUrl` is a root-relative path (e.g. `/images`), the
+module resolves it against the app's public directory (`<rootDir>/public/images`) and, every time the
+Nitro server boots, reconciles the `cms_media` table with what is actually on disk:
+
+- files present on disk but missing from the table are **inserted** (mime from the extension, size
+  from the file, width/height read from the file header for PNG, JPEG, WebP and GIF, `folder` set to
+  the parent directory, `alt` left empty);
+- rows whose file no longer exists are **deleted**;
+- rows whose stored size differs from the file's current size are **refreshed** (mime, size,
+  width/height).
+
+Details worth knowing:
+
+- The `key` of a row is the file path relative to that folder, POSIX-style: `hero.webp`,
+  `waters/avisio-river.webp`. Sub-directories are walked recursively.
+- Only known media extensions are picked up: `jpg`, `jpeg`, `png`, `webp`, `avif`, `gif`, `svg`,
+  `mp4`, `webm`, `mov`, `mp3`, `wav`, `ogg`, `m4a`, `pdf`. Dotfiles (`.gitkeep`, `.DS_Store`, …) and
+  anything else are ignored.
+- `alt` is **never** touched after the initial insert, so alt texts written straight into the
+  database survive the sync as long as the file keeps its name.
+- The sync runs after the migrations plugin and is fully guarded: if the folder does not exist (a
+  serverless build that ships no public assets) or the database is unreachable, it logs a line and
+  the server starts as usual. It ends with one summary line:
+  `[nuxt-cms] Local media sync: 2 added, 1 removed, 0 updated (…)`.
+- It is skipped entirely when `publicBaseUrl` is an absolute `http(s)` URL, since the files are then
+  served by someone else and the module cannot see them. In that setup, populate `cms_media`
+  yourself (a seed script, a migration, a separate tool).
+- The database itself can still be remote (Postgres, Turso/libSQL) while the files are local; the
+  sync goes through the normal database layer.
 
 ## Upload flow (`'s3'` mode)
 

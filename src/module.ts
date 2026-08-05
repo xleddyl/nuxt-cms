@@ -294,6 +294,8 @@ export default defineNuxtModule<ModuleOptions>({
          )
       )
 
+      addServerPlugin(resolver.resolve('./runtime/server/plugins/media-sync-local'))
+
       if (!nuxt.options.dev) {
          addServerPlugin(resolver.resolve('./runtime/server/plugins/session-check'))
       }
@@ -321,6 +323,12 @@ export default defineNuxtModule<ModuleOptions>({
          })
       }
 
+      const publicDir = resolve(nuxt.options.rootDir, nuxt.options.dir?.public ?? 'public')
+      const mediaLocalRoot =
+         options.media.storage === 'local' && options.media.publicBaseUrl.startsWith('/')
+            ? join(publicDir, ...options.media.publicBaseUrl.split('/').filter(Boolean))
+            : ''
+
       const existingConfig = (nuxt.options.runtimeConfig.cms ?? {}) as Record<string, unknown>
       nuxt.options.runtimeConfig.cms = {
          adminEmail: options.admin.email,
@@ -343,6 +351,7 @@ export default defineNuxtModule<ModuleOptions>({
             presignExpiry: options.media.presignExpiry,
             accessKeyId: options.media.accessKeyId,
             secretAccessKey: options.media.secretAccessKey,
+            localRoot: mediaLocalRoot,
             ...((existingConfig.media as Record<string, unknown>) ?? {}),
          },
       }

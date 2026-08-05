@@ -1,3 +1,4 @@
+import { resolve } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const kit = vi.hoisted(() => ({
@@ -40,6 +41,7 @@ function createNuxt() {
    return {
       options: {
          rootDir: '/virtual/root',
+         dir: { public: 'public' },
          dev: false,
          alias: {} as Record<string, string>,
          watch: [] as string[],
@@ -229,5 +231,52 @@ describe('module setup when enabled', () => {
 
       expect(nuxt.options.runtimeConfig.cms.media.storage).toBe('local')
       expect(nuxt.options.runtimeConfig.public.cms.mediaStorage).toBe('local')
+   })
+
+   it('resolves the local media root from a root-relative publicBaseUrl', async () => {
+      const nuxt = createNuxt()
+      await moduleDefinition.setup(
+         options({
+            media: {
+               ...moduleDefinition.defaults.media,
+               storage: 'local',
+               publicBaseUrl: '/images/',
+            },
+         }),
+         nuxt
+      )
+
+      expect(nuxt.options.runtimeConfig.cms.media.localRoot).toBe(
+         resolve('/virtual/root', 'public', 'images')
+      )
+   })
+
+   it.each([
+      ['s3', 'https://cdn.example.com'],
+      ['s3', '/images'],
+      ['local', 'https://cdn.example.com'],
+      ['local', ''],
+   ])(
+      'leaves the local media root empty for %s storage with %s',
+      async (storage, publicBaseUrl) => {
+         const nuxt = createNuxt()
+         await moduleDefinition.setup(
+            options({ media: { ...moduleDefinition.defaults.media, storage, publicBaseUrl } }),
+            nuxt
+         )
+
+         expect(nuxt.options.runtimeConfig.cms.media.localRoot).toBe('')
+      }
+   )
+
+   it('registers the local media sync plugin after the migration plugin', async () => {
+      const nuxt = createNuxt()
+      await moduleDefinition.setup(options(), nuxt)
+
+      const plugins = kit.addServerPlugin.mock.calls.map((call) => call[0] as string)
+      const migrate = plugins.findIndex((plugin) => plugin.includes('plugins/migrate-'))
+      const sync = plugins.findIndex((plugin) => plugin.includes('plugins/media-sync-local'))
+      expect(migrate).toBeGreaterThanOrEqual(0)
+      expect(sync).toBeGreaterThan(migrate)
    })
 })
