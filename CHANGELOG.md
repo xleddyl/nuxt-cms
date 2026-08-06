@@ -1,6 +1,18 @@
 # Changelog
 
 
+## v0.1.28
+
+[compare changes](https://github.com/xleddyl/nuxt-cms/compare/v0.1.27...v0.1.28)
+
+### 🚀 Enhancements
+
+- Redesign the admin panel with a dark minimal theme ([7dc8322](https://github.com/xleddyl/nuxt-cms/commit/7dc8322))
+
+### ❤️ Contributors
+
+- Edoardo Alberti <edoalberti99@gmail.com>
+
 ## v0.1.27
 
 [compare changes](https://github.com/xleddyl/nuxt-cms/compare/v0.1.26...v0.1.27)
