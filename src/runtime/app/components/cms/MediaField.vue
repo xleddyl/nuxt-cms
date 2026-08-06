@@ -1,31 +1,33 @@
 <template>
-   <div v-if="model" class="cms-card cms-media-tile">
-      <img v-if="kind === 'image' && url" :src="url" alt="" class="cms-media-preview-large" />
-      <video
-         v-else-if="kind === 'video' && url"
-         :src="url"
-         controls
-         preload="metadata"
-         playsinline
-         class="cms-media-preview-large"
-      />
-      <div class="cms-media-bar">
+   <div v-if="model" class="cms-card cms-media-field">
+      <div class="cms-media-field-preview">
+         <img v-if="kind === 'image' && url" :src="url" alt="" />
+         <video
+            v-else-if="kind === 'video' && url"
+            :src="url"
+            controls
+            preload="metadata"
+            playsinline
+         />
+         <CmsIcon v-else :name="icon" class="size-10" />
+      </div>
+      <div class="cms-media-field-bar">
          <CmsIcon :name="icon" class="cms-media-bar-icon size-4" />
          <span class="cms-media-bar-name" :title="model">{{ mediaFilename(model) }}</span>
          <CmsButton
-            icon="photo"
-            variant="ghost"
+            label="Replace"
+            icon="arrow-path"
+            variant="subtle"
             color="neutral"
             size="xs"
-            aria-label="Change"
             @click="openGallery"
          />
          <CmsButton
-            icon="x-mark"
-            variant="ghost"
-            color="neutral"
+            label="Remove"
+            icon="trash"
+            variant="subtle"
+            color="error"
             size="xs"
-            aria-label="Remove"
             @click="clear"
          />
       </div>

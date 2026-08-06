@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import { createError, defineEventHandler, readValidatedBody } from 'h3'
 import { z } from 'zod'
-import { slugify } from '../../shared/index'
+import { normalizeMediaFolder, slugify } from '../../shared/index'
 import { assertUploadContentType, useMediaStorage } from '../utils/media'
 import { requireAdmin } from '../utils/require-admin'
 
@@ -13,6 +13,7 @@ const bodySchema = z.object({
    filename: z.string().trim().min(1).max(255),
    contentType: z.string().regex(/^[-\w.+]+\/[-\w.+]+$/, 'Invalid content type'),
    size: z.number().int().positive(),
+   folder: z.string().max(255).nullish(),
 })
 
 function slugifyFilename(filename: string) {
@@ -34,7 +35,7 @@ export default defineEventHandler(async (event) => {
    await requireAdmin(event)
    const { media, client, bucketUrl, publicUrl } = useMediaStorage(event)
 
-   const { filename, contentType, size } = await readValidatedBody(event, bodySchema.parse)
+   const { filename, contentType, size, folder } = await readValidatedBody(event, bodySchema.parse)
    assertUploadContentType(contentType)
    if (size > MAX_FILE_SIZE) {
       throw createError({
@@ -44,7 +45,10 @@ export default defineEventHandler(async (event) => {
    }
 
    const now = new Date()
-   const prefix = `${now.getUTCFullYear()}/${String(now.getUTCMonth() + 1).padStart(2, '0')}`
+   const normalizedFolder = normalizeMediaFolder(folder)
+   const prefix =
+      normalizedFolder ??
+      `${now.getUTCFullYear()}/${String(now.getUTCMonth() + 1).padStart(2, '0')}`
    const key = `${prefix}/${randomUUID()}-${slugifyFilename(filename)}`
 
    const url = new URL(`${bucketUrl}/${key}`)
@@ -59,6 +63,7 @@ export default defineEventHandler(async (event) => {
 
    return {
       key,
+      folder: normalizedFolder,
       uploadUrl: signed.url,
       method: 'PUT',
       headers: { 'content-type': contentType },

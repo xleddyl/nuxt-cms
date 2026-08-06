@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { useDb } from '#cms-db'
 import { cms_media } from '#cms-tables'
 import type { MediaItem } from '../../shared/index'
+import { normalizeMediaFolder } from '../../shared/index'
 import { objectKeySchema } from '../../shared/validation'
 import {
    assertMediaWritable,
@@ -36,7 +37,7 @@ export default defineEventHandler(async (event): Promise<MediaItem> => {
       width: body.width ?? null,
       height: body.height ?? null,
       alt: body.alt ?? null,
-      folder: body.folder ?? null,
+      folder: normalizeMediaFolder(body.folder),
    }
 
    const [row] = await useDb()

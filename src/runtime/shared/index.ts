@@ -85,6 +85,14 @@ export function slugify(value: string): string {
       .replace(/^-+|-+$/g, '')
 }
 
+export const MEDIA_FOLDER_MAX_DEPTH = 4
+
+export function normalizeMediaFolder(value: string | null | undefined): string | null {
+   if (!value) return null
+   const segments = value.split('/').map(slugify).filter(Boolean).slice(0, MEDIA_FOLDER_MAX_DEPTH)
+   return segments.length ? segments.join('/') : null
+}
+
 export interface MediaItem {
    id: number
    key: string

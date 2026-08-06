@@ -2,7 +2,7 @@
    <button
       type="button"
       class="cms-dropzone"
-      :class="{ 'is-dense': dense, 'is-over': dragOver, 'is-busy': uploading }"
+      :class="{ 'is-over': dragOver, 'is-busy': uploading }"
       :disabled="uploading"
       @click="input?.click()"
       @dragover.prevent="dragOver = true"
@@ -32,6 +32,10 @@
                  : 'Drop a file here or click to browse'
          }}
       </span>
+      <span v-if="!uploading" class="cms-dropzone-hint">
+         <CmsIcon :name="folder ? 'folder' : 'circle-stack'" class="size-3.5" />
+         {{ folder ?? 'Library root' }}
+      </span>
    </button>
 </template>
 
@@ -45,9 +49,9 @@ const props = withDefaults(
       multiple?: boolean
       mediaType?: MediaType
       accept?: string[]
-      dense?: boolean
+      folder?: string | null
    }>(),
-   { mediaType: 'file' }
+   { mediaType: 'file', folder: null }
 )
 
 const emit = defineEmits<{ uploaded: [items: MediaItem[]] }>()
@@ -56,6 +60,7 @@ const toast = useCmsToast()
 
 interface PresignResponse {
    key: string
+   folder: string | null
    uploadUrl: string
    headers: Record<string, string>
    publicUrl: string | null
@@ -108,6 +113,7 @@ async function uploadOne(file: File) {
          filename: file.name,
          contentType: file.type || 'application/octet-stream',
          size: file.size,
+         folder: props.folder,
       },
    })
    const res = await fetch(presign.uploadUrl, {
@@ -120,6 +126,7 @@ async function uploadOne(file: File) {
       method: 'POST',
       body: {
          key: presign.key,
+         folder: presign.folder,
          mime: file.type || null,
          size: file.size,
          ...(await imageDimensions(file)),

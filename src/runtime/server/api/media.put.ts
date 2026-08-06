@@ -4,6 +4,7 @@ import { z } from 'zod'
 import { useDb } from '#cms-db'
 import { cms_media } from '#cms-tables'
 import type { MediaItem } from '../../shared/index'
+import { normalizeMediaFolder } from '../../shared/index'
 import { assertMediaWritable, toMediaItem, useMediaConfig } from '../utils/media'
 import { requireAdmin } from '../utils/require-admin'
 
@@ -21,7 +22,7 @@ export default defineEventHandler(async (event): Promise<MediaItem> => {
 
    const updates: { alt?: string | null; folder?: string | null } = {}
    if (body.alt !== undefined) updates.alt = body.alt
-   if (body.folder !== undefined) updates.folder = body.folder
+   if (body.folder !== undefined) updates.folder = normalizeMediaFolder(body.folder)
    if (Object.keys(updates).length === 0) {
       throw createError({ statusCode: 400, statusMessage: 'No fields to update' })
    }
