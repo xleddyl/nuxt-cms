@@ -1,6 +1,19 @@
 # Changelog
 
 
+## v0.1.27
+
+[compare changes](https://github.com/xleddyl/nuxt-cms/compare/v0.1.26...v0.1.27)
+
+### 🚀 Enhancements
+
+- Media library search, upload folders and clearer image field actions ([082cb7f](https://github.com/xleddyl/nuxt-cms/commit/082cb7f))
+- Sort collection rows by clicking the column headers ([eb733c5](https://github.com/xleddyl/nuxt-cms/commit/eb733c5))
+
+### ❤️ Contributors
+
+- Edoardo Alberti <edoalberti99@gmail.com>
+
 ## v0.1.26
 
 [compare changes](https://github.com/xleddyl/nuxt-cms/compare/v0.1.25...v0.1.26)
