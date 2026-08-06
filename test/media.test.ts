@@ -3,7 +3,9 @@ import {
    assertMediaConfigured,
    assertMediaWritable,
    assertUploadContentType,
+   assertUploadSize,
 } from '../src/runtime/server/utils/media'
+import { DEFAULT_MEDIA_MAX_FILE_SIZE, formatFileSize } from '../src/runtime/shared/index'
 
 function s3Media(overrides: Partial<Parameters<typeof assertMediaConfigured>[0]> = {}) {
    return {
@@ -12,6 +14,7 @@ function s3Media(overrides: Partial<Parameters<typeof assertMediaConfigured>[0]>
       region: 'auto',
       bucket: 'bucket',
       presignExpiry: 600,
+      maxFileSize: DEFAULT_MEDIA_MAX_FILE_SIZE,
       accessKeyId: 'id',
       secretAccessKey: 'secret',
       ...overrides,
@@ -69,6 +72,7 @@ describe('assertMediaConfigured', () => {
             region: '',
             bucket: '',
             presignExpiry: 600,
+            maxFileSize: DEFAULT_MEDIA_MAX_FILE_SIZE,
             accessKeyId: '',
             secretAccessKey: '',
          })
@@ -88,5 +92,49 @@ describe('assertMediaWritable', () => {
 
    it('does not throw for s3 storage', () => {
       expect(() => assertMediaWritable(s3Media())).not.toThrow()
+   })
+})
+
+describe('formatFileSize', () => {
+   it.each([
+      [0, '0 B'],
+      [512, '512 B'],
+      [1024, '1 KB'],
+      [DEFAULT_MEDIA_MAX_FILE_SIZE, '10 MB'],
+      [50 * 1024 * 1024, '50 MB'],
+      [2 * 1024 * 1024 * 1024, '2 GB'],
+   ])('formats %i as %s', (bytes, expected) => {
+      expect(formatFileSize(bytes)).toBe(expected)
+   })
+})
+
+describe('assertUploadSize', () => {
+   it('accepts a file at or below the default cap', () => {
+      expect(() => assertUploadSize(1024, DEFAULT_MEDIA_MAX_FILE_SIZE)).not.toThrow()
+      expect(() =>
+         assertUploadSize(DEFAULT_MEDIA_MAX_FILE_SIZE, DEFAULT_MEDIA_MAX_FILE_SIZE)
+      ).not.toThrow()
+   })
+
+   it('throws 413 above the default cap', () => {
+      expect(() =>
+         assertUploadSize(DEFAULT_MEDIA_MAX_FILE_SIZE + 1, DEFAULT_MEDIA_MAX_FILE_SIZE)
+      ).toThrow(expect.objectContaining({ statusCode: 413 }))
+   })
+
+   it('honours a custom cap', () => {
+      const cap = 50 * 1024 * 1024
+      expect(() => assertUploadSize(DEFAULT_MEDIA_MAX_FILE_SIZE + 1, cap)).not.toThrow()
+      expect(() => assertUploadSize(cap, cap)).not.toThrow()
+      expect(() => assertUploadSize(cap + 1, cap)).toThrow(
+         expect.objectContaining({ statusCode: 413 })
+      )
+   })
+
+   it('reports the configured cap in the error message', () => {
+      expect(() => assertUploadSize(2, 1)).toThrow(/maximum size of 1 B/)
+      expect(() => assertUploadSize(60 * 1024 * 1024, 50 * 1024 * 1024)).toThrow(
+         /maximum size of 50 MB/
+      )
    })
 })

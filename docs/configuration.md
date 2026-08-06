@@ -57,6 +57,7 @@ media: {
    bucket: '',
    publicBaseUrl: '',            // public base URL for uploaded files
    presignExpiry: 600,           // seconds a presigned upload URL stays valid
+   maxFileSize: 10485760,        // max upload size in bytes (default 10 MB)
    accessKeyId: '',
    secretAccessKey: '',
 }
@@ -109,7 +110,9 @@ configured, media endpoints return `501` and media fields simply cannot be uploa
 `storage: 'local'` to make the media library read-only, listing files served from `publicBaseUrl`
 by the host app instead of a bucket — no S3 config needed. In that mode a root-relative
 `publicBaseUrl` (e.g. `/images` → `<rootDir>/public/images`) is also scanned at every server
-startup, so the library mirrors the files on disk. See [Media](media.md).
+startup, so the library mirrors the files on disk. `maxFileSize` caps a single upload in bytes
+(default 10 MB, must be a positive integer); raise it for large assets such as magazine PDFs. See
+[Media](media.md).
 
 ### `i18n`
 
@@ -138,6 +141,7 @@ Secrets should be provided as env vars rather than committed to `nuxt.config.ts`
 | `NUXT_CMS_MEDIA_BUCKET` | for media | bucket name |
 | `NUXT_CMS_MEDIA_ACCESS_KEY_ID` | for media | S3 access key id |
 | `NUXT_CMS_MEDIA_SECRET_ACCESS_KEY` | for media | S3 secret access key |
+| `NUXT_CMS_MEDIA_MAX_FILE_SIZE` | no | max upload size in bytes (default `10485760`) |
 | `NUXT_PUBLIC_CMS_MEDIA_BASE_URL` | for media | public base URL for uploaded files |
 
 Env vars follow Nuxt's runtime-config convention: `cms.admin.email` ← `NUXT_CMS_ADMIN_EMAIL`,

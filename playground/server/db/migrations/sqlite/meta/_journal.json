@@ -15,6 +15,13 @@
       "when": 1786024455658,
       "tag": "0001_stiff_manta",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1786028723392,
+      "tag": "0002_free_psylocke",
+      "breakpoints": true
     }
   ]
 }

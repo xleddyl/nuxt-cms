@@ -51,7 +51,7 @@ Every field has `label: string` and optional `required?: boolean`. Type-specific
 | `slug`     | `from: '<fieldKey>'` (required; auto-generated from that text field)                | String (unique)     |
 | `select`   | `options: string[]` (required, unique), `multiple?: boolean`                        | String (enum) or `[String!]!` |
 | `json`     | —                                                                                   | JSON                |
-| `media`    | `mediaType?: 'image' \| 'video' \| 'file'`, `accept?: string[]`                     | CmsMedia object     |
+| `media`    | `mediaType?: 'image' \| 'video' \| 'file'`, `accept?: string[]`, `translatable?: boolean` | CmsMedia object     |
 | `relation` | see [Relations](#relations)                                                         | related entry / list |
 | `blocks`   | `blocks: Record<name, { label, fields }>` (required)                                | array of typed blocks |
 
@@ -116,15 +116,37 @@ See [Querying → Blocks](querying.md#blocks) for how to read them.
 
 ## Translatable fields
 
-`translatable: true` is supported on `text` and `richtext` only, and requires `cms.i18n.locales`
-to be configured. Values are stored per locale and resolved to a single String at query time via the
-`locale` argument (falling back to `defaultLocale` when a translation is missing).
+`translatable: true` is supported on `text`, `richtext` and `media`, and requires `cms.i18n.locales`
+to be configured. Values are stored per locale and resolved to a single value at query time via the
+`locale` argument (falling back to `defaultLocale` when a translation is missing). Translatable
+fields are **excluded from filtering and sorting**.
 
 ```ts
 i18n: { locales: ['en', 'it'], defaultLocale: 'en' } // in nuxt.config.ts
 
 description: { label: 'Description', type: 'richtext', translatable: true } // in cms.config.ts
 ```
+
+### Translatable media
+
+A translatable `media` field holds a different file per locale: an Italian and a German PDF of the
+same document, a screenshot per language, and so on. The admin panel shows the usual media picker
+with the locale switcher above it, one file per locale.
+
+```ts
+brochure: { label: 'Brochure', type: 'media', mediaType: 'file', translatable: true }
+```
+
+The query shape does not change; it still resolves to a single `CmsMedia`:
+
+```graphql
+brochure { url alt }
+```
+
+Resolution picks the requested `locale`, then `defaultLocale`, then any locale that has a file.
+The column stays a plain `text` column holding a JSON map of locale → object key, so adding
+`translatable: true` to an **existing** media field needs no migration: rows that still hold a plain
+key keep working and are read as the default locale's value.
 
 ## Full example
 

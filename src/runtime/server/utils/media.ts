@@ -3,7 +3,7 @@ import { AwsClient } from 'aws4fetch'
 import { createError } from 'h3'
 import { useRuntimeConfig } from '#imports'
 import type { MediaItem, MediaStorageMode } from '../../shared/index'
-import { mediaPublicUrl, mediaTypeFor } from '../../shared/index'
+import { formatFileSize, mediaPublicUrl, mediaTypeFor } from '../../shared/index'
 
 interface MediaConfig {
    storage: MediaStorageMode
@@ -11,6 +11,7 @@ interface MediaConfig {
    region: string
    bucket: string
    presignExpiry: number
+   maxFileSize: number
    accessKeyId: string
    secretAccessKey: string
 }
@@ -42,6 +43,15 @@ export function assertUploadContentType(contentType: string) {
       throw createError({
          statusCode: 415,
          statusMessage: `Unsupported content type: ${contentType}`,
+      })
+   }
+}
+
+export function assertUploadSize(size: number, maxFileSize: number) {
+   if (size > maxFileSize) {
+      throw createError({
+         statusCode: 413,
+         statusMessage: `File exceeds the maximum size of ${formatFileSize(maxFileSize)}`,
       })
    }
 }

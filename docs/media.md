@@ -24,6 +24,7 @@ cms: {
       bucket: 'my-bucket',
       publicBaseUrl: 'https://cdn.example.com',
       presignExpiry: 600,
+      maxFileSize: 10485760,
       accessKeyId: '...',
       secretAccessKey: '...',
    },
@@ -39,6 +40,7 @@ NUXT_CMS_MEDIA_BUCKET=my-bucket
 NUXT_CMS_MEDIA_ACCESS_KEY_ID=...
 NUXT_CMS_MEDIA_SECRET_ACCESS_KEY=...
 NUXT_PUBLIC_CMS_MEDIA_BASE_URL=https://cdn.example.com
+NUXT_CMS_MEDIA_MAX_FILE_SIZE=52428800
 ```
 
 - **`storage`** — `'s3'` (default) enables uploads against object storage; `'local'` turns the
@@ -55,6 +57,10 @@ NUXT_PUBLIC_CMS_MEDIA_BASE_URL=https://cdn.example.com
 - **`region`** — S3 region (default `auto`, which suits R2). Unused in `'local'` mode.
 - **`presignExpiry`** — how many seconds a presigned upload URL stays valid (default 600). Unused
   in `'local'` mode.
+- **`maxFileSize`** (`NUXT_CMS_MEDIA_MAX_FILE_SIZE`): the largest single upload accepted, in bytes
+  (default `10485760`, i.e. 10 MB). Must be a positive integer. The admin panel checks it before
+  uploading and the presign endpoint rejects anything larger with `413`. Raise it for large assets
+  such as magazine PDFs, and keep any bucket or proxy limits in mind. Unused in `'local'` mode.
 
 ## Local mode (read-only)
 
@@ -122,7 +128,8 @@ Uploads are restricted by content type:
   formats (Word, Excel, PowerPoint — both legacy and OOXML).
 - **Blocked:** `image/svg+xml` (blocked even though it matches `image/*`).
 
-Anything else is rejected with `415 Unsupported content type`.
+Anything else is rejected with `415 Unsupported content type`, and anything larger than
+`media.maxFileSize` with `413`.
 
 ## Using media in content
 
@@ -143,5 +150,16 @@ The database stores only the **`key`** (the object path in your bucket). In quer
 - A relative `publicBaseUrl` (e.g. `/images`) also works and yields site-relative urls like `/images/waters/photo.jpg`, useful when files are served from the app's own `public/` directory.
 - When `publicBaseUrl` is empty, `url` is `null`; construct it yourself from `key`.
 - **`type`** is derived from the mime type (`image` / `video` / `file`).
+
+## One file per locale
+
+A media field marked `translatable: true` stores a different key per locale and still resolves to a
+single `CmsMedia`, picked from the query's `locale` argument:
+
+```ts
+brochure: { label: 'Brochure', type: 'media', mediaType: 'file', translatable: true }
+```
+
+See [Schema → Translatable media](schema.md#translatable-media).
 
 See [Querying → Media](querying.md#media).

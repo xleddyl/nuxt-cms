@@ -41,7 +41,9 @@
 
 <script setup lang="ts">
 import type { MediaItem, MediaType } from '#nuxt-cms'
+import { formatFileSize } from '#nuxt-cms'
 import { computed, ref } from '#imports'
+import { useCmsRuntime } from '../../composables/cms-runtime'
 import { useCmsToast } from '../../composables/cms-toast'
 
 const props = withDefaults(
@@ -57,6 +59,8 @@ const props = withDefaults(
 const emit = defineEmits<{ uploaded: [items: MediaItem[]] }>()
 
 const toast = useCmsToast()
+
+const { mediaMaxFileSize } = useCmsRuntime()
 
 interface PresignResponse {
    key: string
@@ -104,8 +108,6 @@ function matchesAccept(file: File) {
    })
 }
 
-const MAX_FILE_SIZE = 10 * 1024 * 1024
-
 async function uploadOne(file: File) {
    const presign = await $fetch<PresignResponse>('/api/cms/admin/media/presign', {
       method: 'POST',
@@ -138,11 +140,14 @@ async function uploadOne(file: File) {
 
 async function handleFiles(list: FileList) {
    let files = Array.from(list).filter(matchesAccept)
-   const tooLarge = files.filter((file) => file.size > MAX_FILE_SIZE)
+   const tooLarge = files.filter((file) => file.size > mediaMaxFileSize)
    for (const file of tooLarge) {
-      toast.add({ title: `File too large (max 10 MB): ${file.name}`, color: 'error' })
+      toast.add({
+         title: `File too large (max ${formatFileSize(mediaMaxFileSize)}): ${file.name}`,
+         color: 'error',
+      })
    }
-   files = files.filter((file) => file.size <= MAX_FILE_SIZE)
+   files = files.filter((file) => file.size <= mediaMaxFileSize)
    if (!props.multiple) files = files.slice(0, 1)
    if (!files.length || uploading.value) return
 

@@ -12,6 +12,8 @@ describe('renderSchemaFile', () => {
       expect(out).toContain("slug: text('slug').unique().notNull()")
       expect(out).toContain("description: text('description', { mode: 'json' })")
       expect(out).toContain("species: text('species', { mode: 'json' })")
+      expect(out).toContain("poster: text('poster')")
+      expect(out).toContain("brochure: text('brochure')")
       expect(out).toContain("seats: integer('seats')")
       expect(out).toContain("featured: integer('featured', { mode: 'boolean' })")
       expect(out).toContain(
@@ -33,6 +35,31 @@ describe('renderSchemaFile', () => {
       expect(out).toContain("featured: boolean('featured')")
       expect(out).toContain("createdAt: timestamp('created_at', { mode: 'string' })")
       expect(out).toMatch(/import \{ [^}]*\bjsonb\b[^}]* \} from 'drizzle-orm\/pg-core'/)
+   })
+
+   it('keeps translatable media on a plain text column in both dialects', () => {
+      const plain = sampleConfig()
+      const translatable = sampleConfig()
+      translatable.events!.fields.poster!.translatable = true
+      for (const dialect of ['sqlite', 'postgres'] as const) {
+         const before = renderSchemaFile(plain, dialect)
+         const after = renderSchemaFile(translatable, dialect)
+         expect(after).toBe(before)
+         expect(after).toContain("poster: text('poster')")
+      }
+   })
+
+   it('does not pull in jsonb for a postgres schema whose only translatable field is media', () => {
+      const config = sampleConfig()
+      delete config.events!.fields.description
+      delete config.events!.fields.metadata
+      delete config.events!.fields.species
+      delete config.events!.fields.body
+      delete config.homepage!.fields.heroTitle
+      config.homepage!.fields.tagline = { label: 'Tagline', type: 'text' }
+      const out = renderSchemaFile(config, 'postgres')
+      expect(out).toContain("brochure: text('brochure')")
+      expect(out).not.toContain('jsonb')
    })
 
    it('marks required relations as restrict by default', () => {

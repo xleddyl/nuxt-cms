@@ -6,6 +6,7 @@ import cmsConfig from '#cms-config'
 import * as cmsTables from '#cms-tables'
 import { useRuntimeConfig } from '#imports'
 import type { CmsEntry, CmsI18n } from '../../shared/index'
+import { decodeEntryTranslatableMedia, encodeEntryTranslatableMedia } from '../../shared/index'
 import { buildEntrySchema } from '../../shared/validation'
 
 let contentI18n: CmsI18n | undefined
@@ -56,6 +57,14 @@ export function getRegistryEntry(event: H3Event): {
 
 export function buildValidator(entry: CmsEntry) {
    return buildEntrySchema(entry, getContentI18n())
+}
+
+export function encodeColumnValues(entry: CmsEntry, values: Record<string, unknown>) {
+   return encodeEntryTranslatableMedia(entry, values)
+}
+
+export function decodeRows<T extends Record<string, unknown>>(entry: CmsEntry, rows: T[]): T[] {
+   return decodeEntryTranslatableMedia(entry, rows, getContentI18n().defaultLocale)
 }
 
 export function parseId(event: H3Event) {

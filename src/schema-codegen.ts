@@ -1,6 +1,10 @@
 import { typeName } from './runtime/shared/graphql-sdl'
 import type { CmsConfig, CmsEntry, CmsI18n, FieldConfig } from './runtime/shared/index'
-import { isMultiSelect, isTranslatableField } from './runtime/shared/index'
+import {
+   isMultiSelect,
+   isTranslatableField,
+   isTranslatableMediaField,
+} from './runtime/shared/index'
 
 export type Dialect = 'sqlite' | 'postgres'
 export type Driver = Dialect | 'libsql'
@@ -93,8 +97,10 @@ export function validateConfig(config: CmsConfig, i18n?: CmsI18n): string[] {
             columnNames.add(column)
          }
          if (field.translatable) {
-            if (field.type !== 'text' && field.type !== 'richtext')
-               errors.push(`${fat}: translatable is only supported on text and richtext fields`)
+            if (field.type !== 'text' && field.type !== 'richtext' && field.type !== 'media')
+               errors.push(
+                  `${fat}: translatable is only supported on text, richtext and media fields`
+               )
             if (!locales.length)
                errors.push(`${fat}: translatable requires cms.i18n.locales in nuxt.config`)
          }
@@ -212,7 +218,7 @@ function columnExpr(key: string, field: FieldConfig, dialect: Dialect): string {
    const col = snakeCase(key)
    let expr: string
    if (isTranslatableField(field)) {
-      expr = jsonExpr(col, dialect)
+      expr = isTranslatableMediaField(field) ? `text('${col}')` : jsonExpr(col, dialect)
       if (field.required) expr += '.notNull()'
       return `  ${key}: ${expr},`
    }
@@ -341,7 +347,10 @@ export function renderSchemaFile(
       pg &&
       fields.some(
          (f) =>
-            f.type === 'json' || f.type === 'blocks' || isTranslatableField(f) || isMultiSelect(f)
+            f.type === 'json' ||
+            f.type === 'blocks' ||
+            (isTranslatableField(f) && !isTranslatableMediaField(f)) ||
+            isMultiSelect(f)
       )
    )
       core.add('jsonb')

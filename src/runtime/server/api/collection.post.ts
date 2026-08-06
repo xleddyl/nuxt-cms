@@ -2,7 +2,7 @@ import { createError, defineEventHandler, readValidatedBody } from 'h3'
 import { withTransaction } from '#cms-db'
 import { customId } from '../utils/custom-id'
 import { mapConstraintErrors } from '../utils/db-errors'
-import { buildValidator, getRegistryEntry } from '../utils/registry'
+import { buildValidator, decodeRows, encodeColumnValues, getRegistryEntry } from '../utils/registry'
 import {
    assertRelationTargets,
    attachManyToMany,
@@ -22,7 +22,7 @@ export default defineEventHandler(async (event) => {
       string,
       unknown
    >
-   const { values, lists } = splitRelationValues(entry, body)
+   const { values, lists } = splitRelationValues(entry, encodeColumnValues(entry, body))
    await assertRelationTargets(entry, lists)
    if (entry.drafts) values.status ??= 'draft'
    values.id = customId(entry.id)
@@ -33,7 +33,7 @@ export default defineEventHandler(async (event) => {
          const [attached] = await attachManyToMany(db, name, entry, [
             row as Record<string, unknown>,
          ])
-         return attached
+         return decodeRows(entry, [attached!])[0]
       })
    )
 })

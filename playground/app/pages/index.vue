@@ -110,6 +110,14 @@
                         <span v-for="tag in event.tags" :key="tag.id" class="cms-pill">
                            {{ tag.name }}
                         </span>
+                        <a
+                           v-if="event.brochure?.url"
+                           :href="event.brochure.url"
+                           target="_blank"
+                           class="cms-pill"
+                        >
+                           brochure
+                        </a>
                      </div>
                   </div>
                </article>
@@ -130,6 +138,7 @@ const { data } = useCms(`{
       featured
       description
       poster { url alt }
+      brochure { url }
       category { id name }
       tags { id name }
    }

@@ -66,6 +66,7 @@ export default defineCmsConfig({
             },
          },
          poster: { label: 'Poster', type: 'media', mediaType: 'image' },
+         brochure: { label: 'Brochure', type: 'media', mediaType: 'file', translatable: true },
          category: { label: 'Category', type: 'relation', to: 'categories' },
          tags: { label: 'Tags', type: 'relation', to: 'tags', cardinality: 'many-to-many' },
       },

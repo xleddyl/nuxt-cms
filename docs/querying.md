@@ -38,8 +38,8 @@ homepage(locale: String): Homepage
 ## Filters, sorting, pagination
 
 **Filterable fields:** `id`, `createdAt`, `updatedAt`, and every field except `json`, `blocks`,
-`translatable` text, and `many-to-many` relations. Single relations filter by the related id as a
-`StringFilter`.
+`translatable` fields, and `many-to-many` relations. Single relations filter by the related id as a
+`StringFilter`. Non-translatable `media` fields filter and sort on the stored object key.
 
 **Operators:**
 

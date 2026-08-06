@@ -80,6 +80,36 @@ describe('validateConfig', () => {
       expect(errors.some((e) => e.includes('translatable requires'))).toBe(true)
    })
 
+   it('accepts translatable media fields', () => {
+      const config = sampleConfig()
+      config.events!.fields.poster!.translatable = true
+      expect(validateConfig(config, I18N)).toEqual([])
+   })
+
+   it('rejects translatable on field types that do not support it', () => {
+      const config = sampleConfig()
+      config.events!.fields.seats!.translatable = true
+      const errors = validateConfig(config, I18N)
+      expect(
+         errors.some((e) =>
+            e.includes('translatable is only supported on text, richtext and media')
+         )
+      ).toBe(true)
+   })
+
+   it('rejects translatable media inside blocks', () => {
+      const config = sampleConfig()
+      config.events!.fields.body!.blocks!.hero!.fields.image = {
+         label: 'Image',
+         type: 'media',
+         translatable: true,
+      }
+      const errors = validateConfig(config, I18N)
+      expect(
+         errors.some((e) => e.includes('translatable fields are not supported inside blocks'))
+      ).toBe(true)
+   })
+
    it('rejects relations to unknown targets', () => {
       const config = sampleConfig()
       config.events!.fields.category = { label: 'Category', type: 'relation', to: 'nope' }

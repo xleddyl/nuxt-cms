@@ -100,7 +100,7 @@ export function buildEntrySchema(
       }
       if (isTranslatableField(field) && locales.length) {
          const record = z
-            .record(z.string(), z.string())
+            .record(z.string(), field.type === 'media' ? objectKeySchema : z.string())
             .refine((v) => Object.keys(v).every((k) => locales.includes(k)), m.unknownLocale)
          shape[key] = field.required
             ? record.refine((v) => !!v[defaultLocale]?.trim(), m.requiredLocale(defaultLocale))

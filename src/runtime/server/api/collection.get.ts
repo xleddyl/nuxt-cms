@@ -3,7 +3,7 @@ import { asc, count, desc, sql } from 'drizzle-orm'
 import { defineEventHandler, getValidatedQuery } from 'h3'
 import { z } from 'zod'
 import { useDb } from '#cms-db'
-import { getRegistryEntry, idColumn, tableColumns } from '../utils/registry'
+import { decodeRows, getRegistryEntry, idColumn, tableColumns } from '../utils/registry'
 import { attachManyToMany, relationTitles } from '../utils/relations'
 import { requireAdmin } from '../utils/require-admin'
 
@@ -26,9 +26,9 @@ export default defineEventHandler(async (event) => {
    const db = useDb()
 
    if (entry.kind === 'single') {
-      const rows = await db.select().from(table).limit(1)
+      const rows = (await db.select().from(table).limit(1)) as Record<string, unknown>[]
       await attachManyToMany(db, name, entry, rows)
-      return rows[0] ?? null
+      return decodeRows(entry, rows)[0] ?? null
    }
 
    const { limit, offset, search, sort, order, light } = await getValidatedQuery(
@@ -77,6 +77,7 @@ export default defineEventHandler(async (event) => {
    if (light) return { items, total: counted?.total ?? 0, relations: {} }
 
    await attachManyToMany(db, name, entry, items)
+   decodeRows(entry, items)
    return {
       items,
       total: counted?.total ?? 0,

@@ -12,6 +12,7 @@ export const valid = defineCmsConfig({
          kind: { label: 'Kind', type: 'select', options: ['a', 'b'] },
          tags: { label: 'Tags', type: 'select', options: ['a', 'b'], multiple: true },
          parent: { label: 'Parent', type: 'relation', to: 'categories' },
+         cover: { label: 'Cover', type: 'media', mediaType: 'image', translatable: true },
          body: {
             label: 'Body',
             type: 'blocks',

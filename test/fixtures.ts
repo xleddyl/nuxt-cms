@@ -36,6 +36,12 @@ export function sampleConfig(): CmsConfig {
             contactEmail: { label: 'Contact email', type: 'email' },
             metadata: { label: 'Metadata', type: 'json' },
             poster: { label: 'Poster', type: 'media', mediaType: 'image' },
+            brochure: {
+               label: 'Brochure',
+               type: 'media',
+               mediaType: 'file',
+               translatable: true,
+            },
             body: {
                label: 'Body',
                type: 'blocks',

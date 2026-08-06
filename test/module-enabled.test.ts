@@ -269,6 +269,48 @@ describe('module setup when enabled', () => {
       }
    )
 
+   it('defaults media.maxFileSize to 10 MB in the server and public runtime config', async () => {
+      const nuxt = createNuxt()
+      await moduleDefinition.setup(options(), nuxt)
+
+      expect(moduleDefinition.defaults.media.maxFileSize).toBe(10 * 1024 * 1024)
+      expect(nuxt.options.runtimeConfig.cms.media.maxFileSize).toBe(10 * 1024 * 1024)
+      expect(nuxt.options.runtimeConfig.public.cms.mediaMaxFileSize).toBe(10 * 1024 * 1024)
+   })
+
+   it('carries a custom media.maxFileSize into the server and public runtime config', async () => {
+      const nuxt = createNuxt()
+      await moduleDefinition.setup(
+         options({
+            media: { ...moduleDefinition.defaults.media, maxFileSize: 50 * 1024 * 1024 },
+         }),
+         nuxt
+      )
+
+      expect(nuxt.options.runtimeConfig.cms.media.maxFileSize).toBe(50 * 1024 * 1024)
+      expect(nuxt.options.runtimeConfig.public.cms.mediaMaxFileSize).toBe(50 * 1024 * 1024)
+   })
+
+   it('falls back to the default cap for local storage', async () => {
+      const nuxt = createNuxt()
+      await moduleDefinition.setup(
+         options({ media: { storage: 'local', publicBaseUrl: '/images' } }),
+         nuxt
+      )
+
+      expect(nuxt.options.runtimeConfig.cms.media.maxFileSize).toBe(10 * 1024 * 1024)
+   })
+
+   it.each([0, -1, 1.5, Number.NaN])('rejects an invalid media.maxFileSize (%s)', async (value) => {
+      const nuxt = createNuxt()
+      await expect(
+         moduleDefinition.setup(
+            options({ media: { ...moduleDefinition.defaults.media, maxFileSize: value } }),
+            nuxt
+         )
+      ).rejects.toThrow(/maxFileSize must be a positive integer/)
+   })
+
    it('registers the local media sync plugin after the migration plugin', async () => {
       const nuxt = createNuxt()
       await moduleDefinition.setup(options(), nuxt)

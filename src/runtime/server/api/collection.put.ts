@@ -1,7 +1,14 @@
 import { createError, defineEventHandler, readValidatedBody } from 'h3'
 import { withTransaction } from '#cms-db'
 import { mapConstraintErrors } from '../utils/db-errors'
-import { buildValidator, getRegistryEntry, idColumn, withUpdatedAt } from '../utils/registry'
+import {
+   buildValidator,
+   decodeRows,
+   encodeColumnValues,
+   getRegistryEntry,
+   idColumn,
+   withUpdatedAt,
+} from '../utils/registry'
 import {
    assertRelationTargets,
    attachManyToMany,
@@ -18,7 +25,10 @@ export default defineEventHandler(async (event) => {
    }
 
    const body = await readValidatedBody(event, buildValidator(entry).parse)
-   const { values, lists } = splitRelationValues(entry, body as Record<string, unknown>)
+   const { values, lists } = splitRelationValues(
+      entry,
+      encodeColumnValues(entry, body as Record<string, unknown>)
+   )
    await assertRelationTargets(entry, lists)
    const set = withUpdatedAt(table, values)
 
@@ -33,7 +43,7 @@ export default defineEventHandler(async (event) => {
          const [attached] = await attachManyToMany(db, name, entry, [
             row as Record<string, unknown>,
          ])
-         return attached
+         return decodeRows(entry, [attached!])[0]
       })
    )
 })

@@ -30,4 +30,25 @@ describe('renderGraphqlSdl', () => {
    it('renders multi-select fields as non-null string lists', () => {
       expect(sdl).toContain('species: [String!]!')
    })
+
+   it('renders translatable media with the same CmsMedia shape', () => {
+      expect(sdl).toContain('brochure: CmsMedia')
+   })
+
+   it('keeps translatable media out of the filter input and sort enum', () => {
+      const filters = sdl.match(/input EventsFilters \{[^}]*\}/)![0]
+      const sortFields = sdl.match(/enum EventsSortField \{[^}]*\}/)![0]
+      expect(filters).toContain('poster: StringFilter')
+      expect(filters).not.toContain('brochure')
+      expect(sortFields).toContain('poster')
+      expect(sortFields).not.toContain('brochure')
+   })
+
+   it('still builds a valid schema when every media field of a collection is translatable', () => {
+      const config = sampleConfig()
+      config.events!.fields.poster!.translatable = true
+      const out = renderGraphqlSdl(config)
+      expect(() => buildSchema(out)).not.toThrow()
+      expect(out.match(/enum EventsSortField \{[^}]*\}/)![0]).not.toContain('poster')
+   })
 })

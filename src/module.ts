@@ -26,6 +26,7 @@ import { minifyIntrospection, outputIntrospectionFile } from 'gql.tada/internal'
 import { createJiti } from 'jiti'
 import { renderGraphqlSdl } from './runtime/shared/graphql-sdl'
 import type { CmsConfig, MediaStorageMode } from './runtime/shared/index'
+import { DEFAULT_MEDIA_MAX_FILE_SIZE } from './runtime/shared/index'
 import type { Driver } from './schema-codegen'
 import { renderSchemaFile, validateConfig } from './schema-codegen'
 import { renderTypesFile } from './types-codegen'
@@ -46,6 +47,7 @@ export type ModuleOptionsMedia =
         secretAccessKey?: string
         publicBaseUrl?: string
         presignExpiry?: number
+        maxFileSize?: number
      }
    | { storage: 'local'; publicBaseUrl: string }
 
@@ -86,6 +88,7 @@ interface ResolvedModuleOptions {
       bucket: string
       publicBaseUrl: string
       presignExpiry: number
+      maxFileSize: number
       accessKeyId: string
       secretAccessKey: string
    }
@@ -125,6 +128,7 @@ function resolveMediaOptions(media: ModuleOptions['media']): ResolvedModuleOptio
          accessKeyId: '',
          secretAccessKey: '',
          presignExpiry: 600,
+         maxFileSize: DEFAULT_MEDIA_MAX_FILE_SIZE,
          publicBaseUrl: media.publicBaseUrl,
       }
    }
@@ -136,6 +140,7 @@ function resolveMediaOptions(media: ModuleOptions['media']): ResolvedModuleOptio
       accessKeyId: media?.accessKeyId ?? '',
       secretAccessKey: media?.secretAccessKey ?? '',
       presignExpiry: media?.presignExpiry ?? 600,
+      maxFileSize: media?.maxFileSize ?? DEFAULT_MEDIA_MAX_FILE_SIZE,
       publicBaseUrl: media?.publicBaseUrl ?? '',
    }
 }
@@ -188,6 +193,7 @@ export default defineNuxtModule<ModuleOptions>({
          bucket: '',
          publicBaseUrl: '',
          presignExpiry: 600,
+         maxFileSize: DEFAULT_MEDIA_MAX_FILE_SIZE,
          accessKeyId: '',
          secretAccessKey: '',
       },
@@ -213,6 +219,7 @@ export default defineNuxtModule<ModuleOptions>({
          nuxt.options.runtimeConfig.public.cms = {
             mediaBaseUrl: resolved.media.publicBaseUrl,
             mediaStorage: resolved.media.storage,
+            mediaMaxFileSize: resolved.media.maxFileSize,
             i18n: resolved.i18n,
          }
          logger.info(
@@ -228,6 +235,12 @@ export default defineNuxtModule<ModuleOptions>({
       ) {
          logger.warn(
             `[nuxt-cms] database.driver is '${resolved.database.driver}' but no url is configured (database.url or NUXT_CMS_DATABASE_URL); the app will fail to connect unless one is provided before the server starts.`
+         )
+      }
+
+      if (!Number.isInteger(resolved.media.maxFileSize) || resolved.media.maxFileSize <= 0) {
+         throw new Error(
+            `[nuxt-cms] media.maxFileSize must be a positive integer number of bytes, got ${resolved.media.maxFileSize}`
          )
       }
 
@@ -471,6 +484,7 @@ export default defineNuxtModule<ModuleOptions>({
             region: resolved.media.region,
             bucket: resolved.media.bucket,
             presignExpiry: resolved.media.presignExpiry,
+            maxFileSize: resolved.media.maxFileSize,
             accessKeyId: resolved.media.accessKeyId,
             secretAccessKey: resolved.media.secretAccessKey,
             localRoot: mediaLocalRoot,
@@ -480,6 +494,7 @@ export default defineNuxtModule<ModuleOptions>({
       nuxt.options.runtimeConfig.public.cms = {
          mediaBaseUrl: resolved.media.publicBaseUrl,
          mediaStorage: resolved.media.storage,
+         mediaMaxFileSize: resolved.media.maxFileSize,
          i18n: resolved.i18n,
       }
 

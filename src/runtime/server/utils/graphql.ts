@@ -23,7 +23,14 @@ import { useDb } from '#cms-db'
 import * as cmsTables from '#cms-tables'
 import { useRuntimeConfig } from '#imports'
 import type { CmsConfig, CmsEntry, FieldConfig } from '../../shared/index'
-import { mediaPublicUrl, mediaTypeFor, translatableFieldKeys } from '../../shared/index'
+import {
+   decodeTranslatableMedia,
+   isTranslatableMediaField,
+   mediaPublicUrl,
+   mediaTypeFor,
+   pickTranslatedMedia,
+   translatableFieldKeys,
+} from '../../shared/index'
 import { blockTypeName, blockUnionName, renderGraphqlSdl, typeName } from '../../shared/graphql-sdl'
 import { getContentI18n, resolveTable, tableColumns } from './registry'
 
@@ -118,6 +125,11 @@ function localizeRow(entry: CmsEntry, row: Record<string, unknown>, locale: stri
    const { defaultLocale } = getContentI18n()
    const result: Row = { ...row, [LOCALE]: locale }
    for (const key of translatableFieldKeys(entry)) {
+      if (isTranslatableMediaField(entry.fields[key]!)) {
+         const media = decodeTranslatableMedia(row[key], defaultLocale)
+         result[key] = pickTranslatedMedia(media, locale, defaultLocale)
+         continue
+      }
       const value = row[key] as Record<string, string> | null | undefined
       result[key] = value?.[locale] ?? value?.[defaultLocale] ?? null
    }

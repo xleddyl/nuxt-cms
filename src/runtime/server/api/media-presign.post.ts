@@ -1,13 +1,12 @@
 import { randomUUID } from 'node:crypto'
-import { createError, defineEventHandler, readValidatedBody } from 'h3'
+import { defineEventHandler, readValidatedBody } from 'h3'
 import { z } from 'zod'
 import { normalizeMediaFolder, slugify } from '../../shared/index'
-import { assertUploadContentType, useMediaStorage } from '../utils/media'
+import { assertUploadContentType, assertUploadSize, useMediaStorage } from '../utils/media'
 import { requireAdmin } from '../utils/require-admin'
 
 const MAX_BASE_LENGTH = 80
 const MAX_EXT_LENGTH = 10
-const MAX_FILE_SIZE = 10 * 1024 * 1024
 
 const bodySchema = z.object({
    filename: z.string().trim().min(1).max(255),
@@ -37,12 +36,7 @@ export default defineEventHandler(async (event) => {
 
    const { filename, contentType, size, folder } = await readValidatedBody(event, bodySchema.parse)
    assertUploadContentType(contentType)
-   if (size > MAX_FILE_SIZE) {
-      throw createError({
-         statusCode: 413,
-         statusMessage: 'File exceeds the maximum size of 10 MB',
-      })
-   }
+   assertUploadSize(size, media.maxFileSize)
 
    const now = new Date()
    const normalizedFolder = normalizeMediaFolder(folder)

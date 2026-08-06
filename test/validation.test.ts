@@ -17,6 +17,7 @@ function validEvent() {
       contactEmail: 'info@example.com',
       metadata: { any: 'thing' },
       poster: '2026/07/poster.png',
+      brochure: { en: '2026/07/brochure-en.pdf', it: '2026/07/brochure-it.pdf' },
       body: [{ type: 'hero', heading: 'Welcome' }],
       category: 'categories_abc',
       tags: ['categories_abc'],
@@ -113,5 +114,34 @@ describe('buildEntrySchema', () => {
 
    it('rejects media keys with path traversal', () => {
       expect(schema.safeParse({ ...validEvent(), poster: '../etc/passwd' }).success).toBe(false)
+   })
+
+   it('accepts a partial locale map on a translatable media field', () => {
+      const parsed = schema.parse({ ...validEvent(), brochure: { it: '2026/07/only-it.pdf' } })
+      expect(parsed.brochure).toEqual({ it: '2026/07/only-it.pdf' })
+   })
+
+   it('normalizes an omitted translatable media field to null', () => {
+      const entry = validEvent() as Record<string, unknown>
+      delete entry.brochure
+      expect(schema.parse(entry).brochure).toBeNull()
+   })
+
+   it('rejects unknown locale keys on translatable media fields', () => {
+      expect(schema.safeParse({ ...validEvent(), brochure: { fr: 'a.pdf' } }).success).toBe(false)
+   })
+
+   it('rejects translatable media keys with path traversal', () => {
+      expect(schema.safeParse({ ...validEvent(), brochure: { en: '../etc/passwd' } }).success).toBe(
+         false
+      )
+   })
+
+   it('requires the default locale on required translatable media fields', () => {
+      const config = sampleConfig().events!
+      config.fields.brochure!.required = true
+      const strict = buildEntrySchema(config, I18N)
+      expect(strict.safeParse({ ...validEvent(), brochure: { it: 'a.pdf' } }).success).toBe(false)
+      expect(strict.safeParse({ ...validEvent(), brochure: { en: 'a.pdf' } }).success).toBe(true)
    })
 })

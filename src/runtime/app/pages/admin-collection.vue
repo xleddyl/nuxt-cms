@@ -57,7 +57,7 @@
             @reorder="reorderColumns"
          >
             <template v-for="key in mediaKeys" #[`${key}-cell`]="{ row }" :key="key">
-               <CmsMediaThumb :value="row.original[key] as string | null" />
+               <CmsMediaThumb :value="mediaThumbValue(key, row.original[key])" />
             </template>
             <template v-if="drafts" #status-cell="{ row }">
                <CmsStatusBadge :published="row.original.status === 'published'" />
@@ -110,7 +110,7 @@
 
 <script setup lang="ts">
 import type { CmsConfig, FieldConfig } from '#nuxt-cms'
-import { isTranslatableField } from '#nuxt-cms'
+import { isTranslatableField, isTranslatableMediaField, pickTranslatedMedia } from '#nuxt-cms'
 import {
    computed,
    createError,
@@ -267,6 +267,13 @@ function truncate(value: string) {
 function localized(value: unknown): string {
    const record = value as Record<string, string>
    return record[contentI18n.defaultLocale] ?? Object.values(record)[0] ?? ''
+}
+
+function mediaThumbValue(key: string, value: unknown): string | null {
+   const field = config?.fields[key]
+   if (!field || !isTranslatableMediaField(field)) return (value as string | null) ?? null
+   const locale = contentI18n.defaultLocale
+   return pickTranslatedMedia(value as Record<string, string> | null, locale, locale)
 }
 
 function relationLabel(field: FieldConfig, key: string, id: unknown): string {

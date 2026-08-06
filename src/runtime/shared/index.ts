@@ -76,6 +76,20 @@ export function mediaPublicUrl(baseUrl: string | null | undefined, key: string):
    return baseUrl ? `${baseUrl.replace(/\/+$/, '')}/${key}` : null
 }
 
+export const DEFAULT_MEDIA_MAX_FILE_SIZE = 10 * 1024 * 1024
+
+const FILE_SIZE_UNITS = ['B', 'KB', 'MB', 'GB', 'TB']
+
+export function formatFileSize(bytes: number): string {
+   let value = Math.max(0, bytes)
+   let unit = 0
+   while (value >= 1024 && unit < FILE_SIZE_UNITS.length - 1) {
+      value /= 1024
+      unit++
+   }
+   return `${Math.round(value * 10) / 10} ${FILE_SIZE_UNITS[unit]}`
+}
+
 export function slugify(value: string): string {
    return value
       .toLowerCase()
@@ -131,7 +145,92 @@ export interface FieldConfig {
 }
 
 export function isTranslatableField(field: FieldConfig): boolean {
-   return !!field.translatable && (field.type === 'text' || field.type === 'richtext')
+   return (
+      !!field.translatable &&
+      (field.type === 'text' || field.type === 'richtext' || field.type === 'media')
+   )
+}
+
+export function isTranslatableMediaField(field: FieldConfig): boolean {
+   return !!field.translatable && field.type === 'media'
+}
+
+function parseJsonObject(raw: string): Record<string, string> | null {
+   try {
+      const parsed: unknown = JSON.parse(raw)
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+         return parsed as Record<string, string>
+      }
+   } catch {
+      return null
+   }
+   return null
+}
+
+export function decodeTranslatableMedia(
+   value: unknown,
+   defaultLocale: string
+): Record<string, string> | null {
+   if (value == null) return null
+   if (typeof value === 'object') return value as Record<string, string>
+   const raw = String(value).trim()
+   if (!raw) return null
+   return (raw.startsWith('{') ? parseJsonObject(raw) : null) ?? { [defaultLocale]: raw }
+}
+
+export function encodeTranslatableMedia(value: unknown): string | null {
+   if (value == null) return null
+   if (typeof value === 'string') return value.trim() || null
+   if (typeof value !== 'object') return null
+   const entries = Object.entries(value as Record<string, unknown>).filter(
+      (pair): pair is [string, string] => typeof pair[1] === 'string' && pair[1].trim() !== ''
+   )
+   return entries.length ? JSON.stringify(Object.fromEntries(entries)) : null
+}
+
+export function pickTranslatedMedia(
+   values: Record<string, string> | null | undefined,
+   locale: string,
+   defaultLocale: string
+): string | null {
+   if (!values) return null
+   return values[locale] || values[defaultLocale] || Object.values(values).find(Boolean) || null
+}
+
+export function translatableMediaKeys(entry: Pick<CmsEntry, 'fields'>): string[] {
+   return Object.entries(entry.fields)
+      .filter(([, field]) => isTranslatableMediaField(field))
+      .map(([key]) => key)
+}
+
+export function encodeEntryTranslatableMedia(
+   entry: Pick<CmsEntry, 'fields'>,
+   values: Record<string, unknown>
+): Record<string, unknown> {
+   const keys = translatableMediaKeys(entry)
+   if (!keys.length) return values
+   const encoded = { ...values }
+   for (const key of keys) {
+      if (Object.hasOwn(encoded, key)) encoded[key] = encodeTranslatableMedia(encoded[key])
+   }
+   return encoded
+}
+
+export function decodeEntryTranslatableMedia<T extends Record<string, unknown>>(
+   entry: Pick<CmsEntry, 'fields'>,
+   rows: T[],
+   defaultLocale: string
+): T[] {
+   const keys = translatableMediaKeys(entry)
+   if (!keys.length) return rows
+   for (const row of rows) {
+      for (const key of keys) {
+         if (Object.hasOwn(row, key)) {
+            row[key as keyof T] = decodeTranslatableMedia(row[key], defaultLocale) as T[keyof T]
+         }
+      }
+   }
+   return rows
 }
 
 export function isMultiSelect(field: FieldConfig): boolean {
@@ -208,6 +307,7 @@ export interface MediaFieldInput extends FieldInputBase {
    type: 'media'
    mediaType?: MediaType
    accept?: string[]
+   translatable?: boolean
 }
 
 export interface RelationFieldInput extends FieldInputBase {
@@ -226,7 +326,7 @@ export type BlockFieldInput =
    | EmailFieldInput
    | SelectFieldInput
    | JsonFieldInput
-   | MediaFieldInput
+   | Omit<MediaFieldInput, 'translatable'>
 
 export interface BlockInput {
    label: string
