@@ -12,6 +12,7 @@
                }"
             >
                <div class="cms-toast-row">
+                  <CmsIcon :name="iconFor(toast.color)" class="cms-toast-icon size-4" />
                   <div class="min-w-0 flex-1">
                      <p class="cms-toast-title">
                         {{ toast.title }}
@@ -40,4 +41,10 @@ import { useCmsToast, useCmsToastState } from '../../composables/cms-toast'
 
 const toasts = useCmsToastState()
 const { remove } = useCmsToast()
+
+function iconFor(color?: string) {
+   if (color === 'success') return 'check-circle'
+   if (color === 'error') return 'exclamation-circle'
+   return 'information-circle'
+}
 </script>

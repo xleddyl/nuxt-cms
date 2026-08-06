@@ -9,7 +9,7 @@
          <div class="cms-form">
             <p class="text-sm">{{ state.message }}</p>
             <div class="cms-actions is-end">
-               <CmsButton label="Cancel" variant="subtle" color="neutral" @click="finish(false)" />
+               <CmsButton label="Cancel" variant="soft" color="neutral" @click="finish(false)" />
                <CmsButton
                   :label="state.confirmLabel ?? 'Confirm'"
                   color="error"

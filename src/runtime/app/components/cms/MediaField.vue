@@ -17,7 +17,7 @@
          <CmsButton
             label="Replace"
             icon="arrow-path"
-            variant="subtle"
+            variant="soft"
             color="neutral"
             size="xs"
             @click="openGallery"
@@ -25,7 +25,7 @@
          <CmsButton
             label="Remove"
             icon="trash"
-            variant="subtle"
+            variant="soft"
             color="error"
             size="xs"
             @click="clear"

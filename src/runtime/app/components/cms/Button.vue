@@ -39,7 +39,7 @@ const props = defineProps<{
    trailingIcon?: boolean
    size?: 'xs' | 'sm' | 'md' | 'lg'
    color?: 'primary' | 'neutral' | 'error' | 'success'
-   variant?: 'solid' | 'subtle' | 'soft' | 'ghost'
+   variant?: 'solid' | 'soft' | 'ghost'
    disabled?: boolean
    loading?: boolean
    block?: boolean

@@ -2,10 +2,10 @@
    <Teleport to="body">
       <!-- Wrapped in .cms-scope so the vendored Tailwind utilities still apply
            once teleported outside the admin layout root. -->
-      <div v-if="open" class="cms-scope">
-         <div class="cms-overlay" @click.self="close">
+      <Transition name="cms-modal">
+         <div v-if="open" class="cms-scope cms-overlay" @click.self="close">
             <div
-               class="cms-modal cms-rise"
+               class="cms-modal"
                :class="size ? `is-${size}` : undefined"
                role="dialog"
                aria-modal="true"
@@ -22,7 +22,7 @@
                </div>
             </div>
          </div>
-      </div>
+      </Transition>
    </Teleport>
 </template>
 

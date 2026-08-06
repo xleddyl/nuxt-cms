@@ -34,7 +34,7 @@
                   <CmsButton
                      v-if="editor?.isActive('link')"
                      size="xs"
-                     variant="subtle"
+                     variant="soft"
                      color="error"
                      label="Remove link"
                      @click="removeLink"

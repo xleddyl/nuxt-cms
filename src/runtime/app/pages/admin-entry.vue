@@ -1,11 +1,11 @@
 <template>
    <div class="cms-page">
-      <CmsPageHeader :kicker="config.label" :title="isNew ? 'New entry' : 'Edit entry'">
+      <CmsPageHeader :title="isNew ? 'New entry' : 'Edit entry'">
          <template v-if="drafts" #badge>
             <CmsStatusBadge :published="published" />
          </template>
          <div class="cms-actions">
-            <CmsButton label="Back" icon="arrow-left" variant="subtle" @click="goBack" />
+            <CmsButton label="Back" icon="arrow-left" variant="soft" @click="goBack" />
             <CmsButton type="submit" :form="FORM_ID" label="Save" :loading="saving" />
             <CmsButton
                v-if="drafts"

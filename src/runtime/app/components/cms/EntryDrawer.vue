@@ -34,7 +34,7 @@
                type="submit"
                :form="FORM_ID"
                :label="published ? 'Make draft' : 'Publish'"
-               variant="subtle"
+               variant="soft"
                :loading="saving"
                :disabled="loading"
                @click="togglePublished"

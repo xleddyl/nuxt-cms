@@ -390,7 +390,11 @@ export default defineNuxtModule<ModuleOptions>({
       // defaultImport 'url' keeps the host's own `import x from './x.svg'` returning a
       // URL (unchanged); CmsIcon opts in explicitly via the `?component` query.
       addVitePlugin(svgLoader({ defaultImport: 'url', svgoConfig: { plugins: ['prefixIds'] } }))
-      nuxt.options.css.push(resolver.resolve('./runtime/assets/main.css'))
+      nuxt.options.css.push(
+         resolveImport('@fontsource-variable/hanken-grotesk/index.css'),
+         resolveImport('@fontsource/fragment-mono/index.css'),
+         resolver.resolve('./runtime/assets/main.css')
+      )
 
       nuxt.hook('app:templates', (app) => {
          app.layouts['cms-admin'] = {

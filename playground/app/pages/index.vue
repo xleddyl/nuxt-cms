@@ -1,5 +1,5 @@
 <template>
-   <div class="cms-scope cms-canvas cms-grain min-h-screen">
+   <div class="cms-scope cms-canvas min-h-screen">
       <div class="mx-auto flex min-h-screen w-full max-w-5xl flex-col px-6 py-10 sm:py-14">
          <section class="cms-rise" style="animation-delay: 60ms">
             <h1 class="cms-display max-w-3xl text-4xl font-bold text-balance sm:text-6xl">
@@ -12,7 +12,7 @@
                   'Everything on this page is fetched from the CMS GraphQL endpoint.'
                }}
             </p>
-            <p v-if="data?.homepage?.launchDate" class="cms-kicker mt-6">
+            <p v-if="data?.homepage?.launchDate" class="cms-label mt-6">
                launching {{ formatDate(data.homepage.launchDate) }}
             </p>
          </section>
@@ -25,11 +25,11 @@
                <span class="cms-display text-2xl font-semibold text-(--ui-text-highlighted)">
                   {{ stat.value }}
                </span>
-               <span class="cms-kicker">{{ stat.label }}</span>
+               <span class="cms-label">{{ stat.label }}</span>
             </div>
             <NuxtLink
                to="/cms"
-               class="ml-auto inline-flex items-center gap-2 rounded-full border border-(--cms-line-strong) px-4 py-1.5 text-sm font-medium text-(--ui-text-highlighted) transition-colors hover:bg-(--ui-bg-elevated)"
+               class="ml-auto inline-flex items-center gap-2 rounded-lg border border-(--cms-line-strong) px-4 py-1.5 text-sm font-medium text-(--ui-text-highlighted) transition-colors hover:bg-(--ui-bg-elevated)"
             >
                <CmsIcon name="cog-6-tooth" class="size-4" />
                Open admin
@@ -37,7 +37,7 @@
          </section>
 
          <section class="mt-14 flex-1">
-            <h2 class="cms-kicker cms-rise" style="animation-delay: 180ms">upcoming events</h2>
+            <h2 class="cms-label cms-rise" style="animation-delay: 180ms">upcoming events</h2>
 
             <div
                v-if="!data?.events.length"
@@ -59,7 +59,7 @@
                   :style="{ animationDelay: `${220 + index * 70}ms` }"
                >
                   <div
-                     class="relative aspect-[5/2] shrink-0 overflow-hidden bg-(--cms-sage)"
+                     class="relative aspect-[5/2] shrink-0 overflow-hidden bg-(--cms-field)"
                      :class="event.featured ? 'sm:aspect-auto sm:w-2/5' : ''"
                   >
                      <img
@@ -84,10 +84,10 @@
 
                   <div class="flex flex-1 flex-col gap-3 p-5">
                      <div class="flex items-center justify-between gap-3">
-                        <time :datetime="event.date" class="cms-kicker text-(--cms-fern)">
+                        <time :datetime="event.date" class="cms-label text-(--cms-fern)">
                            {{ formatDate(event.date) }}
                         </time>
-                        <span v-if="event.seats != null" class="cms-kicker">
+                        <span v-if="event.seats != null" class="cms-label">
                            {{ event.seats }} seats
                         </span>
                      </div>

@@ -8,7 +8,7 @@
          <div class="flex items-center gap-1">
             <button
                type="button"
-               class="cms-kicker flex grow items-center gap-1.5 text-left"
+               class="cms-block-label flex grow items-center gap-1.5 text-left"
                :aria-label="isCollapsed(item) ? 'Expand block' : 'Collapse block'"
                @click="toggleCollapsed(item)"
             >
@@ -69,7 +69,7 @@
          </template>
       </div>
       <CmsDropdownMenu :items="addItems" class="self-start">
-         <CmsButton label="Add block" icon="plus" variant="subtle" />
+         <CmsButton label="Add block" icon="plus" variant="soft" />
       </CmsDropdownMenu>
    </div>
 </template>

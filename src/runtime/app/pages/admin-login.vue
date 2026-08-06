@@ -1,14 +1,14 @@
 <template>
-   <div class="cms-scope cms-canvas cms-grain cms-auth">
-      <div class="cms-auth-panel">
-         <header class="cms-auth-header cms-rise">
+   <div class="cms-scope cms-canvas cms-auth">
+      <div class="cms-auth-panel cms-rise">
+         <header class="cms-auth-header">
             <h1 class="cms-title cms-title-lg">Welcome back<span class="cms-accent">.</span></h1>
             <p class="cms-subtitle">Sign in to manage your content.</p>
          </header>
 
-         <div class="cms-card cms-auth-card cms-rise is-delayed">
+         <div class="cms-card cms-auth-card">
             <CmsForm :state="state" @submit="login">
-               <CmsAlert v-if="error" color="error" variant="subtle" :title="error" />
+               <CmsAlert v-if="error" color="error" :title="error" />
                <CmsFormField label="Email" name="email" required>
                   <CmsInput
                      v-model="state.email"

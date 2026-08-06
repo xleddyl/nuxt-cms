@@ -53,7 +53,7 @@
             <CmsButton
                label="New folder"
                icon="folder-plus"
-               variant="subtle"
+               variant="soft"
                size="sm"
                @click="openNewFolder"
             />
@@ -120,7 +120,7 @@
       </div>
 
       <CmsEmptyState v-else-if="loadError" icon="exclamation-triangle" title="Could not load media">
-         <CmsButton label="Retry" icon="arrow-path" variant="subtle" @click="reload" />
+         <CmsButton label="Retry" icon="arrow-path" variant="soft" @click="reload" />
       </CmsEmptyState>
 
       <CmsEmptyState
@@ -140,7 +140,7 @@
             v-if="!readOnly"
             label="Upload"
             icon="plus"
-            variant="subtle"
+            variant="soft"
             @click="uploadOpen = true"
          />
       </CmsEmptyState>

@@ -1,6 +1,6 @@
 <template>
    <div class="cms-page" :class="{ 'is-fill': config.kind === 'collection' && !error }">
-      <CmsPageHeader :kicker="kicker" :title="config.label">
+      <CmsPageHeader :title="config.label">
          <CmsButton
             v-if="config.kind === 'single'"
             type="submit"
@@ -14,7 +14,7 @@
          <CmsButton
             label="Retry"
             icon="arrow-path"
-            variant="subtle"
+            variant="soft"
             :loading="status === 'pending'"
             @click="reload"
          />
@@ -41,7 +41,7 @@
             />
             <div class="cms-toolbar-actions">
                <CmsDropdownMenu v-if="rows.length" :items="columnItems" :content="{ align: 'end' }">
-                  <CmsButton label="Columns" icon="view-columns" variant="subtle" />
+                  <CmsButton label="Columns" icon="view-columns" variant="soft" />
                </CmsDropdownMenu>
                <CmsButton label="New entry" icon="plus" @click="openCreate" />
             </div>
@@ -91,7 +91,7 @@
             body="Entries you create will show up here."
             fill
          >
-            <CmsButton label="New entry" icon="plus" variant="subtle" @click="openCreate" />
+            <CmsButton label="New entry" icon="plus" variant="soft" @click="openCreate" />
          </CmsEmptyState>
 
          <CmsPagination v-model:page="page" :total="total" :items-per-page="PAGE_SIZE" />
@@ -390,8 +390,6 @@ const columnItems = computed(() =>
       },
    }))
 )
-
-const kicker = config.kind === 'single' ? 'single document' : undefined
 
 const drawerOpen = ref(false)
 const drawerEntryId = ref<string | null>(null)

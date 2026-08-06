@@ -1,12 +1,12 @@
 <template>
-   <div class="cms-scope cms-canvas cms-grain min-h-screen">
+   <div class="cms-scope cms-canvas min-h-screen">
       <div class="cms-shell">
          <aside class="cms-sidebar">
             <div class="cms-sidebar-brand">nuxt<span class="cms-accent">·</span>cms</div>
 
             <nav class="cms-sidebar-nav">
                <div v-for="group in groups" :key="group.title" class="cms-sidebar-group">
-                  <div class="cms-kicker">
+                  <div class="cms-label">
                      {{ group.title }}
                   </div>
                   <NuxtLink
