@@ -31,18 +31,53 @@ import { renderSchemaFile, validateConfig } from './schema-codegen'
 import { renderTypesFile } from './types-codegen'
 import { CMS_ENABLED_ENV, resolveCmsEnabled } from './enabled'
 
+export type ModuleOptionsDatabase =
+   | { driver?: 'sqlite'; path?: string }
+   | { driver: 'postgres'; url?: string }
+   | { driver: 'libsql'; url?: string; authToken?: string }
+
+export type ModuleOptionsMedia =
+   | {
+        storage?: 's3'
+        endpoint?: string
+        region?: string
+        bucket?: string
+        accessKeyId?: string
+        secretAccessKey?: string
+        publicBaseUrl?: string
+        presignExpiry?: number
+     }
+   | { storage: 'local'; publicBaseUrl: string }
+
 export interface ModuleOptions {
    enabled?: boolean
+   configPath?: string
+   admin?: {
+      email?: string
+      password?: string
+   }
+   database?: ModuleOptionsDatabase
+   media?: ModuleOptionsMedia
+   i18n?: {
+      locales?: string[]
+      defaultLocale?: string
+   }
+   graphql?: {
+      maxDepth?: number
+   }
+}
+
+interface ResolvedModuleOptions {
    configPath: string
    admin: {
       email: string
       password: string
    }
    database: {
-      driver?: Driver
-      path?: string
-      url?: string
-      authToken?: string
+      driver: Driver
+      path: string
+      url: string
+      authToken: string
    }
    media: {
       storage: MediaStorageMode
@@ -60,6 +95,67 @@ export interface ModuleOptions {
    }
    graphql: {
       maxDepth: number
+   }
+}
+
+function resolveDatabaseOptions(
+   database: ModuleOptions['database']
+): ResolvedModuleOptions['database'] {
+   if (database?.driver === 'postgres') {
+      return { driver: 'postgres', path: 'data/cms.db', url: database.url ?? '', authToken: '' }
+   }
+   if (database?.driver === 'libsql') {
+      return {
+         driver: 'libsql',
+         path: 'data/cms.db',
+         url: database.url ?? '',
+         authToken: database.authToken ?? '',
+      }
+   }
+   return { driver: 'sqlite', path: database?.path ?? 'data/cms.db', url: '', authToken: '' }
+}
+
+function resolveMediaOptions(media: ModuleOptions['media']): ResolvedModuleOptions['media'] {
+   if (media?.storage === 'local') {
+      return {
+         storage: 'local',
+         endpoint: '',
+         region: 'auto',
+         bucket: '',
+         accessKeyId: '',
+         secretAccessKey: '',
+         presignExpiry: 600,
+         publicBaseUrl: media.publicBaseUrl,
+      }
+   }
+   return {
+      storage: 's3',
+      endpoint: media?.endpoint ?? '',
+      region: media?.region ?? 'auto',
+      bucket: media?.bucket ?? '',
+      accessKeyId: media?.accessKeyId ?? '',
+      secretAccessKey: media?.secretAccessKey ?? '',
+      presignExpiry: media?.presignExpiry ?? 600,
+      publicBaseUrl: media?.publicBaseUrl ?? '',
+   }
+}
+
+function resolveModuleOptions(options: ModuleOptions): ResolvedModuleOptions {
+   return {
+      configPath: options.configPath ?? 'cms.config',
+      admin: {
+         email: options.admin?.email ?? '',
+         password: options.admin?.password ?? '',
+      },
+      database: resolveDatabaseOptions(options.database),
+      media: resolveMediaOptions(options.media),
+      i18n: {
+         locales: options.i18n?.locales ?? [],
+         defaultLocale: options.i18n?.defaultLocale ?? 'en',
+      },
+      graphql: {
+         maxDepth: options.graphql?.maxDepth ?? 8,
+      },
    }
 }
 
@@ -84,8 +180,6 @@ export default defineNuxtModule<ModuleOptions>({
       database: {
          driver: 'sqlite',
          path: 'data/cms.db',
-         url: '',
-         authToken: '',
       },
       media: {
          storage: 's3',
@@ -108,6 +202,7 @@ export default defineNuxtModule<ModuleOptions>({
    async setup(options, nuxt) {
       const resolver = createResolver(import.meta.url)
       const logger = useLogger('nuxt-cms')
+      const resolved = resolveModuleOptions(options)
 
       if (!resolveCmsEnabled(options.enabled, process.env[CMS_ENABLED_ENV])) {
          const stub = resolver.resolve('./runtime/app/composables/cms-query-disabled')
@@ -116,9 +211,9 @@ export default defineNuxtModule<ModuleOptions>({
             { name: '$cmsQuery', from: stub },
          ])
          nuxt.options.runtimeConfig.public.cms = {
-            mediaBaseUrl: options.media.publicBaseUrl,
-            mediaStorage: options.media.storage,
-            i18n: options.i18n,
+            mediaBaseUrl: resolved.media.publicBaseUrl,
+            mediaStorage: resolved.media.storage,
+            i18n: resolved.i18n,
          }
          logger.info(
             '[nuxt-cms] disabled: registering no-op useCms/$cmsQuery stubs, skipping admin, server and database setup'
@@ -126,7 +221,34 @@ export default defineNuxtModule<ModuleOptions>({
          return
       }
 
-      const configPath = await resolvePath(options.configPath, { cwd: nuxt.options.rootDir })
+      if (
+         (resolved.database.driver === 'postgres' || resolved.database.driver === 'libsql') &&
+         !resolved.database.url &&
+         !process.env.NUXT_CMS_DATABASE_URL
+      ) {
+         logger.warn(
+            `[nuxt-cms] database.driver is '${resolved.database.driver}' but no url is configured (database.url or NUXT_CMS_DATABASE_URL); the app will fail to connect unless one is provided before the server starts.`
+         )
+      }
+
+      const s3KeysConfigured = [
+         resolved.media.endpoint,
+         resolved.media.bucket,
+         resolved.media.accessKeyId,
+         resolved.media.secretAccessKey,
+      ].some(Boolean)
+      if (
+         resolved.media.storage === 's3' &&
+         s3KeysConfigured &&
+         !resolved.media.publicBaseUrl &&
+         !process.env.NUXT_PUBLIC_CMS_MEDIA_BASE_URL
+      ) {
+         logger.warn(
+            "[nuxt-cms] media.storage is 's3' with credentials configured but no publicBaseUrl (media.publicBaseUrl or NUXT_PUBLIC_CMS_MEDIA_BASE_URL); uploaded media URLs will be null."
+         )
+      }
+
+      const configPath = await resolvePath(resolved.configPath, { cwd: nuxt.options.rootDir })
       nuxt.options.alias['#nuxt-cms'] = resolver.resolve('./runtime/shared/index')
       nuxt.options.watch.push(configPath)
 
@@ -140,12 +262,12 @@ export default defineNuxtModule<ModuleOptions>({
          cmsConfig = (await jiti.import(configPath, { default: true })) as CmsConfig
       } else {
          logger.warn(
-            `[nuxt-cms] Config file not found: ${configPath}. Using an empty registry — create a ${options.configPath}.ts with defineCmsConfig().`
+            `[nuxt-cms] Config file not found: ${configPath}. Using an empty registry — create a ${resolved.configPath}.ts with defineCmsConfig().`
          )
          nuxt.options.alias['#cms-config'] = resolver.resolve('./runtime/shared/empty-config')
       }
 
-      const configErrors = validateConfig(cmsConfig, options.i18n)
+      const configErrors = validateConfig(cmsConfig, resolved.i18n)
       if (configErrors.length) {
          for (const error of configErrors) logger.error(error)
          throw new Error(
@@ -170,7 +292,7 @@ export default defineNuxtModule<ModuleOptions>({
          getContents: () =>
             renderSchemaFile(
                cmsConfig,
-               options.database.driver === 'postgres' ? 'postgres' : 'sqlite',
+               resolved.database.driver === 'postgres' ? 'postgres' : 'sqlite',
                resolveImport
             ),
       })
@@ -242,11 +364,11 @@ export default defineNuxtModule<ModuleOptions>({
       ])
 
       const {
-         driver = 'sqlite',
-         path: dbPath = 'data/cms.db',
-         url: databaseUrl = '',
-         authToken: databaseAuthToken = '',
-      } = options.database
+         driver,
+         path: dbPath,
+         url: databaseUrl,
+         authToken: databaseAuthToken,
+      } = resolved.database
       nuxt.options.alias['#cms-db'] = resolver.resolve(
          driver === 'postgres'
             ? './runtime/server/utils/db-postgres'
@@ -325,14 +447,14 @@ export default defineNuxtModule<ModuleOptions>({
 
       const publicDir = resolve(nuxt.options.rootDir, nuxt.options.dir?.public ?? 'public')
       const mediaLocalRoot =
-         options.media.storage === 'local' && options.media.publicBaseUrl.startsWith('/')
-            ? join(publicDir, ...options.media.publicBaseUrl.split('/').filter(Boolean))
+         resolved.media.storage === 'local' && resolved.media.publicBaseUrl.startsWith('/')
+            ? join(publicDir, ...resolved.media.publicBaseUrl.split('/').filter(Boolean))
             : ''
 
       const existingConfig = (nuxt.options.runtimeConfig.cms ?? {}) as Record<string, unknown>
       nuxt.options.runtimeConfig.cms = {
-         adminEmail: options.admin.email,
-         adminPassword: options.admin.password,
+         adminEmail: resolved.admin.email,
+         adminPassword: resolved.admin.password,
          databaseUrl,
          databaseAuthToken,
          dbPath: resolvedDbPath,
@@ -340,25 +462,25 @@ export default defineNuxtModule<ModuleOptions>({
          ...existingConfig,
          graphql: {
             graphiql: nuxt.options.dev,
-            maxDepth: options.graphql.maxDepth,
+            maxDepth: resolved.graphql.maxDepth,
             ...((existingConfig.graphql as Record<string, unknown>) ?? {}),
          },
          media: {
-            storage: options.media.storage,
-            endpoint: options.media.endpoint,
-            region: options.media.region,
-            bucket: options.media.bucket,
-            presignExpiry: options.media.presignExpiry,
-            accessKeyId: options.media.accessKeyId,
-            secretAccessKey: options.media.secretAccessKey,
+            storage: resolved.media.storage,
+            endpoint: resolved.media.endpoint,
+            region: resolved.media.region,
+            bucket: resolved.media.bucket,
+            presignExpiry: resolved.media.presignExpiry,
+            accessKeyId: resolved.media.accessKeyId,
+            secretAccessKey: resolved.media.secretAccessKey,
             localRoot: mediaLocalRoot,
             ...((existingConfig.media as Record<string, unknown>) ?? {}),
          },
       }
       nuxt.options.runtimeConfig.public.cms = {
-         mediaBaseUrl: options.media.publicBaseUrl,
-         mediaStorage: options.media.storage,
-         i18n: options.i18n,
+         mediaBaseUrl: resolved.media.publicBaseUrl,
+         mediaStorage: resolved.media.storage,
+         i18n: resolved.i18n,
       }
 
       addTypeTemplate(

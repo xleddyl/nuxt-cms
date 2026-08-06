@@ -43,8 +43,8 @@ NUXT_PUBLIC_CMS_MEDIA_BASE_URL=https://cdn.example.com
 
 - **`storage`** — `'s3'` (default) enables uploads against object storage; `'local'` turns the
   media library read-only, syncs it from the folder `publicBaseUrl` points to at server startup, and
-  skips the S3 connection checks entirely (`endpoint` / `bucket` / `accessKeyId` /
-  `secretAccessKey` are ignored).
+  does not accept the S3 keys at all (`endpoint` / `bucket` / `accessKeyId` / `secretAccessKey` are
+  rejected at the type level in `'local'` mode, and `publicBaseUrl` is required there).
 - **`endpoint` / `bucket` / `accessKeyId` / `secretAccessKey`** — S3 connection, required when
   `storage` is `'s3'`.
 - **`publicBaseUrl`** (`NUXT_PUBLIC_CMS_MEDIA_BASE_URL`) — the public base URL prepended to object

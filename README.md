@@ -20,10 +20,6 @@ Register the module and configure it under the `cms` key in `nuxt.config.ts`:
 export default defineNuxtConfig({
    modules: ['@xleddyl/nuxt-cms'],
    cms: {
-      database: {
-         driver: 'sqlite', // 'sqlite' | 'postgres' (with `url`) | 'libsql' (Turso/remote, with `url` + `authToken`)
-         path: 'data/cms.db',
-      },
       i18n: {
          locales: ['en', 'it'],
          defaultLocale: 'en',
@@ -31,6 +27,11 @@ export default defineNuxtConfig({
    },
 })
 ```
+
+`database` defaults to SQLite (`{ driver: 'sqlite', path: 'data/cms.db' }`) and can be omitted
+entirely. Switch it to `{ driver: 'postgres', url: '...' }` or
+`{ driver: 'libsql', url: '...', authToken: '...' }` (Turso/remote); see
+[Configuration](docs/configuration.md) for every option.
 
 Then declare your content types in a `cms.config.ts` at the project root with `defineCmsConfig()`.
 

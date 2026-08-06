@@ -1,8 +1,12 @@
 # Configuration
 
-All configuration lives under the `cms` key in `nuxt.config.ts`. The authoritative type is
-`ModuleOptions` in [`../src/module.ts`](../src/module.ts). Every secret also maps to runtime config,
-so it can be provided as a `NUXT_CMS_*` environment variable instead of being hardcoded.
+All configuration lives under the `cms` key in `nuxt.config.ts`, and every key is optional: the
+`cms` key itself can be omitted entirely for a SQLite + S3 setup with an empty i18n config. The
+authoritative type is `ModuleOptions` in [`../src/module.ts`](../src/module.ts). `database` and
+`media` are discriminated unions keyed on `driver` / `storage`, so only the keys relevant to the
+variant you pick are available; the others are rejected at the type level. Every secret also maps
+to runtime config, so it can be provided as a `NUXT_CMS_*` environment variable instead of being
+hardcoded.
 
 ## Options
 
@@ -14,22 +18,8 @@ cms: {
       email: '',                    // prefer NUXT_CMS_ADMIN_EMAIL
       password: '',                 // prefer NUXT_CMS_ADMIN_PASSWORD
    },
-   database: {
-      driver: 'sqlite',             // 'sqlite' | 'postgres' | 'libsql'
-      path: 'data/cms.db',          // file path for sqlite / local libsql
-      url: '',                      // connection string for postgres / remote libsql
-      authToken: '',                // libsql/Turso auth token (remote only)
-   },
-   media: {
-      storage: 's3',                // 's3' | 'local' — 'local' is a read-only library synced from disk
-      endpoint: '',                 // S3-compatible endpoint
-      region: 'auto',
-      bucket: '',
-      publicBaseUrl: '',            // public base URL for uploaded files
-      presignExpiry: 600,           // seconds a presigned upload URL stays valid
-      accessKeyId: '',
-      secretAccessKey: '',
-   },
+   database: { driver: 'sqlite' },  // the default; nothing else required
+   media: { storage: 's3' },        // the default; endpoint/bucket/keys via env or below
    i18n: {
       locales: [],                  // e.g. ['en', 'it']; required for translatable fields
       defaultLocale: 'en',
@@ -39,6 +29,44 @@ cms: {
    },
 }
 ```
+
+### `database` per driver
+
+```ts
+// sqlite (default): nothing required
+database: { driver: 'sqlite', path: 'data/cms.db' } // path defaults to 'data/cms.db'
+
+// postgres: needs a connection string, in config or NUXT_CMS_DATABASE_URL
+database: { driver: 'postgres', url: 'postgres://...' }
+
+// libsql / Turso: url for remote, authToken only needed for remote
+database: { driver: 'libsql', url: 'libsql://...', authToken: '...' }
+```
+
+`path` only exists on the `sqlite` variant; `url` / `authToken` only exist on `postgres` /
+`libsql`. Mixing them is a type error.
+
+### `media` per storage
+
+```ts
+// s3 (default): all keys optional here, usually provided via NUXT_CMS_MEDIA_* env vars
+media: {
+   storage: 's3',
+   endpoint: '',
+   region: 'auto',
+   bucket: '',
+   publicBaseUrl: '',            // public base URL for uploaded files
+   presignExpiry: 600,           // seconds a presigned upload URL stays valid
+   accessKeyId: '',
+   secretAccessKey: '',
+}
+
+// local: read-only library synced from disk, publicBaseUrl is required
+media: { storage: 'local', publicBaseUrl: '/images' }
+```
+
+The `local` variant does not accept the S3-only keys (`endpoint`, `bucket`, `accessKeyId`, etc.),
+and requires `publicBaseUrl` since there is no other way to know which files to list.
 
 ### `enabled`
 

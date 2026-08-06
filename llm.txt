@@ -8,13 +8,12 @@ Nuxt module embedding a CMS in the app's Nitro server. Content types are declare
 export default defineNuxtConfig({
    modules: ['@xleddyl/nuxt-cms'],
    cms: {
-      database: { driver: 'sqlite', path: 'data/cms.db' }, // or 'postgres' { url } / 'libsql' { url, authToken } (remote or local file:)
       i18n: { locales: ['en', 'it'], defaultLocale: 'en' }, // only needed if using translatable fields
    },
 })
 ```
 
-Admin credentials come from `NUXT_CMS_ADMIN_EMAIL` / `NUXT_CMS_ADMIN_PASSWORD` env vars. Media is configured under `cms.media` or `NUXT_CMS_MEDIA_*` env vars: `storage: 's3'` (default) uses S3-compatible object storage; `storage: 'local'` makes the media library read-only (no uploads/edits/deletes, listing only), serving files from `publicBaseUrl` instead of a bucket — with a root-relative `publicBaseUrl` (e.g. `/images` → `public/images`) the library is synced from that folder on every server start (new files added, deleted files removed, changed files refreshed; media keys are the paths relative to it). Remote DB credentials (postgres/libsql) can be overridden at runtime with `NUXT_CMS_DATABASE_URL` / `NUXT_CMS_DATABASE_AUTH_TOKEN` (libsql only).
+The whole `cms` key is optional. `database` defaults to `{ driver: 'sqlite', path: 'data/cms.db' }`; switch to `{ driver: 'postgres', url }` or `{ driver: 'libsql', url, authToken }` (Turso/remote, or omit `url` for a local file); each driver only accepts its own keys (`path` on sqlite, `url`/`authToken` on postgres/libsql). Admin credentials come from `NUXT_CMS_ADMIN_EMAIL` / `NUXT_CMS_ADMIN_PASSWORD` env vars. Media is configured under `cms.media` or `NUXT_CMS_MEDIA_*` env vars: `storage: 's3'` (default) uses S3-compatible object storage (`endpoint`, `region`, `bucket`, `accessKeyId`, `secretAccessKey`, `publicBaseUrl`, `presignExpiry`); `storage: 'local'` makes the media library read-only (no uploads/edits/deletes, listing only), only accepts `publicBaseUrl` (required), serving files from it instead of a bucket. With a root-relative `publicBaseUrl` (e.g. `/images` → `public/images`) the library is synced from that folder on every server start (new files added, deleted files removed, changed files refreshed; media keys are the paths relative to it). Remote DB credentials (postgres/libsql) can be overridden at runtime with `NUXT_CMS_DATABASE_URL` / `NUXT_CMS_DATABASE_AUTH_TOKEN` (libsql only).
 
 ## 2. Schema definition (cms.config.ts, project root)
 

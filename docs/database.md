@@ -64,19 +64,22 @@ NUXT_CMS_DATABASE_AUTH_TOKEN=...
 
 ### Local file
 
-Omit `url` and libSQL connects to a local file (`file:<path>`), just like the `sqlite` driver but
-through the libSQL client:
+Omit `url` and libSQL connects to the same local file as the `sqlite` driver
+(`file:data/cms.db`), just through the libSQL client instead:
 
 ```ts
 cms: {
-   database: { driver: 'libsql', path: 'data/cms.db' },
+   database: { driver: 'libsql' },
 }
 ```
+
+If you need a custom file path, use `driver: 'sqlite'` instead: the `libsql` variant does not
+accept a `path` option, only `url` / `authToken`.
 
 ### How the URL is resolved
 
 - If `url` (or `NUXT_CMS_DATABASE_URL`) is set → **remote**, that URL is used.
-- Otherwise → **local file**, `file:<resolved path>` is used and the directory is created.
+- Otherwise → **local file**, `file:data/cms.db` is used and the directory is created.
 
 ## Migrations
 
