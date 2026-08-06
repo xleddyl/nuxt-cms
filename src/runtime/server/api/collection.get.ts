@@ -1,5 +1,5 @@
 import type { SQL } from 'drizzle-orm'
-import { count, desc, sql } from 'drizzle-orm'
+import { asc, count, desc, sql } from 'drizzle-orm'
 import { defineEventHandler, getValidatedQuery } from 'h3'
 import { z } from 'zod'
 import { useDb } from '#cms-db'
@@ -11,6 +11,8 @@ const querySchema = z.object({
    limit: z.coerce.number().int().min(1).max(100).default(50),
    offset: z.coerce.number().int().min(0).default(0),
    search: z.string().trim().max(200).optional(),
+   sort: z.string().trim().max(64).optional(),
+   order: z.enum(['asc', 'desc']).default('desc'),
    light: z.stringbool().default(false),
 })
 
@@ -29,7 +31,10 @@ export default defineEventHandler(async (event) => {
       return rows[0] ?? null
    }
 
-   const { limit, offset, search, light } = await getValidatedQuery(event, querySchema.parse)
+   const { limit, offset, search, sort, order, light } = await getValidatedQuery(
+      event,
+      querySchema.parse
+   )
 
    const columns = tableColumns(table)
    const titleColumn =
@@ -53,10 +58,15 @@ export default defineEventHandler(async (event) => {
         ])
       : undefined
 
-   const orderBy = columns.createdAt ?? idColumn(table)
+   const sortColumn = sort && Object.hasOwn(columns, sort) ? columns[sort] : undefined
+   const orderBy = sortColumn ?? columns.createdAt ?? idColumn(table)
+   const direction = sortColumn && order === 'asc' ? asc : desc
+   const tiebreaker = idColumn(table)
    const base = selection ? db.select(selection).from(table) : db.select().from(table)
    const items = (await (where ? base.where(where) : base)
-      .orderBy(desc(orderBy))
+      .orderBy(
+         ...(orderBy === tiebreaker ? [direction(orderBy)] : [direction(orderBy), desc(tiebreaker)])
+      )
       .limit(limit)
       .offset(offset)) as Record<string, unknown>[]
 

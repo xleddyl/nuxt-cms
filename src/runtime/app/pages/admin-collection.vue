@@ -50,6 +50,7 @@
          <CmsTable
             v-if="rows.length"
             v-model:column-visibility="columnVisibility"
+            v-model:sort="sort"
             :data="rows"
             :columns="columns"
             @select="onSelect"
@@ -151,6 +152,11 @@ const formKeys = drafts ? [...fieldKeys, 'status'] : fieldKeys
 
 type Row = Record<string, unknown>
 
+interface TableSort {
+   key: string
+   order: 'asc' | 'desc'
+}
+
 const endpoint: string = `/api/cms/admin/${name}`
 
 const PAGE_SIZE = 25
@@ -172,10 +178,17 @@ interface ListResponse {
    relations?: Record<string, Record<string, unknown>>
 }
 
+const sort = ref<TableSort | null>(null)
+
+watch(sort, () => {
+   page.value = 1
+})
+
 const listQuery = computed(() => ({
    limit: PAGE_SIZE,
    offset: (page.value - 1) * PAGE_SIZE,
    ...(searchTerm.value ? { search: searchTerm.value } : {}),
+   ...(sort.value ? { sort: sort.value.key, order: sort.value.order } : {}),
 }))
 
 const { data, refresh, error, status } = await useFetch<ListResponse | Row | null>(endpoint, {
@@ -297,14 +310,20 @@ const orderedKeys = computed(() => {
    return [...known, ...fieldKeys.filter((key) => !known.includes(key))]
 })
 
+function isSortable(field: FieldConfig) {
+   if (field.type === 'blocks') return false
+   return !(field.type === 'relation' && field.cardinality === 'many-to-many')
+}
+
 const columns = computed(() => [
    ...orderedKeys.value.map((key) => ({
       id: key,
       accessorFn: (row: Row) => displayValue(config.fields[key]!, key, row[key]),
       header: config.fields[key]!.label,
       reorderable: true,
+      sortable: isSortable(config.fields[key]!),
    })),
-   ...(drafts ? [{ accessorKey: 'status', header: 'Status' }] : []),
+   ...(drafts ? [{ accessorKey: 'status', header: 'Status', sortable: true }] : []),
    { id: 'actions', header: '' },
 ])
 

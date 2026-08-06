@@ -10,15 +10,26 @@
                      :class="{
                         'is-dragging': draggingId === columnId(column),
                         'is-drop-target': dropTargetId === columnId(column),
+                        'is-sortable': column.sortable,
+                        'is-sorted': sort?.key === columnId(column),
                      }"
                      :draggable="column.reorderable || undefined"
+                     :aria-sort="ariaSort(column)"
+                     @click="toggleSort(column)"
                      @dragstart="onDragStart($event, column)"
                      @dragover="onDragOver($event, column)"
                      @dragleave="onDragLeave(column)"
                      @drop="onDrop($event, column)"
                      @dragend="resetDrag"
                   >
-                     {{ column.header }}
+                     <span class="cms-th-label">
+                        {{ column.header }}
+                        <CmsIcon
+                           v-if="column.sortable"
+                           :name="sortIcon(column)"
+                           class="cms-th-sort size-3"
+                        />
+                     </span>
                   </th>
                </tr>
             </thead>
@@ -52,6 +63,12 @@ interface Column {
    accessorFn?: (row: Row) => unknown
    header?: string
    reorderable?: boolean
+   sortable?: boolean
+}
+
+interface TableSort {
+   key: string
+   order: 'asc' | 'desc'
 }
 
 const props = defineProps<{
@@ -61,6 +78,8 @@ const props = defineProps<{
 
 const visibility = defineModel<Record<string, boolean>>('columnVisibility', { default: () => ({}) })
 
+const sort = defineModel<TableSort | null>('sort', { default: null })
+
 const emit = defineEmits<{
    select: [event: Event, row: { original: Row }]
    reorder: [from: string, to: string]
@@ -68,6 +87,25 @@ const emit = defineEmits<{
 
 function columnId(column: Column) {
    return column.id ?? column.accessorKey ?? ''
+}
+
+function toggleSort(column: Column) {
+   if (!column.sortable) return
+   const key = columnId(column)
+   if (sort.value?.key !== key) sort.value = { key, order: 'asc' }
+   else if (sort.value.order === 'asc') sort.value = { key, order: 'desc' }
+   else sort.value = null
+}
+
+function sortIcon(column: Column) {
+   if (sort.value?.key !== columnId(column)) return 'arrows-up-down'
+   return sort.value.order === 'asc' ? 'arrow-small-up' : 'arrow-small-down'
+}
+
+function ariaSort(column: Column) {
+   if (!column.sortable) return undefined
+   if (sort.value?.key !== columnId(column)) return 'none'
+   return sort.value.order === 'asc' ? 'ascending' : 'descending'
 }
 
 const draggingId = ref<string | null>(null)
