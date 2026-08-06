@@ -1,6 +1,22 @@
 # Changelog
 
 
+## v0.1.29
+
+[compare changes](https://github.com/xleddyl/nuxt-cms/compare/v0.1.28...v0.1.29)
+
+### 🚀 Enhancements
+
+- Translatable media fields and configurable upload size limit ([3e4c0f9](https://github.com/xleddyl/nuxt-cms/commit/3e4c0f9))
+
+### 🏡 Chore
+
+- Docs ([382b8a0](https://github.com/xleddyl/nuxt-cms/commit/382b8a0))
+
+### ❤️ Contributors
+
+- Edoardo Alberti <edoalberti99@gmail.com>
+
 ## v0.1.28
 
 [compare changes](https://github.com/xleddyl/nuxt-cms/compare/v0.1.27...v0.1.28)
