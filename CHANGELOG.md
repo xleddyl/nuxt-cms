@@ -1,6 +1,22 @@
 # Changelog
 
 
+## v0.1.30
+
+[compare changes](https://github.com/xleddyl/nuxt-cms/compare/v0.1.29...v0.1.30)
+
+### 🚀 Enhancements
+
+- Build-time media manifest so local media syncs on serverless hosts ([8bf90fb](https://github.com/xleddyl/nuxt-cms/commit/8bf90fb))
+
+### 🏡 Chore
+
+- Skip changelogen github release step ([e4f2efc](https://github.com/xleddyl/nuxt-cms/commit/e4f2efc))
+
+### ❤️ Contributors
+
+- Edoardo Alberti <edoalberti99@gmail.com>
+
 ## v0.1.29
 
 [compare changes](https://github.com/xleddyl/nuxt-cms/compare/v0.1.28...v0.1.29)
