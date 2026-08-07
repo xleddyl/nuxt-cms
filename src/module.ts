@@ -27,6 +27,11 @@ import { createJiti } from 'jiti'
 import { renderGraphqlSdl } from './runtime/shared/graphql-sdl'
 import type { CmsConfig, MediaStorageMode } from './runtime/shared/index'
 import { DEFAULT_MEDIA_MAX_FILE_SIZE } from './runtime/shared/index'
+import {
+   collectMediaManifest,
+   renderMediaManifestFile,
+   renderMediaManifestTypes,
+} from './media-manifest-codegen'
 import type { Driver } from './schema-codegen'
 import { renderSchemaFile, validateConfig } from './schema-codegen'
 import { renderTypesFile } from './types-codegen'
@@ -419,6 +424,37 @@ export default defineNuxtModule<ModuleOptions>({
             ].join('\n'),
       })
 
+      const publicDir = resolve(nuxt.options.rootDir, nuxt.options.dir?.public ?? 'public')
+      const mediaLocalRoot =
+         resolved.media.storage === 'local' && resolved.media.publicBaseUrl.startsWith('/')
+            ? join(publicDir, ...resolved.media.publicBaseUrl.split('/').filter(Boolean))
+            : ''
+
+      addTemplate({
+         filename: 'cms/media-manifest.d.ts',
+         write: true,
+         getContents: () =>
+            renderMediaManifestTypes(
+               toPosix(resolver.resolve('./runtime/server/utils/media-sync'))
+            ),
+      })
+
+      const mediaManifestTemplate = addTemplate({
+         filename: 'cms/media-manifest.js',
+         write: true,
+         getContents: async () => {
+            if (!mediaLocalRoot || nuxt.options.dev) return renderMediaManifestFile(null)
+            if (!existsSync(mediaLocalRoot)) {
+               logger.warn(
+                  `[nuxt-cms] Local media folder not found at build time: ${mediaLocalRoot}. The media library will not be synced at runtime.`
+               )
+               return renderMediaManifestFile(null)
+            }
+            return renderMediaManifestFile(await collectMediaManifest(mediaLocalRoot))
+         },
+      })
+      nuxt.options.alias['#cms-media-manifest'] = mediaManifestTemplate.dst
+
       addServerPlugin(
          resolver.resolve(
             driver === 'postgres'
@@ -457,12 +493,6 @@ export default defineNuxtModule<ModuleOptions>({
                logger.error(`[nuxt-cms] drizzle-kit generate failed (exit code ${code})`)
          })
       }
-
-      const publicDir = resolve(nuxt.options.rootDir, nuxt.options.dir?.public ?? 'public')
-      const mediaLocalRoot =
-         resolved.media.storage === 'local' && resolved.media.publicBaseUrl.startsWith('/')
-            ? join(publicDir, ...resolved.media.publicBaseUrl.split('/').filter(Boolean))
-            : ''
 
       const existingConfig = (nuxt.options.runtimeConfig.cms ?? {}) as Record<string, unknown>
       nuxt.options.runtimeConfig.cms = {

@@ -97,15 +97,42 @@ Details worth knowing:
   anything else are ignored.
 - `alt` is **never** touched after the initial insert, so alt texts written straight into the
   database survive the sync as long as the file keeps its name.
-- The sync runs after the migrations plugin and is fully guarded: if the folder does not exist (a
-  serverless build that ships no public assets) or the database is unreachable, it logs a line and
-  the server starts as usual. It ends with one summary line:
+- The sync runs after the migrations plugin and is fully guarded: if neither the folder nor a build
+  manifest is available, or the database is unreachable, it logs a line and the server starts as
+  usual. It ends with one summary line:
   `[nuxt-cms] Local media sync: 2 added, 1 removed, 0 updated (…)`.
 - It is skipped entirely when `publicBaseUrl` is an absolute `http(s)` URL, since the files are then
   served by someone else and the module cannot see them. In that setup, populate `cms_media`
   yourself (a seed script, a migration, a separate tool).
 - The database itself can still be remote (Postgres, Turso/libSQL) while the files are local; the
   sync goes through the normal database layer.
+
+### Build manifest (serverless hosts)
+
+On a serverless host the `public/` folder is not on the function's filesystem: Vercel, for example,
+ships it to the static/CDN layer (`.vercel/output/static`) while the server code runs from a separate
+bundle. A boot-time `readdir` would find nothing there, so the sync alone cannot see your files.
+
+To cover that, the module also scans the folder **at build time** and emits the result into the
+server bundle as `cms/media-manifest.js` (key, folder, mime, size, width, height for every file). At
+boot the sync picks its source in this order:
+
+1. the folder on disk, if it exists (dev, and any deploy that ships the source tree) — always the
+   freshest view;
+2. otherwise the build manifest, if one was generated;
+3. otherwise nothing: it logs and skips, deliberately leaving `cms_media` untouched rather than
+   treating "no files visible" as "delete every row".
+
+A manifest generated from an empty folder is distinct from no manifest at all, so deleting the last
+file in the folder still empties the library on the next deploy.
+
+What this means in practice: **files are picked up at build time on serverless hosts**. Add an image
+to `public/images`, commit, redeploy, and it shows up in the media library. Dropping a file into the
+deployed bucket/CDN out of band will not, since nothing rescans between builds.
+
+If the folder is missing when the manifest is generated, the build warns:
+`[nuxt-cms] Local media folder not found at build time: …`. The manifest is not generated during
+`nuxt dev`, where the folder is read live on every server start.
 
 ## Upload flow (`'s3'` mode)
 
