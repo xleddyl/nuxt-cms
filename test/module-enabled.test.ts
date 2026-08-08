@@ -310,15 +310,4 @@ describe('module setup when enabled', () => {
          )
       ).rejects.toThrow(/maxFileSize must be a positive integer/)
    })
-
-   it('registers the local media sync plugin after the migration plugin', async () => {
-      const nuxt = createNuxt()
-      await moduleDefinition.setup(options(), nuxt)
-
-      const plugins = kit.addServerPlugin.mock.calls.map((call) => call[0] as string)
-      const migrate = plugins.findIndex((plugin) => plugin.includes('plugins/migrate-'))
-      const sync = plugins.findIndex((plugin) => plugin.includes('plugins/media-sync-local'))
-      expect(migrate).toBeGreaterThanOrEqual(0)
-      expect(sync).toBeGreaterThan(migrate)
-   })
 })

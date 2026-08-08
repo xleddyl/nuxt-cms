@@ -62,7 +62,7 @@ media: {
    secretAccessKey: '',
 }
 
-// local: read-only library synced from disk, publicBaseUrl is required
+// local: library backed by the public/ folder, publicBaseUrl is required
 media: { storage: 'local', publicBaseUrl: '/images' }
 ```
 
@@ -107,7 +107,7 @@ together. See [Database](database.md) for the details of each driver.
 
 S3-compatible object storage for the media library by default (`storage: 's3'`). When it is not
 configured, media endpoints return `501` and media fields simply cannot be uploaded to. Set
-`storage: 'local'` to make the media library read-only, listing files served from `publicBaseUrl`
+`storage: 'local'` to back the media library with files served from `publicBaseUrl`
 by the host app instead of a bucket — no S3 config needed. In that mode a root-relative
 `publicBaseUrl` (e.g. `/images` → `<rootDir>/public/images`) is also scanned at every server
 startup, so the library mirrors the files on disk. `maxFileSize` caps a single upload in bytes

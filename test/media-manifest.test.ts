@@ -61,28 +61,31 @@ describe('collectMediaManifest', () => {
 
 describe('renderMediaManifestFile', () => {
    it('marks the manifest as generated and embeds the metadata', () => {
-      const contents = renderMediaManifestFile([
-         { key: 'hero.png', folder: null, mime: 'image/png', size: 42, width: 120, height: 60 },
-      ])
+      const contents = renderMediaManifestFile(
+         [{ key: 'hero.png', folder: null, mime: 'image/png', size: 42, width: 120, height: 60 }],
+         '2026-08-08T10:00:00.000Z'
+      )
       expect(contents).toContain('export const generated = true')
+      expect(contents).toContain('export const builtAt = "2026-08-08T10:00:00.000Z"')
       expect(contents).toContain('"key": "hero.png"')
       expect(contents).toContain('"width": 120')
    })
 
    it('emits an empty, ungenerated manifest when there is nothing to scan', () => {
-      const contents = renderMediaManifestFile(null)
+      const contents = renderMediaManifestFile(null, null)
       expect(contents).toContain('export const generated = false')
+      expect(contents).toContain('export const builtAt = null')
       expect(contents).toContain('export const files = []')
    })
 
    it('keeps an empty generated manifest distinguishable from an ungenerated one', () => {
-      const contents = renderMediaManifestFile([])
+      const contents = renderMediaManifestFile([], '2026-08-08T10:00:00.000Z')
       expect(contents).toContain('export const generated = true')
       expect(contents).toContain('export const files = []')
    })
 
    it('emits type annotations only in the declaration file', () => {
-      expect(renderMediaManifestFile([])).not.toContain('MediaFileMeta')
+      expect(renderMediaManifestFile([], '2026-08-08T10:00:00.000Z')).not.toContain('MediaFileMeta')
       const types = renderMediaManifestTypes('/abs/media-sync')
       expect(types).toContain("import type { MediaFileMeta } from '/abs/media-sync'")
       expect(types).toContain('export declare const generated: boolean')

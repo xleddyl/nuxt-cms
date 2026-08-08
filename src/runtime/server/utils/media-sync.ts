@@ -6,17 +6,6 @@ export interface ScannedMediaFile {
    size: number
 }
 
-export interface MediaSyncRow {
-   key: string
-   size: number | null
-}
-
-export interface MediaSyncPlan {
-   insert: ScannedMediaFile[]
-   update: ScannedMediaFile[]
-   remove: string[]
-}
-
 export interface MediaFileMeta {
    key: string
    folder: string | null
@@ -219,23 +208,6 @@ export async function scanMediaDirectory(root: string): Promise<ScannedMediaFile
    return files.sort((a, b) => (a.key < b.key ? -1 : a.key > b.key ? 1 : 0))
 }
 
-export function planMediaSync(files: ScannedMediaFile[], rows: MediaSyncRow[]): MediaSyncPlan {
-   const rowByKey = new Map(rows.map((row) => [row.key, row]))
-   const insert: ScannedMediaFile[] = []
-   const update: ScannedMediaFile[] = []
-
-   for (const file of files) {
-      const row = rowByKey.get(file.key)
-      if (!row) insert.push(file)
-      else if (row.size !== file.size) update.push(file)
-   }
-
-   const scanned = new Set(files.map((file) => file.key))
-   const remove = rows.filter((row) => !scanned.has(row.key)).map((row) => row.key)
-
-   return { insert, update, remove }
-}
-
 export async function readMediaFileMeta(
    root: string,
    file: ScannedMediaFile
@@ -259,12 +231,4 @@ export async function readMediaFileMeta(
       width: size?.width ?? null,
       height: size?.height ?? null,
    }
-}
-
-export function chunked<T>(items: T[], size: number): T[][] {
-   const chunks: T[][] = []
-   for (let index = 0; index < items.length; index += size) {
-      chunks.push(items.slice(index, index + size))
-   }
-   return chunks
 }

@@ -430,6 +430,14 @@ export default defineNuxtModule<ModuleOptions>({
             ? join(publicDir, ...resolved.media.publicBaseUrl.split('/').filter(Boolean))
             : ''
 
+      if (resolved.media.storage === 'local' && !mediaLocalRoot) {
+         logger.warn(
+            `[nuxt-cms] media.storage is 'local' but media.publicBaseUrl (${
+               resolved.media.publicBaseUrl || 'empty'
+            }) is not a root-relative path, so no folder can be read: the media library will be empty. Set it to something like '/images'.`
+         )
+      }
+
       addTemplate({
          filename: 'cms/media-manifest.d.ts',
          write: true,
@@ -443,14 +451,17 @@ export default defineNuxtModule<ModuleOptions>({
          filename: 'cms/media-manifest.js',
          write: true,
          getContents: async () => {
-            if (!mediaLocalRoot || nuxt.options.dev) return renderMediaManifestFile(null)
+            if (!mediaLocalRoot || nuxt.options.dev) return renderMediaManifestFile(null, null)
             if (!existsSync(mediaLocalRoot)) {
                logger.warn(
-                  `[nuxt-cms] Local media folder not found at build time: ${mediaLocalRoot}. The media library will not be synced at runtime.`
+                  `[nuxt-cms] Local media folder not found at build time: ${mediaLocalRoot}. The media library will be empty at runtime.`
                )
-               return renderMediaManifestFile(null)
+               return renderMediaManifestFile(null, null)
             }
-            return renderMediaManifestFile(await collectMediaManifest(mediaLocalRoot))
+            return renderMediaManifestFile(
+               await collectMediaManifest(mediaLocalRoot),
+               new Date().toISOString()
+            )
          },
       })
       nuxt.options.alias['#cms-media-manifest'] = mediaManifestTemplate.dst
@@ -464,8 +475,6 @@ export default defineNuxtModule<ModuleOptions>({
                  : './runtime/server/plugins/migrate-sqlite'
          )
       )
-
-      addServerPlugin(resolver.resolve('./runtime/server/plugins/media-sync-local'))
 
       if (!nuxt.options.dev) {
          addServerPlugin(resolver.resolve('./runtime/server/plugins/session-check'))

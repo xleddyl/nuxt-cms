@@ -6,9 +6,14 @@ export async function collectMediaManifest(root: string): Promise<MediaFileMeta[
    return Promise.all(files.map((file) => readMediaFileMeta(root, file)))
 }
 
-export function renderMediaManifestFile(files: MediaFileMeta[] | null): string {
+export function renderMediaManifestFile(
+   files: MediaFileMeta[] | null,
+   builtAt: string | null
+): string {
    return [
       `export const generated = ${files !== null}`,
+      ``,
+      `export const builtAt = ${JSON.stringify(builtAt)}`,
       ``,
       `export const files = ${JSON.stringify(files ?? [], null, 3)}`,
       ``,
@@ -20,6 +25,8 @@ export function renderMediaManifestTypes(typesPath: string): string {
       `import type { MediaFileMeta } from '${typesPath}'`,
       ``,
       `export declare const generated: boolean`,
+      ``,
+      `export declare const builtAt: string | null`,
       ``,
       `export declare const files: MediaFileMeta[]`,
       ``,

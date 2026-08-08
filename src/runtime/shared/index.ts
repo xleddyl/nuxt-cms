@@ -108,7 +108,7 @@ export function normalizeMediaFolder(value: string | null | undefined): string |
 }
 
 export interface MediaItem {
-   id: number
+   id?: number
    key: string
    alt: string | null
    folder: string | null
@@ -116,9 +116,17 @@ export interface MediaItem {
    size: number | null
    width: number | null
    height: number | null
-   createdAt: string
+   createdAt: string | null
    type: MediaType
    url: string | null
+}
+
+export type MediaSourceKind = 'database' | 'filesystem' | 'manifest' | 'none'
+
+export interface MediaSourceInfo {
+   kind: MediaSourceKind
+   root: string
+   builtAt: string | null
 }
 
 export interface BlockConfig {

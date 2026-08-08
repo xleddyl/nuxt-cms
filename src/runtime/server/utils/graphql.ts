@@ -22,7 +22,7 @@ import cmsConfig from '#cms-config'
 import { useDb } from '#cms-db'
 import * as cmsTables from '#cms-tables'
 import { useRuntimeConfig } from '#imports'
-import type { CmsConfig, CmsEntry, FieldConfig } from '../../shared/index'
+import type { CmsConfig, CmsEntry, FieldConfig, MediaStorageMode } from '../../shared/index'
 import {
    decodeTranslatableMedia,
    isTranslatableMediaField,
@@ -32,6 +32,7 @@ import {
    translatableFieldKeys,
 } from '../../shared/index'
 import { blockTypeName, blockUnionName, renderGraphqlSdl, typeName } from '../../shared/graphql-sdl'
+import { useMediaIndex } from './media-index'
 import { getContentI18n, resolveTable, tableColumns } from './registry'
 
 const MAX_LIMIT = 100
@@ -199,14 +200,28 @@ function sortOrder(table: SQLiteTable, sort: SortInput[] | null | undefined): SQ
 }
 
 let mediaBase: string | undefined
+let mediaStorage: MediaStorageMode | undefined
 
 function getMediaBase(): string {
    mediaBase ??= (useRuntimeConfig().public.cms as { mediaBaseUrl: string }).mediaBaseUrl
    return mediaBase
 }
 
+function isLocalMedia(): boolean {
+   mediaStorage ??= (useRuntimeConfig().cms.media as { storage: MediaStorageMode }).storage
+   return mediaStorage === 'local'
+}
+
 async function resolveMedia(ctx: Ctx, key: unknown) {
    if (!key) return null
+
+   if (isLocalMedia()) {
+      const file = (await useMediaIndex()).get(key as string)
+      if (!file) return null
+      const alt = await loadMediaAlt(ctx).load(key as string)
+      return mediaObject(key as string, { ...file, alt: alt ?? null })
+   }
+
    const row = await loadMedia(ctx).load(key as string)
    return row ? mediaObject(key as string, row) : null
 }
@@ -272,6 +287,18 @@ function loadMedia(ctx: Ctx) {
             row as Record<string, unknown>,
          ])
       )
+   })
+}
+
+function loadMediaAlt(ctx: Ctx) {
+   return getLoader<string, string | null>(ctx, 'mediaAlt', async (keys) => {
+      const media = (cmsTables as Record<string, unknown>).cms_media as SQLiteTable
+      const columns = tableColumns(media)
+      const rows = await useDb()
+         .select({ key: columns.key!, alt: columns.alt! })
+         .from(media)
+         .where(inArray(columns.key!, keys))
+      return new Map(rows.map((row) => [row.key as string, (row.alt ?? null) as string | null]))
    })
 }
 

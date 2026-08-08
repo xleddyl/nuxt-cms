@@ -1298,6 +1298,12 @@ textarea.cms-field {
    gap: 1.25rem;
 }
 
+.cms-media-source {
+   margin-top: -0.75rem;
+   font-size: 0.8125rem;
+   color: var(--ui-text-muted);
+}
+
 .cms-media-filters {
    display: flex;
    flex-wrap: wrap;

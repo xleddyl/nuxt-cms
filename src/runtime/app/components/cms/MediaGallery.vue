@@ -9,6 +9,8 @@
    <div v-else class="cms-media-gallery">
       <CmsInput v-model="search" icon="magnifying-glass" placeholder="Search media…" />
 
+      <p v-if="sourceHint" class="cms-media-source">{{ sourceHint }}</p>
+
       <div v-if="showTypeFilters || folderChips.length || !readOnly" class="cms-media-filters">
          <template v-if="showTypeFilters">
             <button
@@ -69,12 +71,12 @@
             v-for="item in paged"
             :key="item.key"
             :type="selectable ? 'button' : undefined"
-            :role="!selectable && !readOnly ? 'button' : undefined"
-            :tabindex="!selectable && !readOnly ? 0 : undefined"
+            :role="!selectable && canEditAlt ? 'button' : undefined"
+            :tabindex="!selectable && canEditAlt ? 0 : undefined"
             class="cms-card cms-media-tile"
-            :class="{ 'is-selectable': selectable || !readOnly }"
+            :class="{ 'is-selectable': selectable || canEditAlt }"
             @click="onTileClick(item)"
-            @keydown.enter="!selectable && !readOnly && openEdit(item)"
+            @keydown.enter="!selectable && canEditAlt && openEdit(item)"
          >
             <div class="cms-media-preview">
                <img
@@ -205,7 +207,7 @@
       </CmsModal>
 
       <CmsModal
-         v-if="!readOnly"
+         v-if="canEditAlt"
          :open="!!editing"
          :title="editing ? mediaFilename(editing.key) : ''"
          @update:open="
@@ -219,7 +221,7 @@
                <CmsFormField label="Alt text">
                   <CmsInput v-model="editAlt" />
                </CmsFormField>
-               <CmsFormField label="Folder">
+               <CmsFormField v-if="canUpload" label="Folder">
                   <CmsMediaFolderPicker
                      v-model="editFolder"
                      :folders="folderNames"
@@ -242,7 +244,7 @@
 </template>
 
 <script setup lang="ts">
-import type { MediaItem, MediaType } from '#nuxt-cms'
+import type { MediaItem, MediaSourceInfo, MediaType } from '#nuxt-cms'
 import { computed, onMounted, ref, watch } from '#imports'
 import { MEDIA_TYPES, mediaFilename, mediaIconFor, normalizeMediaFolder } from '#nuxt-cms'
 import { useCmsConfirm } from '../../composables/cms-confirm'
@@ -267,12 +269,16 @@ const emit = defineEmits<{ select: [item: { key: string; url: string | null }] }
 
 const toast = useCmsToast()
 const runtime = useCmsRuntime()
-const readOnly = computed(() => runtime.mediaStorage === 'local')
+const isLocal = computed(() => runtime.mediaStorage === 'local')
+const canUpload = computed(() => !isLocal.value)
+const canEditAlt = computed(() => true)
+const readOnly = computed(() => !canUpload.value)
 
 const endpoint = '/api/cms/admin/media'
 const DRAFT_FOLDERS_KEY = 'nuxt-cms:media-folders'
 
 const items = ref<MediaItem[]>([])
+const source = ref<MediaSourceInfo | null>(null)
 const loading = ref(true)
 const errorCode = ref<number | null>(null)
 
@@ -280,14 +286,26 @@ async function reload() {
    loading.value = true
    errorCode.value = null
    try {
-      const result = await $fetch<{ items: MediaItem[] }>(endpoint)
+      const result = await $fetch<{ items: MediaItem[]; source: MediaSourceInfo }>(endpoint)
       items.value = result.items
+      source.value = result.source
    } catch (err) {
       errorCode.value = (err as { statusCode?: number }).statusCode ?? 500
    } finally {
       loading.value = false
    }
 }
+
+const sourceHint = computed(() => {
+   if (!isLocal.value || !source.value) return null
+   const { kind, root, builtAt } = source.value
+   if (kind === 'filesystem') return `read live from ${root}`
+   if (kind === 'manifest') {
+      const when = builtAt ? new Date(builtAt).toLocaleString() : 'the last build'
+      return `from the build of ${when} — add files to ${root} and redeploy to update`
+   }
+   return `no media folder was found at build time — check cms.media.publicBaseUrl`
+})
 onMounted(reload)
 
 const notConfigured = computed(() => errorCode.value === 501)
@@ -429,7 +447,7 @@ function onTileClick(item: MediaItem) {
       emit('select', { key: item.key, url: item.url })
       return
    }
-   if (!readOnly.value) openEdit(item)
+   if (canEditAlt.value) openEdit(item)
 }
 
 function openEdit(item: MediaItem) {
@@ -445,9 +463,9 @@ async function saveEdit() {
       await $fetch(endpoint, {
          method: 'PUT',
          body: {
-            id: editing.value.id,
+            key: editing.value.key,
             alt: editAlt.value.trim() || null,
-            folder: editFolder.value,
+            ...(canUpload.value ? { folder: editFolder.value } : {}),
          },
       })
       editing.value = null

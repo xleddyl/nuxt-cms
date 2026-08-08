@@ -6,7 +6,8 @@ Media (images, video, documents) can be stored two ways, selected with `cms.medi
 - **`'s3'`** — **S3-compatible object storage**: AWS S3, Cloudflare R2, MinIO, Backblaze B2, and
   similar. The database stores only metadata; the files live in your bucket. When media is not
   configured, media endpoints return `501` and `media` fields cannot be uploaded to.
-- **`'local'`** — the media library is **read-only**: no bucket, no credentials, no uploads. Files
+- **`'local'`** — the files in your `public/` folder **are** the library: no bucket, no credentials,
+  no uploads. Only alt text is editable. Files
   are expected to already live wherever `publicBaseUrl` points (e.g. your app's own `public/`
   directory, or any URL you serve yourself). When `publicBaseUrl` is a root-relative path, the
   library is **synced from disk at server startup**, so the gallery always mirrors the folder. Use
@@ -44,7 +45,7 @@ NUXT_CMS_MEDIA_MAX_FILE_SIZE=52428800
 ```
 
 - **`storage`** — `'s3'` (default) enables uploads against object storage; `'local'` turns the
-  media library read-only, syncs it from the folder `publicBaseUrl` points to at server startup, and
+  media library file-backed, listing the folder `publicBaseUrl` points to, and
   does not accept the S3 keys at all (`endpoint` / `bucket` / `accessKeyId` / `secretAccessKey` are
   rejected at the type level in `'local'` mode, and `publicBaseUrl` is required there).
 - **`endpoint` / `bucket` / `accessKeyId` / `secretAccessKey`** — S3 connection, required when
@@ -62,77 +63,67 @@ NUXT_CMS_MEDIA_MAX_FILE_SIZE=52428800
   uploading and the presign endpoint rejects anything larger with `413`. Raise it for large assets
   such as magazine PDFs, and keep any bucket or proxy limits in mind. Unused in `'local'` mode.
 
-## Local mode (read-only)
+## Local mode (files own the library)
 
-With `storage: 'local'`:
+With `storage: 'local'` the files in your `public/` folder **are** the media library. The `cms_media`
+table is not a copy of them: it only stores the `alt` texts you write. Nothing syncs, nothing
+reconciles, and there is no background job that can disagree with what is on disk.
 
-- `GET` (listing media in the admin panel and the media field picker) works exactly as in `'s3'`
-  mode and needs no S3 config at all.
-- Uploading, editing (alt/folder) and deleting are disabled: the admin UI hides the upload dropzone
-  and the edit/delete actions, and the corresponding server endpoints (`presign`, `POST`, `PUT`,
-  `DELETE`) respond with `501` ("Media storage is local; the media library is read-only") if called
-  directly.
-- The library is filled automatically by the **startup sync** below: you add and remove files in the
-  folder, the CMS keeps `cms_media` in step.
+- `GET` (the admin listing and the media field picker) reads the file list directly from the source
+  described below and left-joins the alt texts.
+- **Alt text is editable**, in the admin panel like in `'s3'` mode.
+- Uploading, deleting and moving a file between folders are disabled, because the files belong to
+  your repository: the UI hides the dropzone and the delete action, `folder` is derived from the
+  file's own path, and `presign`, `POST` and `DELETE` answer `501` if called directly.
 
-### Startup sync from disk
+### Where the file list comes from
 
-When `storage` is `'local'` **and** `publicBaseUrl` is a root-relative path (e.g. `/images`), the
-module resolves it against the app's public directory (`<rootDir>/public/images`) and, every time the
-Nitro server boots, reconciles the `cms_media` table with what is actually on disk:
+`publicBaseUrl` must be a root-relative path (e.g. `/images`); the module resolves it against the
+app's public directory (`<rootDir>/public/images`). The list is then resolved in this order:
 
-- files present on disk but missing from the table are **inserted** (mime from the extension, size
-  from the file, width/height read from the file header for PNG, JPEG, WebP and GIF, `folder` set to
-  the parent directory, `alt` left empty);
-- rows whose file no longer exists are **deleted**;
-- rows whose stored size differs from the file's current size are **refreshed** (mime, size,
-  width/height).
+1. **the folder on disk**, whenever it exists (dev, and any deploy that ships the source tree). Read
+   live, with a one-second cache, so adding a file and refreshing the page is enough — no restart.
+2. **the build manifest**, otherwise. At build time the module scans the folder and bakes the result
+   into the server bundle as `cms/media-manifest.js` (key, folder, mime, size, width, height, plus
+   the build timestamp).
+3. **nothing**, if neither is available: the library renders empty and the admin panel says so.
 
-Details worth knowing:
+Both paths produce the same metadata: mime from the extension, size from the file, width/height read
+from the file header for PNG, JPEG, WebP and GIF, `folder` from the parent directory. The `key` is
+the path relative to that folder, POSIX-style: `hero.webp`, `waters/avisio-river.webp`.
+Sub-directories are walked recursively. Only known media extensions are picked up (`jpg`, `jpeg`,
+`png`, `webp`, `avif`, `gif`, `svg`, `mp4`, `webm`, `mov`, `mp3`, `wav`, `ogg`, `m4a`, `pdf`);
+dotfiles and anything else are ignored.
 
-- The `key` of a row is the file path relative to that folder, POSIX-style: `hero.webp`,
-  `waters/avisio-river.webp`. Sub-directories are walked recursively.
-- Only known media extensions are picked up: `jpg`, `jpeg`, `png`, `webp`, `avif`, `gif`, `svg`,
-  `mp4`, `webm`, `mov`, `mp3`, `wav`, `ogg`, `m4a`, `pdf`. Dotfiles (`.gitkeep`, `.DS_Store`, …) and
-  anything else are ignored.
-- `alt` is **never** touched after the initial insert, so alt texts written straight into the
-  database survive the sync as long as the file keeps its name.
-- The sync runs after the migrations plugin and is fully guarded: if neither the folder nor a build
-  manifest is available, or the database is unreachable, it logs a line and the server starts as
-  usual. It ends with one summary line:
-  `[nuxt-cms] Local media sync: 2 added, 1 removed, 0 updated (…)`.
-- It is skipped entirely when `publicBaseUrl` is an absolute `http(s)` URL, since the files are then
-  served by someone else and the module cannot see them. In that setup, populate `cms_media`
-  yourself (a seed script, a migration, a separate tool).
-- The database itself can still be remote (Postgres, Turso/libSQL) while the files are local; the
-  sync goes through the normal database layer.
-
-### Build manifest (serverless hosts)
+### Serverless hosts
 
 On a serverless host the `public/` folder is not on the function's filesystem: Vercel, for example,
 ships it to the static/CDN layer (`.vercel/output/static`) while the server code runs from a separate
-bundle. A boot-time `readdir` would find nothing there, so the sync alone cannot see your files.
+bundle. Step 1 above is therefore impossible there and the manifest is what gets used.
 
-To cover that, the module also scans the folder **at build time** and emits the result into the
-server bundle as `cms/media-manifest.js` (key, folder, mime, size, width, height for every file). At
-boot the sync picks its source in this order:
+The practical consequence: **on serverless hosts files are picked up at build time**. Add an image to
+`public/images`, commit, and deploy *that commit*. Dropping a file into the CDN out of band does
+nothing, and neither does re-deploying an older build: a "Redeploy" button that rebuilds a previous
+snapshot rebuilds that snapshot's manifest too. The admin panel prints which source it is using and,
+for a manifest, when it was built.
 
-1. the folder on disk, if it exists (dev, and any deploy that ships the source tree) — always the
-   freshest view;
-2. otherwise the build manifest, if one was generated;
-3. otherwise nothing: it logs and skips, deliberately leaving `cms_media` untouched rather than
-   treating "no files visible" as "delete every row".
+### Why there is no sync
 
-A manifest generated from an empty folder is distinct from no manifest at all, so deleting the last
-file in the folder still empties the library on the next deploy.
+Earlier versions reconciled `cms_media` against the folder at every server boot. That is unsound as
+soon as two environments share one database: local dev reconciles against the live folder, production
+against the manifest frozen into its deployment, and each deletes the rows the other just wrote.
+Reading the list per-environment and keeping only `alt` in the database removes the shared mutable
+state entirely, so **dev and production can safely share one database**.
 
-What this means in practice: **files are picked up at build time on serverless hosts**. Add an image
-to `public/images`, commit, redeploy, and it shows up in the media library. Dropping a file into the
-deployed bucket/CDN out of band will not, since nothing rescans between builds.
+Consequences worth knowing:
 
-If the folder is missing when the manifest is generated, the build warns:
-`[nuxt-cms] Local media folder not found at build time: …`. The manifest is not generated during
-`nuxt dev`, where the folder is read live on every server start.
+- Dev sees a new file immediately; production sees it after a deploy. This divergence is by design
+  and is surfaced in the UI rather than papered over.
+- An `alt` whose file is later removed stays in the table as a harmless orphan, and reattaches by
+  itself if the file comes back. **It is never pruned** — pruning against one environment's partial
+  view is exactly the bug described above.
+- If `publicBaseUrl` is an absolute `http(s)` URL, no folder can be resolved and the library is
+  empty. The build warns about it.
 
 ## Upload flow (`'s3'` mode)
 

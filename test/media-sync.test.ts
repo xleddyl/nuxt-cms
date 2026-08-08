@@ -9,7 +9,6 @@ import {
    jpegImageSize,
    mediaMimeForKey,
    mediaSyncFolder,
-   planMediaSync,
    pngImageSize,
    readMediaFileMeta,
    scanMediaDirectory,
@@ -186,40 +185,6 @@ describe('key helpers', () => {
       expect(mediaSyncFolder('hero.webp')).toBeNull()
       expect(mediaSyncFolder('waters/avisio-river.webp')).toBe('waters')
       expect(mediaSyncFolder('a/b/c.png')).toBe('a/b')
-   })
-})
-
-describe('planMediaSync', () => {
-   it('inserts new keys, removes missing files and updates changed sizes', () => {
-      const plan = planMediaSync(
-         [
-            { key: 'hero.webp', size: 100 },
-            { key: 'waters/river.webp', size: 250 },
-            { key: 'new.png', size: 10 },
-         ],
-         [
-            { key: 'hero.webp', size: 100 },
-            { key: 'waters/river.webp', size: 999 },
-            { key: 'gone.jpg', size: 5 },
-         ]
-      )
-
-      expect(plan.insert).toEqual([{ key: 'new.png', size: 10 }])
-      expect(plan.update).toEqual([{ key: 'waters/river.webp', size: 250 }])
-      expect(plan.remove).toEqual(['gone.jpg'])
-   })
-
-   it('treats a null stored size as changed', () => {
-      const plan = planMediaSync([{ key: 'a.png', size: 4 }], [{ key: 'a.png', size: null }])
-      expect(plan.update).toEqual([{ key: 'a.png', size: 4 }])
-      expect(plan.insert).toHaveLength(0)
-      expect(plan.remove).toHaveLength(0)
-   })
-
-   it('is a no-op when files and rows match', () => {
-      const files = [{ key: 'a.png', size: 4 }]
-      const plan = planMediaSync(files, [{ key: 'a.png', size: 4 }])
-      expect(plan).toEqual({ insert: [], update: [], remove: [] })
    })
 })
 
