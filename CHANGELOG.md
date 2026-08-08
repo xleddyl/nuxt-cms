@@ -1,6 +1,18 @@
 # Changelog
 
 
+## v0.1.31
+
+[compare changes](https://github.com/xleddyl/nuxt-cms/compare/v0.1.30...v0.1.31)
+
+### 🚀 Enhancements
+
+- Local media library reads from disk or build manifest instead of syncing cms_media ([a5d29d0](https://github.com/xleddyl/nuxt-cms/commit/a5d29d0))
+
+### ❤️ Contributors
+
+- Edoardo Alberti <edoalberti99@gmail.com>
+
 ## v0.1.30
 
 [compare changes](https://github.com/xleddyl/nuxt-cms/compare/v0.1.29...v0.1.30)
