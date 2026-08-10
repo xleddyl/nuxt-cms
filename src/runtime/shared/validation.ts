@@ -53,14 +53,34 @@ function optionalize(field: FieldConfig, base: z.ZodType): z.ZodType {
    return field.required ? base : base.nullish().transform((v) => v ?? null)
 }
 
-function blocksSchema(field: FieldConfig, m: ValidationMessages) {
+function translatableSchema(field: FieldConfig, i18n: CmsI18n, m: ValidationMessages): z.ZodType {
+   const { locales, defaultLocale } = i18n
+   const record = z
+      .record(z.string(), field.type === 'media' ? objectKeySchema : z.string())
+      .refine((v) => Object.keys(v).every((k) => locales.includes(k)), m.unknownLocale)
+   return field.required
+      ? record.refine((v) => !!v[defaultLocale]?.trim(), m.requiredLocale(defaultLocale))
+      : record.nullish().transform((v) => v ?? null)
+}
+
+function blockFieldSchema(
+   blockField: FieldConfig,
+   i18n: CmsI18n,
+   m: ValidationMessages
+): z.ZodType {
+   if (isTranslatableField(blockField) && i18n.locales.length)
+      return translatableSchema(blockField, i18n, m)
+   return optionalize(blockField, scalarSchema(blockField, m))
+}
+
+function blocksSchema(field: FieldConfig, i18n: CmsI18n, m: ValidationMessages) {
    const variants = Object.entries(field.blocks ?? {}).map(([type, block]) =>
       z.object({
          type: z.literal(type),
          ...Object.fromEntries(
             Object.entries(block.fields).map(([key, blockField]) => [
                key,
-               optionalize(blockField, scalarSchema(blockField, m)),
+               blockFieldSchema(blockField, i18n, m),
             ])
          ),
       })
@@ -74,7 +94,6 @@ export function buildEntrySchema(
    messages?: Partial<ValidationMessages>
 ) {
    const m: ValidationMessages = { ...DEFAULT_MESSAGES, ...messages }
-   const { locales, defaultLocale } = i18n
    const shape: Record<string, z.ZodType> = {}
    for (const [key, field] of Object.entries(entry.fields)) {
       if (field.type === 'relation' && field.cardinality === 'many-to-many') {
@@ -92,19 +111,14 @@ export function buildEntrySchema(
          continue
       }
       if (field.type === 'blocks') {
-         const list = blocksSchema(field, m)
+         const list = blocksSchema(field, i18n, m)
          shape[key] = field.required
             ? list.min(1, m.required)
             : list.nullish().transform((v) => v ?? null)
          continue
       }
-      if (isTranslatableField(field) && locales.length) {
-         const record = z
-            .record(z.string(), field.type === 'media' ? objectKeySchema : z.string())
-            .refine((v) => Object.keys(v).every((k) => locales.includes(k)), m.unknownLocale)
-         shape[key] = field.required
-            ? record.refine((v) => !!v[defaultLocale]?.trim(), m.requiredLocale(defaultLocale))
-            : record.nullish().transform((v) => v ?? null)
+      if (isTranslatableField(field) && i18n.locales.length) {
+         shape[key] = translatableSchema(field, i18n, m)
          continue
       }
       if (field.type === 'json') {

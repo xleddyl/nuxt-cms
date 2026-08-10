@@ -13,6 +13,7 @@ const IDENTIFIER = /^[a-z_]\w*$/i
 const RESERVED_ENTRY_KEYS = ['admin', 'auth', 'login', 'media', 'graphql', 'cms_media']
 const RESERVED_COLUMNS = ['id', 'status', 'created_at', 'updated_at']
 const TITLE_FIELD_TYPES = ['text', 'slug', 'email', 'number', 'date', 'select']
+const TRANSLATABLE_FIELD_TYPES = ['text', 'richtext', 'media']
 const RESERVED_TYPE_NAMES = [
    'Query',
    'Mutation',
@@ -97,7 +98,7 @@ export function validateConfig(config: CmsConfig, i18n?: CmsI18n): string[] {
             columnNames.add(column)
          }
          if (field.translatable) {
-            if (field.type !== 'text' && field.type !== 'richtext' && field.type !== 'media')
+            if (!TRANSLATABLE_FIELD_TYPES.includes(field.type))
                errors.push(
                   `${fat}: translatable is only supported on text, richtext and media fields`
                )
@@ -140,8 +141,16 @@ export function validateConfig(config: CmsConfig, i18n?: CmsI18n): string[] {
                         `${bfat}: ${blockField.type} fields are not supported inside blocks`
                      )
                   }
-                  if (blockField.translatable)
-                     errors.push(`${bfat}: translatable fields are not supported inside blocks`)
+                  if (blockField.translatable) {
+                     if (!TRANSLATABLE_FIELD_TYPES.includes(blockField.type))
+                        errors.push(
+                           `${bfat}: translatable is only supported on text, richtext and media fields`
+                        )
+                     if (!locales.length)
+                        errors.push(
+                           `${bfat}: translatable requires cms.i18n.locales in nuxt.config`
+                        )
+                  }
                   if (blockField.private)
                      errors.push(`${bfat}: private fields are not supported inside blocks`)
                   if (blockField.type === 'select' && !blockField.options?.length) {

@@ -102,6 +102,72 @@ describe('buildEntrySchema', () => {
       expect(result.success).toBe(false)
    })
 
+   it('validates translatable fields inside blocks as locale maps', () => {
+      const config = sampleConfig().events!
+      config.fields.body!.blocks!.hero!.fields.heading!.translatable = true
+      const translatable = buildEntrySchema(config, I18N)
+
+      expect(
+         translatable.safeParse({
+            ...validEvent(),
+            body: [{ type: 'hero', heading: { en: 'Welcome', it: 'Benvenuto' } }],
+         }).success
+      ).toBe(true)
+      expect(
+         translatable.safeParse({ ...validEvent(), body: [{ type: 'hero', heading: 'Welcome' }] })
+            .success
+      ).toBe(false)
+   })
+
+   it('rejects unknown locales inside blocks', () => {
+      const config = sampleConfig().events!
+      config.fields.body!.blocks!.hero!.fields.heading!.translatable = true
+      const translatable = buildEntrySchema(config, I18N)
+
+      expect(
+         translatable.safeParse({
+            ...validEvent(),
+            body: [{ type: 'hero', heading: { en: 'Welcome', fr: 'Bienvenue' } }],
+         }).success
+      ).toBe(false)
+   })
+
+   it('requires the default locale on a required translatable block field', () => {
+      const config = sampleConfig().events!
+      config.fields.body!.blocks!.hero!.fields.heading!.translatable = true
+      const translatable = buildEntrySchema(config, I18N)
+
+      expect(
+         translatable.safeParse({
+            ...validEvent(),
+            body: [{ type: 'hero', heading: { it: 'Benvenuto' } }],
+         }).success
+      ).toBe(false)
+   })
+
+   it('validates translatable media keys inside blocks', () => {
+      const config = sampleConfig().events!
+      config.fields.body!.blocks!.hero!.fields.image = {
+         label: 'Image',
+         type: 'media',
+         translatable: true,
+      }
+      const translatable = buildEntrySchema(config, I18N)
+
+      expect(
+         translatable.safeParse({
+            ...validEvent(),
+            body: [{ type: 'hero', heading: 'Welcome', image: { en: '2026/07/hero.png' } }],
+         }).success
+      ).toBe(true)
+      expect(
+         translatable.safeParse({
+            ...validEvent(),
+            body: [{ type: 'hero', heading: 'Welcome', image: { en: '../etc/passwd' } }],
+         }).success
+      ).toBe(false)
+   })
+
    it('normalizes omitted many-to-many lists to empty arrays', () => {
       const entry = validEvent() as Record<string, unknown>
       delete entry.tags

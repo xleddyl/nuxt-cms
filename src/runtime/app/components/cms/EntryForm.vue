@@ -13,10 +13,12 @@
          :name="key"
          :required="field.required"
       >
-         <template v-if="isTranslatableField(field) && i18n.locales.length > 1" #label-actions>
+         <template v-if="hasLocaleSwitch(field) && i18n.locales.length > 1" #label-actions>
             <CmsLocaleSwitch
                :model-value="localeFor(key)"
-               :value="state[key] as Record<string, string> | null"
+               :value="
+                  isTranslatableField(field) ? (state[key] as Record<string, string> | null) : null
+               "
                @update:model-value="(locale: string) => setLocale(key, locale)"
             />
          </template>
@@ -41,8 +43,8 @@
 </template>
 
 <script setup lang="ts">
-import type { CmsEntry } from '#nuxt-cms'
-import { isTranslatableField } from '#nuxt-cms'
+import type { CmsEntry, FieldConfig } from '#nuxt-cms'
+import { hasTranslatableBlockFields, isTranslatableField } from '#nuxt-cms'
 import { computed, ref } from '#imports'
 import { buildEntrySchema } from '../../../shared/validation'
 import { useCmsRuntime } from '../../composables/cms-runtime'
@@ -65,6 +67,10 @@ const emit = defineEmits<{ submit: []; error: [] }>()
 const { i18n } = useCmsRuntime()
 
 const activeLocale = ref<Record<string, string>>({})
+
+function hasLocaleSwitch(field: FieldConfig) {
+   return isTranslatableField(field) || hasTranslatableBlockFields(field)
+}
 
 function localeFor(key: string) {
    return activeLocale.value[key] ?? i18n.defaultLocale

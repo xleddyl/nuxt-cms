@@ -63,6 +63,7 @@
                <CmsFieldInput
                   :model-value="item[blockKey]"
                   :field="blockField"
+                  :locale="locale"
                   @update:model-value="(value: unknown) => updateField(index, blockKey, value)"
                />
             </CmsFormField>
@@ -78,7 +79,7 @@
 import type { FieldConfig } from '#nuxt-cms'
 import { computed, ref } from '#imports'
 
-const props = defineProps<{ field: FieldConfig }>()
+const props = defineProps<{ field: FieldConfig; locale?: string }>()
 
 const model = defineModel<Record<string, unknown>[] | null>({ required: true })
 

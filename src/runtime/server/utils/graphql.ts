@@ -25,8 +25,10 @@ import { useRuntimeConfig } from '#imports'
 import type { CmsConfig, CmsEntry, FieldConfig, MediaStorageMode } from '../../shared/index'
 import {
    decodeTranslatableMedia,
+   hasTranslatableBlockFields,
    isPrivateField,
    isTranslatableMediaField,
+   localizeBlocks,
    mediaPublicUrl,
    mediaTypeFor,
    pickTranslatedMedia,
@@ -134,6 +136,10 @@ function localizeRow(entry: CmsEntry, row: Record<string, unknown>, locale: stri
       }
       const value = row[key] as Record<string, string> | null | undefined
       result[key] = value?.[locale] ?? value?.[defaultLocale] ?? null
+   }
+   for (const [key, field] of Object.entries(entry.fields)) {
+      if (isPrivateField(field) || !hasTranslatableBlockFields(field)) continue
+      result[key] = localizeBlocks(field, result[key], locale, defaultLocale)
    }
    return result
 }

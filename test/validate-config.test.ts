@@ -97,17 +97,56 @@ describe('validateConfig', () => {
       ).toBe(true)
    })
 
-   it('rejects translatable media inside blocks', () => {
+   it('accepts translatable text, richtext and media inside blocks', () => {
       const config = sampleConfig()
       config.events!.fields.body!.blocks!.hero!.fields.image = {
          label: 'Image',
          type: 'media',
          translatable: true,
       }
+      config.events!.fields.body!.blocks!.hero!.fields.heading!.translatable = true
+      config.events!.fields.body!.blocks!.quote!.fields.body = {
+         label: 'Body',
+         type: 'richtext',
+         translatable: true,
+      }
+      expect(validateConfig(config, I18N)).toEqual([])
+   })
+
+   it('rejects translatable inside blocks on field types that do not support it', () => {
+      const config = sampleConfig()
+      config.events!.fields.body!.blocks!.hero!.fields.count = {
+         label: 'Count',
+         type: 'number',
+         translatable: true,
+      }
       const errors = validateConfig(config, I18N)
       expect(
-         errors.some((e) => e.includes('translatable fields are not supported inside blocks'))
+         errors.some(
+            (e) =>
+               e.includes("field 'count'") &&
+               e.includes('translatable is only supported on text, richtext and media')
+         )
       ).toBe(true)
+   })
+
+   it('rejects translatable inside blocks without configured locales', () => {
+      const config = sampleConfig()
+      config.events!.fields.body!.blocks!.hero!.fields.heading!.translatable = true
+      const errors = validateConfig(config)
+      expect(
+         errors.some(
+            (e) =>
+               e.includes("field 'heading'") && e.includes('translatable requires cms.i18n.locales')
+         )
+      ).toBe(true)
+   })
+
+   it('still rejects a translatable blocks field itself', () => {
+      const config = sampleConfig()
+      config.events!.fields.body!.translatable = true
+      const errors = validateConfig(config, I18N)
+      expect(errors.some((e) => e.includes('blocks fields cannot be translatable'))).toBe(true)
    })
 
    it('rejects private fields inside blocks', () => {

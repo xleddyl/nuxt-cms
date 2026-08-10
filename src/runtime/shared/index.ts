@@ -180,7 +180,7 @@ function parseJsonObject(raw: string): Record<string, string> | null {
    return null
 }
 
-export function decodeTranslatableMedia(
+export function decodeTranslatableValue(
    value: unknown,
    defaultLocale: string
 ): Record<string, string> | null {
@@ -190,6 +190,8 @@ export function decodeTranslatableMedia(
    if (!raw) return null
    return (raw.startsWith('{') ? parseJsonObject(raw) : null) ?? { [defaultLocale]: raw }
 }
+
+export const decodeTranslatableMedia = decodeTranslatableValue
 
 export function encodeTranslatableMedia(value: unknown): string | null {
    if (value == null) return null
@@ -254,6 +256,50 @@ export function translatableFieldKeys(entry: CmsEntry): string[] {
    return Object.entries(entry.fields)
       .filter(([, field]) => isTranslatableField(field))
       .map(([key]) => key)
+}
+
+export function translatableBlockFieldKeys(block: BlockConfig): string[] {
+   return Object.entries(block.fields)
+      .filter(([, field]) => isTranslatableField(field))
+      .map(([key]) => key)
+}
+
+export function hasTranslatableBlockFields(field: FieldConfig): boolean {
+   if (field.type !== 'blocks') return false
+   return Object.values(field.blocks ?? {}).some((block) =>
+      Object.values(block.fields).some(isTranslatableField)
+   )
+}
+
+export function localizeBlock(
+   field: FieldConfig,
+   item: unknown,
+   locale: string,
+   defaultLocale: string
+): unknown {
+   if (!item || typeof item !== 'object') return item
+   const block = field.blocks?.[String((item as Record<string, unknown>).type)]
+   if (!block) return item
+   const keys = translatableBlockFieldKeys(block)
+   if (!keys.length) return item
+   const localized: Record<string, unknown> = { ...(item as Record<string, unknown>) }
+   for (const key of keys) {
+      const values = decodeTranslatableValue(localized[key], defaultLocale)
+      localized[key] = isTranslatableMediaField(block.fields[key]!)
+         ? pickTranslatedMedia(values, locale, defaultLocale)
+         : values?.[locale] ?? values?.[defaultLocale] ?? null
+   }
+   return localized
+}
+
+export function localizeBlocks(
+   field: FieldConfig,
+   value: unknown,
+   locale: string,
+   defaultLocale: string
+): unknown {
+   if (!Array.isArray(value)) return value
+   return value.map((item) => localizeBlock(field, item, locale, defaultLocale))
 }
 
 export interface CmsEntry {
@@ -332,15 +378,15 @@ export interface RelationFieldInput extends FieldInputBase {
 }
 
 export type BlockFieldInput =
-   | Omit<TextFieldInput, 'translatable' | 'private'>
-   | Omit<RichtextFieldInput, 'translatable' | 'private'>
+   | Omit<TextFieldInput, 'private'>
+   | Omit<RichtextFieldInput, 'private'>
    | Omit<NumberFieldInput, 'private'>
    | Omit<BooleanFieldInput, 'private'>
    | Omit<DateFieldInput, 'private'>
    | Omit<EmailFieldInput, 'private'>
    | Omit<SelectFieldInput, 'private'>
    | Omit<JsonFieldInput, 'private'>
-   | Omit<MediaFieldInput, 'translatable' | 'private'>
+   | Omit<MediaFieldInput, 'private'>
 
 export interface BlockInput {
    label: string

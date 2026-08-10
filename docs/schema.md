@@ -112,8 +112,35 @@ body: {
 }
 ```
 
-Block fields accept every field type **except** `slug`, `relation`, `blocks`, `translatable`, and multi-select (`select` with `multiple: true`).
+Block fields accept every field type **except** `slug`, `relation`, `blocks`, and multi-select
+(`select` with `multiple: true`). They can be `translatable` (see below) but not `private` — mark the
+whole `blocks` field private instead.
 See [Querying → Blocks](querying.md#blocks) for how to read them.
+
+### Translatable block fields
+
+`text`, `richtext` and `media` fields **inside** a block accept `translatable: true`, with the same
+semantics as at the top level:
+
+```ts
+answers: {
+   label: 'Answers', type: 'blocks',
+   blocks: {
+      answer: { label: 'Answer', fields: {
+         text: { label: 'Text', type: 'text', required: true, translatable: true },
+         correct: { label: 'Correct', type: 'boolean' },
+      } },
+   },
+}
+```
+
+The per-locale values live inside the block's JSON, so the column shape does not change and **adding
+`translatable: true` to an existing block field needs no migration**: blocks that still hold a plain
+value keep working and are read as the default locale's value. The query shape does not change
+either — the field still resolves to a single `String` (or `CmsMedia`) for the requested `locale`.
+
+In the admin panel the locale switcher appears next to the `blocks` field label and applies to every
+translatable sub-field of every block at once, so a whole list can be translated in one pass.
 
 ## Private fields
 
@@ -146,8 +173,8 @@ a translatable media field a JSON map of locale → key), not the resolved Graph
 
 ## Translatable fields
 
-`translatable: true` is supported on `text`, `richtext` and `media`, and requires `cms.i18n.locales`
-to be configured. Values are stored per locale and resolved to a single value at query time via the
+`translatable: true` is supported on `text`, `richtext` and `media` — both as top-level fields and
+[inside blocks](#translatable-block-fields) — and requires `cms.i18n.locales` to be configured. Values are stored per locale and resolved to a single value at query time via the
 `locale` argument (falling back to `defaultLocale` when a translation is missing). Translatable
 fields are **excluded from filtering and sorting**.
 
@@ -233,6 +260,7 @@ export default defineCmsConfig({
   `text`, `slug`, `email`, `number`, `date` or single `select`.
 - `select` needs a non-empty array of unique `options`.
 - Multi-select (`select` with `multiple: true`) is not allowed inside `blocks` and is excluded from filters and sorting.
+- `translatable` is only valid on `text`, `richtext` and `media`, at the top level or inside a block, and requires `cms.i18n.locales`. The `blocks` field itself cannot be translatable.
 - `slug.from` must point to a non-translatable `text` field.
 - `private` is not allowed inside `blocks`.
 - A relation `to` must reference an existing collection.

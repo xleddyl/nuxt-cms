@@ -52,8 +52,18 @@ export default defineCmsConfig({
                hero: {
                   label: 'Hero',
                   fields: {
-                     heading: { label: 'Heading', type: 'text', required: true },
-                     image: { label: 'Image', type: 'media', mediaType: 'image' },
+                     heading: {
+                        label: 'Heading',
+                        type: 'text',
+                        required: true,
+                        translatable: true,
+                     },
+                     image: {
+                        label: 'Image',
+                        type: 'media',
+                        mediaType: 'image',
+                        translatable: true,
+                     },
                   },
                },
                quote: {

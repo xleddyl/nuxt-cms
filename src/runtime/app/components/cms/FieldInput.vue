@@ -5,7 +5,12 @@
       :field="field"
       :locale="locale"
    />
-   <CmsBlocksField v-else-if="field.type === 'blocks'" v-model="blocksValue" :field="field" />
+   <CmsBlocksField
+      v-else-if="field.type === 'blocks'"
+      v-model="blocksValue"
+      :field="field"
+      :locale="locale"
+   />
    <CmsRichTextField v-else-if="field.type === 'richtext'" v-model="strOrNull" />
    <CmsTextarea v-else-if="field.type === 'text' && field.textarea" v-model="str" :rows="8" />
    <CmsInput v-else-if="field.type === 'text'" v-model="str" />
