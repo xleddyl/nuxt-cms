@@ -1,5 +1,5 @@
 import type { CmsConfig, CmsEntry, FieldConfig } from './index'
-import { isTranslatableField } from './index'
+import { isPrivateField, isTranslatableField } from './index'
 
 export function typeName(name: string) {
    return name.replace(/(?:^|_)([a-z0-9])/gi, (_, c: string) => c.toUpperCase())
@@ -27,7 +27,7 @@ function scalarFor(field: FieldConfig): string {
 }
 
 function filterScalarFor(field: FieldConfig): string | null {
-   if (isTranslatableField(field)) return null
+   if (isPrivateField(field) || isTranslatableField(field)) return null
    switch (field.type) {
       case 'json':
          return null
@@ -73,6 +73,7 @@ function fieldSdl(config: CmsConfig, entryName: string, key: string, field: Fiel
 function entrySdl(config: CmsConfig, name: string, entry: CmsEntry): string {
    const lines = ['  id: ID!']
    for (const [key, field] of Object.entries(entry.fields)) {
+      if (isPrivateField(field)) continue
       lines.push(fieldSdl(config, name, key, field))
    }
    if (entry.kind === 'collection') lines.push('  createdAt: String!')
@@ -130,7 +131,8 @@ export function renderGraphqlSdl(config: CmsConfig): string {
       const gqlType = typeName(name)
       types.push(entrySdl(config, name, entry))
       for (const [key, field] of Object.entries(entry.fields)) {
-         if (field.type === 'blocks') types.push(...blocksSdl(name, key, field))
+         if (field.type === 'blocks' && !isPrivateField(field))
+            types.push(...blocksSdl(name, key, field))
       }
 
       if (entry.kind === 'single') {

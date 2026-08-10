@@ -142,6 +142,8 @@ export function validateConfig(config: CmsConfig, i18n?: CmsI18n): string[] {
                   }
                   if (blockField.translatable)
                      errors.push(`${bfat}: translatable fields are not supported inside blocks`)
+                  if (blockField.private)
+                     errors.push(`${bfat}: private fields are not supported inside blocks`)
                   if (blockField.type === 'select' && !blockField.options?.length) {
                      errors.push(`${bfat}: select requires a non-empty options array`)
                   }

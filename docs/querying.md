@@ -102,6 +102,8 @@ const { data } = useCms(`query ($cat: String!) {
 ## Behavior notes
 
 - Entries with `drafts: true` return **published rows only**; drafts are invisible to the API.
+- Fields declared with [`private: true`](schema.md#private-fields) are absent from the schema
+  entirely: they cannot be selected, filtered or sorted on, and introspection does not list them.
 - `locale` omitted → `defaultLocale`; unknown locale → error; missing translation → falls back to
   `defaultLocale`.
 - Relations resolve nested entries (localized with the parent's `locale`). A required many-to-one

@@ -25,6 +25,7 @@ import { useRuntimeConfig } from '#imports'
 import type { CmsConfig, CmsEntry, FieldConfig, MediaStorageMode } from '../../shared/index'
 import {
    decodeTranslatableMedia,
+   isPrivateField,
    isTranslatableMediaField,
    mediaPublicUrl,
    mediaTypeFor,
@@ -319,6 +320,7 @@ function mediaObject(key: string, row: Record<string, unknown> | undefined) {
 function entryResolvers(config: CmsConfig, name: string, entry: CmsEntry) {
    const resolvers: Record<string, unknown> = {}
    for (const [key, field] of Object.entries(entry.fields)) {
+      if (isPrivateField(field)) continue
       if (field.type === 'relation' && field.cardinality === 'many-to-many') {
          resolvers[key] = async (parent: Row, _args: unknown, ctx: Ctx) => {
             const rows = await loadManyToMany(ctx, name, key, field).load(parent.id as string)
@@ -381,7 +383,8 @@ export function buildCmsSchema() {
       if (Object.keys(fieldLevel).length) typeResolvers[gqlType] = fieldLevel
 
       for (const [key, field] of Object.entries(entry.fields)) {
-         if (field.type === 'blocks') Object.assign(typeResolvers, blockResolvers(name, key, field))
+         if (field.type === 'blocks' && !isPrivateField(field))
+            Object.assign(typeResolvers, blockResolvers(name, key, field))
       }
 
       if (entry.kind === 'single') {

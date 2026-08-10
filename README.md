@@ -5,7 +5,7 @@ nuxt-cms is a Nuxt module that leverages the Nitro server to ship a lightweight 
 - **Zero extra infrastructure**: the CMS runs inside your app's Nitro server; you deploy one thing.
 - **Content types in code**: a `cms.config.ts` with `defineCmsConfig()` declares collections, single documents, relations, blocks and translatable fields; database schema, migrations and TypeScript types are generated from it.
 - **Admin panel at `/cms`**: entry editing with validation, drafts, media library (S3-compatible storage, or a local mode backed directly by your `public/` folder), single-admin auth from env credentials.
-- **Public GraphQL API**: read-only, typed end-to-end via gql.tada, with filtering, sorting and pagination.
+- **Public GraphQL API**: read-only, typed end-to-end via gql.tada, with filtering, sorting and pagination; fields marked `private` stay out of it.
 - **SQLite, Postgres or libSQL/Turso**: a local file database by default, one config line to switch (including remote SQLite over the network).
 
 ## Installation

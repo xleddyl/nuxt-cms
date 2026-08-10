@@ -38,7 +38,8 @@ The GraphQL type name is the PascalCase of the entry key (`blog_posts` → `Blog
 
 ## Field types
 
-Every field has `label: string` and optional `required?: boolean`. Type-specific options:
+Every field has `label: string` and optional `required?: boolean` and `private?: boolean` (see
+[Private fields](#private-fields)). Type-specific options:
 
 | type       | extra options                                                                      | stored / queried as |
 | ---------- | ---------------------------------------------------------------------------------- | ------------------- |
@@ -113,6 +114,35 @@ body: {
 
 Block fields accept every field type **except** `slug`, `relation`, `blocks`, `translatable`, and multi-select (`select` with `multiple: true`).
 See [Querying → Blocks](querying.md#blocks) for how to read them.
+
+## Private fields
+
+`private: true` keeps a field out of the **public GraphQL API**. The column is still created, the
+field is still editable in the admin panel and its value is still stored — it is simply never
+published: it is absent from the entry type, from the filters input and from the sort enum, so it
+cannot be selected, filtered or sorted on, and introspection does not reveal it. It is also omitted
+from the generated `#cms-types` interfaces, which describe the API shape.
+
+```ts
+file: { label: 'File', type: 'media', mediaType: 'file', private: true }
+```
+
+Use it for values that only server-side code should see, for example a media key that must be served
+through your own authenticated route instead of the public bucket URL. Read those values from the
+database directly (`#cms-db` + `#cms-tables`) in a server handler that enforces your own rules:
+
+```ts
+import { useDb } from '#cms-db'
+import { magazine } from '#cms-tables'
+import { eq } from 'drizzle-orm'
+
+const [row] = await useDb().select().from(magazine).where(eq(magazine.id, id)).limit(1)
+```
+
+Note that a private field holds its **raw column value** (a media field holds the object key string,
+a translatable media field a JSON map of locale → key), not the resolved GraphQL shape.
+
+`private` is not supported inside `blocks`: mark the whole `blocks` field private instead.
 
 ## Translatable fields
 
@@ -204,6 +234,7 @@ export default defineCmsConfig({
 - `select` needs a non-empty array of unique `options`.
 - Multi-select (`select` with `multiple: true`) is not allowed inside `blocks` and is excluded from filters and sorting.
 - `slug.from` must point to a non-translatable `text` field.
+- `private` is not allowed inside `blocks`.
 - A relation `to` must reference an existing collection.
 
 After changing the schema, restart the dev server so migrations and types are regenerated.

@@ -37,7 +37,7 @@ export default defineCmsConfig({
 
 ### Field types
 
-Every field has `label: string` and optional `required?: boolean`. Type-specific options:
+Every field has `label: string` and optional `required?: boolean` and `private?: boolean`. Type-specific options:
 
 | type       | extra options                                                                      | stored/queried as |
 | ---------- | ---------------------------------------------------------------------------------- | ----------------- |
@@ -56,7 +56,8 @@ Every field has `label: string` and optional `required?: boolean`. Type-specific
 
 Notes:
 - `translatable` only works on `text`, `richtext` and `media`; requires `cms.i18n` locales. Stored per locale, resolved to a single value at query time via the `locale` argument (falls back to the default locale, then to any locale that has a value). Translatable `media` keeps the `CmsMedia` shape, so `cover { url alt }` is unchanged.
-- Block fields accept every type above except `slug`, `relation`, `blocks`, and `translatable`.
+- `private: true` keeps a field out of the public GraphQL API: the column and the admin editor stay, but the field is absent from the entry type, the filters input, the sort enum, introspection and the generated `#cms-types`. Read those values server-side from the DB (`#cms-db` + `#cms-tables`), where they hold the raw column value (a media field holds the object key string). Use it when a value must only be served through your own authenticated route. Not allowed inside `blocks` — mark the whole `blocks` field private instead.
+- Block fields accept every type above except `slug`, `relation`, `blocks`, `translatable`, and `private`.
 - After changing the schema, restart dev (migrations are generated + applied on boot).
 
 ### Example
@@ -127,7 +128,7 @@ homepage(locale: String): Homepage
 
 ### Filters, sort, pagination
 
-Filterable: `id`, `createdAt`, `updatedAt`, and every field except `json`, `blocks`, `translatable` fields, and `many-to-many` relations (single relations filter by the related id as a StringFilter).
+Filterable: `id`, `createdAt`, `updatedAt`, and every field except `json`, `blocks`, `translatable` fields, `private` fields, and `many-to-many` relations (single relations filter by the related id as a StringFilter).
 
 Filter operators — String: `eq neq gt gte lt lte like in isNull`; Int/Float: `eq neq gt gte lt lte in isNull`; Boolean: `eq neq isNull`.
 
@@ -165,5 +166,6 @@ const { data } = useCms(`query ($cat: String!) {
 
 Behavior:
 - Entries with `drafts: true` only return `published` rows (drafts are invisible to the API).
+- Fields with `private: true` are not in the schema at all: they cannot be selected, filtered or sorted on.
 - `locale` omitted → default locale; unknown locale → error; missing translation → falls back to default locale.
 - Relations resolve nested entries (localized with the parent's locale); a required many-to-one pointing to a drafted entry can still be null.

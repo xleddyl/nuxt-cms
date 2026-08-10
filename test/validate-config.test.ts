@@ -110,6 +110,25 @@ describe('validateConfig', () => {
       ).toBe(true)
    })
 
+   it('rejects private fields inside blocks', () => {
+      const config = sampleConfig()
+      config.events!.fields.body!.blocks!.hero!.fields.secret = {
+         label: 'Secret',
+         type: 'text',
+         private: true,
+      }
+      const errors = validateConfig(config, I18N)
+      expect(errors.some((e) => e.includes('private fields are not supported inside blocks'))).toBe(
+         true
+      )
+   })
+
+   it('accepts private fields at the top level', () => {
+      const config = sampleConfig()
+      config.events!.fields.poster!.private = true
+      expect(validateConfig(config, I18N)).toEqual([])
+   })
+
    it('rejects relations to unknown targets', () => {
       const config = sampleConfig()
       config.events!.fields.category = { label: 'Category', type: 'relation', to: 'nope' }

@@ -51,4 +51,31 @@ describe('renderGraphqlSdl', () => {
       expect(() => buildSchema(out)).not.toThrow()
       expect(out.match(/enum EventsSortField \{[^}]*\}/)![0]).not.toContain('poster')
    })
+
+   it('omits private fields from the type, filters and sort enum', () => {
+      const config = sampleConfig()
+      config.events!.fields.poster!.private = true
+      const out = renderGraphqlSdl(config)
+      expect(() => buildSchema(out)).not.toThrow()
+      expect(out.match(/type Events \{[^}]*\}/)![0]).not.toContain('poster')
+      expect(out.match(/input EventsFilters \{[^}]*\}/)![0]).not.toContain('poster')
+      expect(out.match(/enum EventsSortField \{[^}]*\}/)![0]).not.toContain('poster')
+   })
+
+   it('omits the block types of a private blocks field', () => {
+      const config = sampleConfig()
+      config.events!.fields.body!.private = true
+      const out = renderGraphqlSdl(config)
+      expect(() => buildSchema(out)).not.toThrow()
+      expect(out).not.toContain('EventsBodyBlock')
+      expect(out).not.toContain('EventsBodyHero')
+   })
+
+   it('builds a valid schema when every field of a collection is private', () => {
+      const config = sampleConfig()
+      for (const field of Object.values(config.categories!.fields)) field.private = true
+      const out = renderGraphqlSdl(config)
+      expect(() => buildSchema(out)).not.toThrow()
+      expect(out.match(/type Categories \{[^}]*\}/)![0]).not.toContain('name')
+   })
 })

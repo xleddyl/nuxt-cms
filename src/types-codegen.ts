@@ -1,6 +1,6 @@
 import { blockTypeName, blockUnionName, typeName } from './runtime/shared/graphql-sdl'
 import type { CmsConfig, CmsEntry, FieldConfig } from './runtime/shared/index'
-import { isTranslatableField } from './runtime/shared/index'
+import { isPrivateField, isTranslatableField } from './runtime/shared/index'
 
 function scalarTsType(field: FieldConfig): string {
    switch (field.type) {
@@ -67,6 +67,7 @@ function blockTypesTs(entryName: string, key: string, field: FieldConfig): strin
 function entryTs(config: CmsConfig, name: string, entry: CmsEntry): string {
    const lines = ['  id: string']
    for (const [key, field] of Object.entries(entry.fields)) {
+      if (isPrivateField(field)) continue
       lines.push(`  ${key}: ${fieldTsType(config, name, key, field)}`)
    }
    if (entry.kind === 'collection') lines.push('  createdAt: string')
@@ -90,7 +91,8 @@ export function renderTypesFile(config: CmsConfig): string {
    ]
    for (const [name, entry] of Object.entries(config)) {
       for (const [key, field] of Object.entries(entry.fields)) {
-         if (field.type === 'blocks') parts.push(...blockTypesTs(name, key, field))
+         if (field.type === 'blocks' && !isPrivateField(field))
+            parts.push(...blockTypesTs(name, key, field))
       }
       parts.push(entryTs(config, name, entry))
    }

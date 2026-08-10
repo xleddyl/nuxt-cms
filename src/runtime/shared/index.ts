@@ -138,6 +138,7 @@ export interface FieldConfig {
    label: string
    type: FieldType
    required?: boolean
+   private?: boolean
    textarea?: boolean
    integer?: boolean
    translatable?: boolean
@@ -150,6 +151,10 @@ export interface FieldConfig {
    to?: string
    cardinality?: 'many-to-one' | 'one-to-one' | 'many-to-many'
    onDelete?: 'set null' | 'cascade' | 'restrict'
+}
+
+export function isPrivateField(field: FieldConfig): boolean {
+   return !!field.private
 }
 
 export function isTranslatableField(field: FieldConfig): boolean {
@@ -266,6 +271,7 @@ export type CmsConfig = Record<string, CmsEntry>
 interface FieldInputBase {
    label: string
    required?: boolean
+   private?: boolean
 }
 
 export interface TextFieldInput extends FieldInputBase {
@@ -326,15 +332,15 @@ export interface RelationFieldInput extends FieldInputBase {
 }
 
 export type BlockFieldInput =
-   | Omit<TextFieldInput, 'translatable'>
-   | Omit<RichtextFieldInput, 'translatable'>
-   | NumberFieldInput
-   | BooleanFieldInput
-   | DateFieldInput
-   | EmailFieldInput
-   | SelectFieldInput
-   | JsonFieldInput
-   | Omit<MediaFieldInput, 'translatable'>
+   | Omit<TextFieldInput, 'translatable' | 'private'>
+   | Omit<RichtextFieldInput, 'translatable' | 'private'>
+   | Omit<NumberFieldInput, 'private'>
+   | Omit<BooleanFieldInput, 'private'>
+   | Omit<DateFieldInput, 'private'>
+   | Omit<EmailFieldInput, 'private'>
+   | Omit<SelectFieldInput, 'private'>
+   | Omit<JsonFieldInput, 'private'>
+   | Omit<MediaFieldInput, 'translatable' | 'private'>
 
 export interface BlockInput {
    label: string
