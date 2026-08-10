@@ -1,6 +1,18 @@
 # Changelog
 
 
+## v0.1.33
+
+[compare changes](https://github.com/xleddyl/nuxt-cms/compare/v0.1.32...v0.1.33)
+
+### 🚀 Enhancements
+
+- Translatable fields inside blocks ([d40ffce](https://github.com/xleddyl/nuxt-cms/commit/d40ffce))
+
+### ❤️ Contributors
+
+- Edoardo Alberti <edoalberti99@gmail.com>
+
 ## v0.1.32
 
 [compare changes](https://github.com/xleddyl/nuxt-cms/compare/v0.1.31...v0.1.32)
