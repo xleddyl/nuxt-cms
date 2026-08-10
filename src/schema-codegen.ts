@@ -3,6 +3,7 @@ import type { CmsConfig, CmsEntry, CmsI18n, FieldConfig } from './runtime/shared
 import {
    fieldConditions,
    isMultiSelect,
+   isRequiredField,
    isTranslatableField,
    isTranslatableMediaField,
 } from './runtime/shared/index'
@@ -278,7 +279,7 @@ function columnExpr(key: string, field: FieldConfig, dialect: Dialect): string {
    let expr: string
    if (isTranslatableField(field)) {
       expr = isTranslatableMediaField(field) ? `text('${col}')` : jsonExpr(col, dialect)
-      if (field.required) expr += '.notNull()'
+      if (isRequiredField(field)) expr += '.notNull()'
       return `  ${key}: ${expr},`
    }
    switch (field.type) {
@@ -315,7 +316,7 @@ function columnExpr(key: string, field: FieldConfig, dialect: Dialect): string {
       default:
          expr = `text('${col}')`
    }
-   if (field.required) expr += '.notNull()'
+   if (isRequiredField(field)) expr += '.notNull()'
    return `  ${key}: ${expr},`
 }
 

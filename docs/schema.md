@@ -158,9 +158,11 @@ photo: { label: 'Photo', type: 'media', showIf: { field: 'type', eq: 'image' } }
 - **Only the admin editor is affected.** The GraphQL schema, the database column and the query shape
   are unchanged — a condition cannot make a column conditional.
 - A hidden field **keeps the value it already has**; it is not cleared on save, so toggling the
-  controlling field back and forth does not lose work. What changes is that a hidden field is
-  **not enforced as `required`**, otherwise a required field belonging to another branch would make
-  the entry unsavable.
+  controlling field back and forth does not lose work.
+- On a conditional field, `required` means **"required while visible"**: it is enforced by the admin
+  form only. The column stays nullable and the GraphQL field stays optional, because two fields
+  belonging to opposite branches can never both be filled — a `NOT NULL` on either would make every
+  entry unsavable. Treat a conditional field as optional when you read it.
 - The condition may point at a `select`, `boolean`, `text`, `number`, `date`, `email` or `slug`
   field — not at `blocks`, `relation`, `media`, `json`, multi-select or translatable fields, whose
   values have no single comparable form.

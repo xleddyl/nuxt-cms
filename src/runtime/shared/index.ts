@@ -166,6 +166,10 @@ export function isPrivateField(field: FieldConfig): boolean {
    return !!field.private
 }
 
+export function isRequiredField(field: FieldConfig): boolean {
+   return !!field.required && !field.showIf
+}
+
 export function fieldConditions(field: FieldConfig): FieldCondition[] {
    if (!field.showIf) return []
    return Array.isArray(field.showIf) ? field.showIf : [field.showIf]

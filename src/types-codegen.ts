@@ -1,6 +1,6 @@
 import { blockTypeName, blockUnionName, typeName } from './runtime/shared/graphql-sdl'
 import type { CmsConfig, CmsEntry, FieldConfig } from './runtime/shared/index'
-import { isPrivateField, isTranslatableField } from './runtime/shared/index'
+import { isPrivateField, isRequiredField, isTranslatableField } from './runtime/shared/index'
 
 function scalarTsType(field: FieldConfig): string {
    switch (field.type) {
@@ -26,7 +26,7 @@ function fieldTsType(
    if (field.type === 'relation') {
       const target = typeName(field.to!)
       if (field.cardinality === 'many-to-many') return `${target}[]`
-      return field.required && !config[field.to!]?.drafts ? target : `${target} | null`
+      return isRequiredField(field) && !config[field.to!]?.drafts ? target : `${target} | null`
    }
    if (field.type === 'media') return 'CmsMedia | null'
    if (field.type === 'select' && field.multiple) {
@@ -35,11 +35,11 @@ function fieldTsType(
    }
    if (field.type === 'blocks') {
       const union = blockUnionName(entryName, key)
-      return field.required ? `${union}[]` : `${union}[] | null`
+      return isRequiredField(field) ? `${union}[]` : `${union}[] | null`
    }
-   if (isTranslatableField(field)) return field.required ? 'string' : 'string | null'
+   if (isTranslatableField(field)) return isRequiredField(field) ? 'string' : 'string | null'
    const base = scalarTsType(field)
-   return field.required ? base : `${base} | null`
+   return isRequiredField(field) ? base : `${base} | null`
 }
 
 function blockTypesTs(entryName: string, key: string, field: FieldConfig): string[] {

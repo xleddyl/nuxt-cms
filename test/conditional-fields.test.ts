@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { validateConfig } from '../src/schema-codegen'
+import { renderSchemaFile, validateConfig } from '../src/schema-codegen'
+import { renderTypesFile } from '../src/types-codegen'
 import type { CmsConfig } from '../src/runtime/shared/index'
-import { fieldConditions, isFieldVisible } from '../src/runtime/shared/index'
+import { fieldConditions, isFieldVisible, isRequiredField } from '../src/runtime/shared/index'
+import { renderGraphqlSdl } from '../src/runtime/shared/graphql-sdl'
 import { buildEntrySchema } from '../src/runtime/shared/validation'
 import { I18N, sampleConfig } from './fixtures'
 
@@ -152,6 +154,40 @@ describe('showIf config validation', () => {
       }
       const errors = validateConfig(config, I18N)
       expect(errors.some((e) => e.includes('showIf is not supported inside blocks'))).toBe(true)
+   })
+})
+
+describe('a conditional field is never required outside the admin form', () => {
+   function config() {
+      const config = sampleConfig()
+      config.events!.fields.seats!.required = true
+      config.events!.fields.contactEmail!.required = true
+      config.events!.fields.contactEmail!.showIf = { field: 'visibility', eq: 'public' }
+      return config
+   }
+
+   it('reports required only for unconditional fields', () => {
+      const fields = config().events!.fields
+      expect(isRequiredField(fields.seats!)).toBe(true)
+      expect(isRequiredField(fields.contactEmail!)).toBe(false)
+   })
+
+   it('leaves the column nullable', () => {
+      const sql = renderSchemaFile(config(), 'sqlite')
+      expect(sql).toContain("seats: integer('seats').notNull()")
+      expect(sql).toContain("contactEmail: text('contact_email'),")
+   })
+
+   it('leaves the graphql field nullable', () => {
+      const sdl = renderGraphqlSdl(config())
+      expect(sdl).toContain('seats: Int!')
+      expect(sdl).toContain('contactEmail: String\n')
+   })
+
+   it('leaves the generated type nullable', () => {
+      const types = renderTypesFile(config())
+      expect(types).toContain('seats: number\n')
+      expect(types).toContain('contactEmail: string | null')
    })
 })
 

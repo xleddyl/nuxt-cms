@@ -1,5 +1,5 @@
 import type { CmsConfig, CmsEntry, FieldConfig } from './index'
-import { isPrivateField, isTranslatableField } from './index'
+import { isPrivateField, isRequiredField, isTranslatableField } from './index'
 
 export function typeName(name: string) {
    return name.replace(/(?:^|_)([a-z0-9])/gi, (_, c: string) => c.toUpperCase())
@@ -60,14 +60,14 @@ function fieldSdl(config: CmsConfig, entryName: string, key: string, field: Fiel
    if (field.type === 'relation') {
       const target = typeName(field.to!)
       if (field.cardinality === 'many-to-many') return `  ${key}: [${target}!]!`
-      const nonNull = field.required && !config[field.to!]?.drafts
+      const nonNull = isRequiredField(field) && !config[field.to!]?.drafts
       return `  ${key}: ${target}${nonNull ? '!' : ''}`
    }
    if (field.type === 'media') return `  ${key}: CmsMedia`
    if (field.type === 'select' && field.multiple) return `  ${key}: [String!]!`
    if (field.type === 'blocks')
-      return `  ${key}: [${blockUnionName(entryName, key)}!]${field.required ? '!' : ''}`
-   return `  ${key}: ${scalarFor(field)}${field.required ? '!' : ''}`
+      return `  ${key}: [${blockUnionName(entryName, key)}!]${isRequiredField(field) ? '!' : ''}`
+   return `  ${key}: ${scalarFor(field)}${isRequiredField(field) ? '!' : ''}`
 }
 
 function entrySdl(config: CmsConfig, name: string, entry: CmsEntry): string {
