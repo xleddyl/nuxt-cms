@@ -1,6 +1,18 @@
 # Changelog
 
 
+## v0.1.34
+
+[compare changes](https://github.com/xleddyl/nuxt-cms/compare/v0.1.33...v0.1.34)
+
+### 🚀 Enhancements
+
+- Conditional field visibility with showIf ([3940672](https://github.com/xleddyl/nuxt-cms/commit/3940672))
+
+### ❤️ Contributors
+
+- Edoardo Alberti <edoalberti99@gmail.com>
+
 ## v0.1.33
 
 [compare changes](https://github.com/xleddyl/nuxt-cms/compare/v0.1.32...v0.1.33)
