@@ -43,7 +43,11 @@ export default defineCmsConfig({
             options: ['bass', 'trout', 'pike', 'carp', 'catfish'],
             multiple: true,
          },
-         contactEmail: { label: 'Contact email', type: 'email' },
+         contactEmail: {
+            label: 'Contact email',
+            type: 'email',
+            showIf: { field: 'visibility', in: ['public', 'members'] },
+         },
          metadata: { label: 'Metadata', type: 'json' },
          body: {
             label: 'Body',

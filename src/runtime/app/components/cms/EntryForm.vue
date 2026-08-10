@@ -7,7 +7,7 @@
       @error="emit('error')"
    >
       <CmsFormField
-         v-for="(field, key) in fields"
+         v-for="(field, key) in visibleFields"
          :key="key"
          :label="field.label"
          :name="key"
@@ -44,7 +44,7 @@
 
 <script setup lang="ts">
 import type { CmsEntry, FieldConfig } from '#nuxt-cms'
-import { hasTranslatableBlockFields, isTranslatableField } from '#nuxt-cms'
+import { hasTranslatableBlockFields, isFieldVisible, isTranslatableField } from '#nuxt-cms'
 import { computed, ref } from '#imports'
 import { buildEntrySchema } from '../../../shared/validation'
 import { useCmsRuntime } from '../../composables/cms-runtime'
@@ -67,6 +67,12 @@ const emit = defineEmits<{ submit: []; error: [] }>()
 const { i18n } = useCmsRuntime()
 
 const activeLocale = ref<Record<string, string>>({})
+
+const visibleFields = computed(() =>
+   Object.fromEntries(
+      Object.entries(props.fields).filter(([, field]) => isFieldVisible(field, state.value))
+   )
+)
 
 function hasLocaleSwitch(field: FieldConfig) {
    return isTranslatableField(field) || hasTranslatableBlockFields(field)

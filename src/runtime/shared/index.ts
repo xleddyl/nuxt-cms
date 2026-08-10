@@ -134,6 +134,14 @@ export interface BlockConfig {
    fields: Record<string, FieldConfig>
 }
 
+export type ConditionValue = string | number | boolean
+
+export interface FieldCondition {
+   field: string
+   eq?: ConditionValue
+   in?: ConditionValue[]
+}
+
 export interface FieldConfig {
    label: string
    type: FieldType
@@ -151,10 +159,30 @@ export interface FieldConfig {
    to?: string
    cardinality?: 'many-to-one' | 'one-to-one' | 'many-to-many'
    onDelete?: 'set null' | 'cascade' | 'restrict'
+   showIf?: FieldCondition | FieldCondition[]
 }
 
 export function isPrivateField(field: FieldConfig): boolean {
    return !!field.private
+}
+
+export function fieldConditions(field: FieldConfig): FieldCondition[] {
+   if (!field.showIf) return []
+   return Array.isArray(field.showIf) ? field.showIf : [field.showIf]
+}
+
+function matchesCondition(condition: FieldCondition, value: unknown): boolean {
+   if (condition.in) return condition.in.some((option) => option === value)
+   return condition.eq === value
+}
+
+export function isFieldVisible(
+   field: FieldConfig,
+   values: Record<string, unknown> | null | undefined
+): boolean {
+   const conditions = fieldConditions(field)
+   if (!conditions.length) return true
+   return conditions.every((condition) => matchesCondition(condition, values?.[condition.field]))
 }
 
 export function isTranslatableField(field: FieldConfig): boolean {
@@ -318,6 +346,7 @@ interface FieldInputBase {
    label: string
    required?: boolean
    private?: boolean
+   showIf?: FieldCondition | FieldCondition[]
 }
 
 export interface TextFieldInput extends FieldInputBase {
@@ -377,16 +406,18 @@ export interface RelationFieldInput extends FieldInputBase {
    onDelete?: 'set null' | 'cascade' | 'restrict'
 }
 
+type BlockField<T> = Omit<T, 'private' | 'showIf'>
+
 export type BlockFieldInput =
-   | Omit<TextFieldInput, 'private'>
-   | Omit<RichtextFieldInput, 'private'>
-   | Omit<NumberFieldInput, 'private'>
-   | Omit<BooleanFieldInput, 'private'>
-   | Omit<DateFieldInput, 'private'>
-   | Omit<EmailFieldInput, 'private'>
-   | Omit<SelectFieldInput, 'private'>
-   | Omit<JsonFieldInput, 'private'>
-   | Omit<MediaFieldInput, 'private'>
+   | BlockField<TextFieldInput>
+   | BlockField<RichtextFieldInput>
+   | BlockField<NumberFieldInput>
+   | BlockField<BooleanFieldInput>
+   | BlockField<DateFieldInput>
+   | BlockField<EmailFieldInput>
+   | BlockField<SelectFieldInput>
+   | BlockField<JsonFieldInput>
+   | BlockField<MediaFieldInput>
 
 export interface BlockInput {
    label: string

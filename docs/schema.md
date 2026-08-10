@@ -142,6 +142,32 @@ either — the field still resolves to a single `String` (or `CmsMedia`) for the
 In the admin panel the locale switcher appears next to the `blocks` field label and applies to every
 translatable sub-field of every block at once, so a whole list can be translated in one pass.
 
+## Conditional fields
+
+`showIf` hides a field in the admin editor until another field of the same entry has a given value —
+useful when one `select` decides which of the remaining fields are meaningful.
+
+```ts
+type: { label: 'Type', type: 'select', options: ['text', 'image'], required: true },
+body:  { label: 'Body',  type: 'richtext', showIf: { field: 'type', eq: 'text' } },
+photo: { label: 'Photo', type: 'media', showIf: { field: 'type', eq: 'image' } },
+```
+
+- Use `eq` for a single value or `in` for a list; pass an **array of conditions** to require all of
+  them (AND).
+- **Only the admin editor is affected.** The GraphQL schema, the database column and the query shape
+  are unchanged — a condition cannot make a column conditional.
+- A hidden field **keeps the value it already has**; it is not cleared on save, so toggling the
+  controlling field back and forth does not lose work. What changes is that a hidden field is
+  **not enforced as `required`**, otherwise a required field belonging to another branch would make
+  the entry unsavable.
+- The condition may point at a `select`, `boolean`, `text`, `number`, `date`, `email` or `slug`
+  field — not at `blocks`, `relation`, `media`, `json`, multi-select or translatable fields, whose
+  values have no single comparable form.
+- When the target is a `select`, the referenced values are checked against its `options` at build
+  time, so a typo fails the build instead of silently hiding the field forever.
+- The `titleField` cannot be conditional, and `showIf` is not supported inside `blocks`.
+
 ## Private fields
 
 `private: true` keeps a field out of the **public GraphQL API**. The column is still created, the
@@ -261,6 +287,7 @@ export default defineCmsConfig({
 - `select` needs a non-empty array of unique `options`.
 - Multi-select (`select` with `multiple: true`) is not allowed inside `blocks` and is excluded from filters and sorting.
 - `translatable` is only valid on `text`, `richtext` and `media`, at the top level or inside a block, and requires `cms.i18n.locales`. The `blocks` field itself cannot be translatable.
+- `showIf` must reference another declared field of a comparable type, cannot be used on the `titleField` or inside `blocks`, and needs exactly one of `eq` / `in`.
 - `slug.from` must point to a non-translatable `text` field.
 - `private` is not allowed inside `blocks`.
 - A relation `to` must reference an existing collection.

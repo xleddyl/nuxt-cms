@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import type { CmsEntry, CmsI18n, FieldConfig } from './index'
-import { isTranslatableField } from './index'
+import { isFieldVisible, isTranslatableField } from './index'
 
 export const objectKeySchema = z
    .string()
@@ -88,6 +88,17 @@ function blocksSchema(field: FieldConfig, i18n: CmsI18n, m: ValidationMessages) 
    return z.array(z.discriminatedUnion('type', variants as never))
 }
 
+function isEmptyValue(field: FieldConfig, value: unknown, defaultLocale: string): boolean {
+   if (value == null) return true
+   if (Array.isArray(value)) return !value.length
+   if (isTranslatableField(field)) {
+      const values = value as Record<string, string>
+      return !values[defaultLocale]?.trim()
+   }
+   if (typeof value === 'string') return !value.trim()
+   return false
+}
+
 export function buildEntrySchema(
    entry: Pick<CmsEntry, 'fields'> & { drafts?: boolean },
    i18n: CmsI18n,
@@ -95,7 +106,10 @@ export function buildEntrySchema(
 ) {
    const m: ValidationMessages = { ...DEFAULT_MESSAGES, ...messages }
    const shape: Record<string, z.ZodType> = {}
-   for (const [key, field] of Object.entries(entry.fields)) {
+   const conditional: [string, FieldConfig][] = []
+   for (const [key, declared] of Object.entries(entry.fields)) {
+      const field = declared.showIf ? { ...declared, required: false } : declared
+      if (declared.showIf && declared.required) conditional.push([key, declared])
       if (field.type === 'relation' && field.cardinality === 'many-to-many') {
          const list = z.array(z.string().min(1))
          shape[key] = field.required
@@ -136,5 +150,16 @@ export function buildEntrySchema(
          .nullish()
          .transform((v) => v ?? undefined)
    }
-   return z.object(shape)
+
+   const schema = z.object(shape)
+   if (!conditional.length) return schema
+
+   return schema.superRefine((values, ctx) => {
+      for (const [key, field] of conditional) {
+         if (!isFieldVisible(field, values as Record<string, unknown>)) continue
+         if (!isEmptyValue(field, (values as Record<string, unknown>)[key], i18n.defaultLocale))
+            continue
+         ctx.addIssue({ code: 'custom', path: [key], message: m.required })
+      }
+   })
 }

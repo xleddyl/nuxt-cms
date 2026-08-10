@@ -1,6 +1,7 @@
 import { typeName } from './runtime/shared/graphql-sdl'
 import type { CmsConfig, CmsEntry, CmsI18n, FieldConfig } from './runtime/shared/index'
 import {
+   fieldConditions,
    isMultiSelect,
    isTranslatableField,
    isTranslatableMediaField,
@@ -14,6 +15,7 @@ const RESERVED_ENTRY_KEYS = ['admin', 'auth', 'login', 'media', 'graphql', 'cms_
 const RESERVED_COLUMNS = ['id', 'status', 'created_at', 'updated_at']
 const TITLE_FIELD_TYPES = ['text', 'slug', 'email', 'number', 'date', 'select']
 const TRANSLATABLE_FIELD_TYPES = ['text', 'richtext', 'media']
+const CONDITION_FIELD_TYPES = ['select', 'boolean', 'text', 'number', 'date', 'email', 'slug']
 const RESERVED_TYPE_NAMES = [
    'Query',
    'Mutation',
@@ -111,6 +113,50 @@ export function validateConfig(config: CmsConfig, i18n?: CmsI18n): string[] {
             else if (new Set(field.options).size !== field.options.length)
                errors.push(`${fat}: select options must be unique`)
          }
+         if (field.showIf) {
+            if (entry.titleField === key)
+               errors.push(`${fat}: the titleField cannot be conditional`)
+            for (const condition of fieldConditions(field)) {
+               const cat = `${fat}, showIf on '${condition.field}'`
+               const target = entry.fields?.[condition.field]
+               if (!condition.field || !target) {
+                  errors.push(`${cat}: '${condition.field}' is not a declared field`)
+                  continue
+               }
+               if (condition.field === key) {
+                  errors.push(`${cat}: a field cannot depend on itself`)
+                  continue
+               }
+               if (!CONDITION_FIELD_TYPES.includes(target.type) || isMultiSelect(target)) {
+                  errors.push(
+                     `${cat}: showIf can only depend on ${CONDITION_FIELD_TYPES.join(
+                        ', '
+                     )} fields (got '${target.type}')`
+                  )
+                  continue
+               }
+               if (isTranslatableField(target)) {
+                  errors.push(`${cat}: showIf cannot depend on a translatable field`)
+                  continue
+               }
+               const values = condition.in ?? (condition.eq === undefined ? null : [condition.eq])
+               if (!values || !values.length) {
+                  errors.push(`${cat}: showIf requires 'eq' or a non-empty 'in'`)
+                  continue
+               }
+               if (condition.in && condition.eq !== undefined)
+                  errors.push(`${cat}: showIf accepts either 'eq' or 'in', not both`)
+               if (target.type === 'select') {
+                  const unknown = values.filter((value) => !target.options?.includes(String(value)))
+                  if (unknown.length)
+                     errors.push(
+                        `${cat}: ${unknown
+                           .map((value) => `'${String(value)}'`)
+                           .join(', ')} not in the options of '${condition.field}'`
+                     )
+               }
+            }
+         }
          if (field.type === 'slug' && field.from) {
             const source = entry.fields?.[field.from]
             if (!source) errors.push(`${fat}: slug source '${field.from}' is not a declared field`)
@@ -153,6 +199,8 @@ export function validateConfig(config: CmsConfig, i18n?: CmsI18n): string[] {
                   }
                   if (blockField.private)
                      errors.push(`${bfat}: private fields are not supported inside blocks`)
+                  if (blockField.showIf)
+                     errors.push(`${bfat}: showIf is not supported inside blocks`)
                   if (blockField.type === 'select' && !blockField.options?.length) {
                      errors.push(`${bfat}: select requires a non-empty options array`)
                   }
