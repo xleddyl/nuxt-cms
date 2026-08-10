@@ -1,6 +1,18 @@
 # Changelog
 
 
+## v0.1.32
+
+[compare changes](https://github.com/xleddyl/nuxt-cms/compare/v0.1.31...v0.1.32)
+
+### 🚀 Enhancements
+
+- Private fields kept out of the public graphql api ([afc2ff1](https://github.com/xleddyl/nuxt-cms/commit/afc2ff1))
+
+### ❤️ Contributors
+
+- Edoardo Alberti <edoalberti99@gmail.com>
+
 ## v0.1.31
 
 [compare changes](https://github.com/xleddyl/nuxt-cms/compare/v0.1.30...v0.1.31)
