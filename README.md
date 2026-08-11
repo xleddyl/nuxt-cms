@@ -1,5 +1,9 @@
 # nuxt-cms
 
+[![npm version](https://img.shields.io/npm/v/%40xleddyl%2Fnuxt-cms)](https://www.npmjs.com/package/@xleddyl/nuxt-cms)
+[![CI](https://github.com/xleddyl/nuxt-cms/actions/workflows/ci.yml/badge.svg)](https://github.com/xleddyl/nuxt-cms/actions/workflows/ci.yml)
+[![license](https://img.shields.io/npm/l/%40xleddyl%2Fnuxt-cms)](LICENSE)
+
 nuxt-cms is a Nuxt module that leverages the Nitro server to ship a lightweight CMS together with your Nuxt frontend, no external CMS, no second service to deploy, nothing extra to pay for. Content lives next to the code that renders it: you define content types in code, editors manage entries from a built-in admin panel, and the same server that serves your site serves your content.
 
 - **Zero extra infrastructure**: the CMS runs inside your app's Nitro server; you deploy one thing.
@@ -7,6 +11,14 @@ nuxt-cms is a Nuxt module that leverages the Nitro server to ship a lightweight 
 - **Admin panel at `/cms`**: entry editing with validation, drafts, media library (S3-compatible storage, or a local mode backed directly by your `public/` folder), single-admin auth from env credentials.
 - **Public GraphQL API**: read-only, typed end-to-end via gql.tada, with filtering, sorting and pagination; fields marked `private` stay out of it.
 - **SQLite, Postgres or libSQL/Turso**: a local file database by default, one config line to switch (including remote SQLite over the network).
+
+## Screenshots
+
+![Collection view](docs/screenshots/collection.png)
+
+![Entry editor](docs/screenshots/entry.png)
+
+![Media library](docs/screenshots/media.png)
 
 ## Installation
 
