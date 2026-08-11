@@ -1,6 +1,18 @@
 # Changelog
 
 
+## v0.1.36
+
+[compare changes](https://github.com/xleddyl/nuxt-cms/compare/v0.1.35...v0.1.36)
+
+### 📖 Documentation
+
+- Add readme badges and admin panel screenshots ([420318f](https://github.com/xleddyl/nuxt-cms/commit/420318f))
+
+### ❤️ Contributors
+
+- Edoardo Alberti <edoalberti99@gmail.com>
+
 ## v0.1.35
 
 [compare changes](https://github.com/xleddyl/nuxt-cms/compare/v0.1.34...v0.1.35)
