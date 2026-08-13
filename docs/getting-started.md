@@ -7,6 +7,17 @@ npm install @xleddyl/nuxt-cms
 # or: pnpm add @xleddyl/nuxt-cms
 ```
 
+The default SQLite driver works out of the box. The other drivers need their own client, so install
+one only if you pick it:
+
+```bash
+npm install pg                # database.driver: 'postgres'
+npm install @libsql/client    # database.driver: 'libsql'
+```
+
+Cloudflare D1 needs nothing extra. If the client for the driver you configured is missing, the build
+stops with a message telling you which package to install.
+
 ## 2. Register the module
 
 Add it to `nuxt.config.ts` and configure it under the `cms` key:
@@ -16,7 +27,7 @@ export default defineNuxtConfig({
    modules: ['@xleddyl/nuxt-cms'],
    cms: {
       database: {
-         driver: 'sqlite', // 'sqlite' | 'postgres' | 'libsql'
+         driver: 'sqlite', // 'sqlite' | 'postgres' | 'libsql' | 'd1'
          path: 'data/cms.db',
       },
       i18n: {

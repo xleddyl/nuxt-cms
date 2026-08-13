@@ -48,6 +48,10 @@ entirely. Switch it to `{ driver: 'postgres', url: '...' }`,
 [Configuration](docs/configuration.md) for every option and
 [Deployment](docs/deployment.md) for which driver each host supports.
 
+Each driver brings its own client, and only the one you use has to be installed: SQLite works out of
+the box, `postgres` needs `pg`, `libsql` needs `@libsql/client`, and `d1` needs nothing extra. The
+build stops with an explicit message if the client for the configured driver is missing.
+
 Then declare your content types in a `cms.config.ts` at the project root with `defineCmsConfig()`.
 
 ### Disabling the CMS
