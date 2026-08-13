@@ -1,6 +1,22 @@
 # Changelog
 
 
+## v0.1.37
+
+[compare changes](https://github.com/xleddyl/nuxt-cms/compare/v0.1.36...v0.1.37)
+
+### 🚀 Enhancements
+
+- Bundle migrations at build time and add cloudflare d1 driver ([acb8b9a](https://github.com/xleddyl/nuxt-cms/commit/acb8b9a))
+
+### 📖 Documentation
+
+- Document per-driver client packages in readme and getting started ([faa4da7](https://github.com/xleddyl/nuxt-cms/commit/faa4da7))
+
+### ❤️ Contributors
+
+- Edoardo Alberti <edoalberti99@gmail.com>
+
 ## v0.1.36
 
 [compare changes](https://github.com/xleddyl/nuxt-cms/compare/v0.1.35...v0.1.36)
