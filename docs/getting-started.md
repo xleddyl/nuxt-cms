@@ -27,8 +27,8 @@ export default defineNuxtConfig({
 })
 ```
 
-See [Configuration](configuration.md) for every option and [Database](database.md) for Postgres and
-libSQL/Turso.
+See [Configuration](configuration.md) for every option and [Database](database.md) for Postgres,
+libSQL/Turso and Cloudflare D1.
 
 ## 3. Set the required environment variables
 
@@ -94,3 +94,7 @@ Continue with [Querying content](querying.md).
 
 Migrations are generated and applied on dev boot. After editing `cms.config.ts`, restart the dev
 server so the new schema, types and migrations are regenerated and applied.
+
+Commit `server/db/migrations/<driver>`: it is read at build time and inlined into the server bundle,
+which is how the CMS runs on hosts where `server/` is not part of the deployed function. See
+[Deployment](deployment.md) when you are ready to ship.

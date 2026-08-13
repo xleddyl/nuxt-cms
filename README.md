@@ -10,7 +10,8 @@ nuxt-cms is a Nuxt module that leverages the Nitro server to ship a lightweight 
 - **Content types in code**: a `cms.config.ts` with `defineCmsConfig()` declares collections, single documents, relations, blocks and translatable fields; database schema, migrations and TypeScript types are generated from it.
 - **Admin panel at `/cms`**: entry editing with validation, drafts, media library (S3-compatible storage, or a local mode backed directly by your `public/` folder), single-admin auth from env credentials.
 - **Public GraphQL API**: read-only, typed end-to-end via gql.tada, with filtering, sorting and pagination; fields marked `private` stay out of it.
-- **SQLite, Postgres or libSQL/Turso**: a local file database by default, one config line to switch (including remote SQLite over the network).
+- **SQLite, Postgres, libSQL/Turso or Cloudflare D1**: a local file database by default, one config line to switch (including remote SQLite over the network).
+- **Runs on serverless too**: migrations are baked into the server bundle, uploads are presigned straight to your bucket, sessions are sealed cookies. Nothing on the request path needs a local disk or sticky instances.
 
 ## Screenshots
 
@@ -41,9 +42,11 @@ export default defineNuxtConfig({
 ```
 
 `database` defaults to SQLite (`{ driver: 'sqlite', path: 'data/cms.db' }`) and can be omitted
-entirely. Switch it to `{ driver: 'postgres', url: '...' }` or
-`{ driver: 'libsql', url: '...', authToken: '...' }` (Turso/remote); see
-[Configuration](docs/configuration.md) for every option.
+entirely. Switch it to `{ driver: 'postgres', url: '...' }`,
+`{ driver: 'libsql', url: '...', authToken: '...' }` (Turso/remote) or
+`{ driver: 'd1', binding: 'DB' }` (Cloudflare Workers); see
+[Configuration](docs/configuration.md) for every option and
+[Deployment](docs/deployment.md) for which driver each host supports.
 
 Then declare your content types in a `cms.config.ts` at the project root with `defineCmsConfig()`.
 
@@ -74,6 +77,7 @@ Every secret maps to runtime config, so it can be set as an env var instead of i
 | `NUXT_SESSION_PASSWORD` | in production | session encryption key (32+ chars) |
 | `NUXT_CMS_DATABASE_URL` | with `postgres` / remote `libsql` | Postgres connection string or libSQL URL |
 | `NUXT_CMS_DATABASE_AUTH_TOKEN` | with remote `libsql` | libSQL/Turso auth token |
+| `NUXT_CMS_MIGRATE_ON_BOOT` | no | `false` to apply migrations in CI instead of on boot |
 | `NUXT_CMS_MEDIA_ENDPOINT` | for media | S3-compatible endpoint |
 | `NUXT_CMS_MEDIA_REGION` | for media | S3 region (default `auto`) |
 | `NUXT_CMS_MEDIA_BUCKET` | for media | bucket name |
@@ -87,11 +91,12 @@ Full documentation lives in [`docs/`](docs/README.md):
 
 - [Getting started](docs/getting-started.md) — install, configure, first content type, run.
 - [Configuration](docs/configuration.md) — every `cms.*` option and the `NUXT_CMS_*` env vars.
-- [Database](docs/database.md) — SQLite, Postgres and libSQL/Turso drivers, migrations, studio.
+- [Database](docs/database.md) — SQLite, Postgres, libSQL/Turso and D1 drivers, migrations, studio.
 - [Schema](docs/schema.md) — `defineCmsConfig`, entries, field types, relations, blocks, i18n.
 - [Querying content](docs/querying.md) — GraphQL API, `useCms` / `$cmsQuery`, filters, sorting, pagination.
 - [Admin panel & security](docs/admin.md) — pages, authentication, sessions, admin REST API.
 - [Media](docs/media.md) — S3-compatible storage or local mode backed by your `public/` folder, upload flow, allowed file types.
+- [Deployment](docs/deployment.md) — host/driver matrix, migrations on serverless, horizontal scaling, Cloudflare Workers.
 
 ## LLM guide
 

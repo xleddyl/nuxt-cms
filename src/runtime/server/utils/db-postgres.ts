@@ -6,13 +6,18 @@ let _db: ReturnType<typeof drizzle> | null = null
 
 export function useDb() {
    if (!_db) {
-      const { databaseUrl } = useRuntimeConfig().cms as { databaseUrl: string }
+      const { databaseUrl, poolMax } = useRuntimeConfig().cms as {
+         databaseUrl: string
+         poolMax: number
+      }
       if (!databaseUrl) {
          throw new Error(
             '[nuxt-cms] Missing Postgres connection string: set NUXT_CMS_DATABASE_URL or cms.database.url'
          )
       }
-      _db = drizzle(new pg.Pool({ connectionString: databaseUrl }))
+      _db = drizzle(
+         new pg.Pool({ connectionString: databaseUrl, ...(poolMax > 0 ? { max: poolMax } : {}) })
+      )
    }
    return _db
 }

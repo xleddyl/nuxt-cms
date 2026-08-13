@@ -24,7 +24,10 @@ route middleware). The admin UI ships in English and Italian.
   [`nuxt-auth-utils`](https://github.com/atinux/nuxt-auth-utils).
 - Email and password are compared with a timing-safe hash comparison.
 - **Login rate limiting:** after 10 failed attempts from one IP within 15 minutes (or 100 failures
-  globally in the same window) further attempts return `429` until the window resets.
+  globally in the same window) further attempts return `429` until the window resets. Counters live
+  in Nitro's `useStorage()` under `cms:login-rate`, which defaults to an in-memory driver: with more
+  than one instance the limit is enforced per instance unless you mount a shared driver. See
+  [Deployment → Horizontal scaling](deployment.md#horizontal-scaling).
 
 ## Sessions
 

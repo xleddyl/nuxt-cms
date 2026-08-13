@@ -1,11 +1,19 @@
-import { mkdirSync } from 'node:fs'
 import { createRequire } from 'node:module'
-import { dirname } from 'node:path'
 import { createClient } from '@libsql/client/web'
 import { drizzle } from 'drizzle-orm/libsql/web'
 import { useRuntimeConfig } from '#imports'
 
 let _db: ReturnType<typeof drizzle> | null = null
+
+function createFileDb(url: string, dbPath: string, authToken: string) {
+   const require = createRequire(import.meta.url)
+   const { mkdirSync } = require('node:fs') as typeof import('node:fs')
+   const { dirname } = require('node:path') as typeof import('node:path')
+   mkdirSync(dirname(dbPath), { recursive: true })
+   const { createClient: createNativeClient } = require('@libsql/client')
+   const { drizzle: drizzleNative } = require('drizzle-orm/libsql')
+   return drizzleNative(createNativeClient({ url, authToken: authToken || undefined }))
+}
 
 export function useDb() {
    if (!_db) {
@@ -15,15 +23,9 @@ export function useDb() {
          dbPath: string
       }
       const url = databaseUrl || `file:${dbPath}`
-      if (url.startsWith('file:')) {
-         mkdirSync(dirname(dbPath), { recursive: true })
-         const require = createRequire(import.meta.url)
-         const { createClient: createNativeClient } = require('@libsql/client')
-         const { drizzle: drizzleNative } = require('drizzle-orm/libsql')
-         _db = drizzleNative(createNativeClient({ url, authToken: databaseAuthToken || undefined }))
-      } else {
-         _db = drizzle(createClient({ url, authToken: databaseAuthToken || undefined }))
-      }
+      _db = url.startsWith('file:')
+         ? createFileDb(url, dbPath, databaseAuthToken)
+         : drizzle(createClient({ url, authToken: databaseAuthToken || undefined }))
    }
    return _db!
 }

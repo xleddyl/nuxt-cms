@@ -74,13 +74,11 @@
    "dependencies": {
       "@fontsource-variable/hanken-grotesk": "^5.3.0",
       "@fontsource/fragment-mono": "^5.3.0",
-      "@libsql/client": "^0.17.4",
       "@nuxt/kit": "^4.4.8",
       "@tailwindcss/vite": "^4.3.2",
       "@tiptap/starter-kit": "^3.0.0",
       "@tiptap/vue-3": "^3.0.0",
       "aws4fetch": "^1.0.20",
-      "better-sqlite3": "^12.2.0",
       "drizzle-kit": "^0.31.0",
       "drizzle-orm": "^0.44.0",
       "gql.tada": "^1.11.2",
@@ -88,18 +86,38 @@
       "graphql-yoga": "^5.10.0",
       "jiti": "^2.7.0",
       "nuxt-auth-utils": "^0.5.29",
-      "pg": "^8.16.0",
       "tailwindcss": "^4.3.2",
       "vite-svg-loader": "^5.1.0",
       "zod": "^4.0.0"
    },
+   "optionalDependencies": {
+      "better-sqlite3": "^12.2.0"
+   },
+   "peerDependencies": {
+      "@libsql/client": "^0.17.4",
+      "better-sqlite3": "^12.2.0",
+      "pg": "^8.16.0"
+   },
+   "peerDependenciesMeta": {
+      "@libsql/client": {
+         "optional": true
+      },
+      "better-sqlite3": {
+         "optional": true
+      },
+      "pg": {
+         "optional": true
+      }
+   },
    "devDependencies": {
+      "@libsql/client": "^0.17.4",
       "@nuxt/devtools": "^3.2.4",
       "@nuxt/module-builder": "^1.0.2",
       "@nuxt/schema": "^4.4.8",
       "@types/better-sqlite3": "^7.6.13",
       "@types/node": "latest",
       "@types/pg": "^8.11.0",
+      "pg": "^8.16.0",
       "changelogen": "^0.6.0",
       "h3": "^1.15.11",
       "nuxt": "^4.4.8",

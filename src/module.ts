@@ -32,15 +32,22 @@ import {
    renderMediaManifestFile,
    renderMediaManifestTypes,
 } from './media-manifest-codegen'
+import {
+   collectMigrations,
+   renderMigrationsFile,
+   renderMigrationsTypes,
+} from './migrations-codegen'
 import type { Driver } from './schema-codegen'
 import { renderSchemaFile, validateConfig } from './schema-codegen'
 import { renderTypesFile } from './types-codegen'
 import { CMS_ENABLED_ENV, resolveCmsEnabled } from './enabled'
 
-export type ModuleOptionsDatabase =
+export type ModuleOptionsDatabase = { migrateOnBoot?: boolean } & (
    | { driver?: 'sqlite'; path?: string }
-   | { driver: 'postgres'; url?: string }
+   | { driver: 'postgres'; url?: string; poolMax?: number }
    | { driver: 'libsql'; url?: string; authToken?: string }
+   | { driver: 'd1'; binding?: string }
+)
 
 export type ModuleOptionsMedia =
    | {
@@ -85,6 +92,9 @@ interface ResolvedModuleOptions {
       path: string
       url: string
       authToken: string
+      binding: string
+      migrateOnBoot: boolean
+      poolMax: number
    }
    media: {
       storage: MediaStorageMode
@@ -109,18 +119,34 @@ interface ResolvedModuleOptions {
 function resolveDatabaseOptions(
    database: ModuleOptions['database']
 ): ResolvedModuleOptions['database'] {
+   const shared = {
+      migrateOnBoot: database?.migrateOnBoot ?? true,
+      poolMax: 0,
+      binding: '',
+      path: 'data/cms.db',
+      url: '',
+      authToken: '',
+   }
    if (database?.driver === 'postgres') {
-      return { driver: 'postgres', path: 'data/cms.db', url: database.url ?? '', authToken: '' }
+      return {
+         ...shared,
+         driver: 'postgres',
+         url: database.url ?? '',
+         poolMax: database.poolMax ?? 0,
+      }
    }
    if (database?.driver === 'libsql') {
       return {
+         ...shared,
          driver: 'libsql',
-         path: 'data/cms.db',
          url: database.url ?? '',
          authToken: database.authToken ?? '',
       }
    }
-   return { driver: 'sqlite', path: database?.path ?? 'data/cms.db', url: '', authToken: '' }
+   if (database?.driver === 'd1') {
+      return { ...shared, driver: 'd1', binding: database.binding ?? 'DB' }
+   }
+   return { ...shared, driver: 'sqlite', path: database?.path ?? 'data/cms.db' }
 }
 
 function resolveMediaOptions(media: ModuleOptions['media']): ResolvedModuleOptions['media'] {
@@ -190,6 +216,7 @@ export default defineNuxtModule<ModuleOptions>({
       database: {
          driver: 'sqlite',
          path: 'data/cms.db',
+         migrateOnBoot: true,
       },
       media: {
          storage: 's3',
@@ -386,14 +413,31 @@ export default defineNuxtModule<ModuleOptions>({
          path: dbPath,
          url: databaseUrl,
          authToken: databaseAuthToken,
+         binding: d1Binding,
+         migrateOnBoot,
+         poolMax,
       } = resolved.database
       nuxt.options.alias['#cms-db'] = resolver.resolve(
          driver === 'postgres'
             ? './runtime/server/utils/db-postgres'
             : driver === 'libsql'
               ? './runtime/server/utils/db-libsql'
-              : './runtime/server/utils/db-sqlite'
+              : driver === 'd1'
+                ? './runtime/server/utils/db-d1'
+                : './runtime/server/utils/db-sqlite'
       )
+
+      const driverPackage =
+         driver === 'postgres' ? 'pg' : driver === 'libsql' ? '@libsql/client' : 'better-sqlite3'
+      if (driver !== 'd1') {
+         try {
+            resolveImport(driverPackage)
+         } catch {
+            throw new Error(
+               `[nuxt-cms] database.driver is '${driver}' but '${driverPackage}' is not installed. Install it in your app (e.g. pnpm add ${driverPackage}); only the client for the driver you use is required.`
+            )
+         }
+      }
 
       const dialect =
          driver === 'postgres' ? 'postgresql' : driver === 'libsql' ? 'turso' : 'sqlite'
@@ -418,11 +462,37 @@ export default defineNuxtModule<ModuleOptions>({
                     ? `  dbCredentials: { url: process.env.NUXT_CMS_DATABASE_URL ?? '${
                          databaseUrl || `file:${toPosix(resolvedDbPath)}`
                       }', authToken: (process.env.NUXT_CMS_DATABASE_AUTH_TOKEN ?? '${databaseAuthToken}') || undefined },`
-                    : `  dbCredentials: { url: '${toPosix(resolvedDbPath)}' },`,
+                    : driver === 'd1'
+                      ? ``
+                      : `  dbCredentials: { url: '${toPosix(resolvedDbPath)}' },`,
                `}`,
                ``,
             ].join('\n'),
       })
+
+      addTemplate({
+         filename: 'cms/migrations.d.ts',
+         write: true,
+         getContents: () =>
+            renderMigrationsTypes(toPosix(resolver.resolve('./runtime/server/utils/migrate'))),
+      })
+
+      const migrationsTemplate = addTemplate({
+         filename: 'cms/migrations.js',
+         write: true,
+         getContents: async () => {
+            const migrations = await collectMigrations(migrationsDir)
+            if (!migrations && !nuxt.options.dev && Object.keys(cmsConfig).length) {
+               logger.warn(
+                  `[nuxt-cms] No migrations found at ${migrationsDir}. The CMS tables will not be created — run the dev server once to generate them and commit ${toPosix(
+                     relativeMigrationsDir
+                  )}.`
+               )
+            }
+            return renderMigrationsFile(migrations)
+         },
+      })
+      nuxt.options.alias['#cms-migrations'] = migrationsTemplate.dst
 
       const publicDir = resolve(nuxt.options.rootDir, nuxt.options.dir?.public ?? 'public')
       const mediaLocalRoot =
@@ -472,7 +542,9 @@ export default defineNuxtModule<ModuleOptions>({
                ? './runtime/server/plugins/migrate-postgres'
                : driver === 'libsql'
                  ? './runtime/server/plugins/migrate-libsql'
-                 : './runtime/server/plugins/migrate-sqlite'
+                 : driver === 'd1'
+                   ? './runtime/server/plugins/d1-binding'
+                   : './runtime/server/plugins/migrate-sqlite'
          )
       )
 
@@ -511,6 +583,9 @@ export default defineNuxtModule<ModuleOptions>({
          databaseAuthToken,
          dbPath: resolvedDbPath,
          migrationsDir,
+         migrateOnBoot,
+         poolMax,
+         d1Binding,
          ...existingConfig,
          graphql: {
             graphiql: nuxt.options.dev,
@@ -553,6 +628,12 @@ export default defineNuxtModule<ModuleOptions>({
                   "declare module '#imports' {",
                   "  function getUserSession(event: H3Event): Promise<{ user?: import('#auth-utils').User }>",
                   "  function setUserSession(event: H3Event, session: { user: import('#auth-utils').User }): Promise<unknown>",
+                  '  function useStorage(base?: string): {',
+                  '    getItem<T>(key: string): Promise<T | null>',
+                  '    setItem<T>(key: string, value: T, options?: { ttl?: number }): Promise<void>',
+                  '    removeItem(key: string): Promise<void>',
+                  '    getKeys(base?: string): Promise<string[]>',
+                  '  }',
                   '}',
                   '',
                   'export {}',

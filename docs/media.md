@@ -10,7 +10,8 @@ Media (images, video, documents) can be stored two ways, selected with `cms.medi
   no uploads. Only alt text is editable. Files
   are expected to already live wherever `publicBaseUrl` points (e.g. your app's own `public/`
   directory, or any URL you serve yourself). When `publicBaseUrl` is a root-relative path, the
-  library is **synced from disk at server startup**, so the gallery always mirrors the folder. Use
+  library is **read from that folder** on every request, so the gallery mirrors what the running
+  deployment actually ships. Use
   this when you manage files outside the CMS (deploy-time assets, a separate pipeline, …) but still
   want to pick them from the media field picker.
 
@@ -53,7 +54,7 @@ NUXT_CMS_MEDIA_MAX_FILE_SIZE=52428800
 - **`publicBaseUrl`** (`NUXT_PUBLIC_CMS_MEDIA_BASE_URL`) — the public base URL prepended to object
   keys to build the URL returned in queries. Point it at your bucket's public domain or CDN in
   `'s3'` mode, or at wherever your host app serves the files from in `'local'` mode. A root-relative
-  value (`/images`) in `'local'` mode also selects the folder synced at startup
+  value (`/images`) in `'local'` mode also selects the folder the library is read from
   (`<rootDir>/public/images`).
 - **`region`** — S3 region (default `auto`, which suits R2). Unused in `'local'` mode.
 - **`presignExpiry`** — how many seconds a presigned upload URL stays valid (default 600). Unused

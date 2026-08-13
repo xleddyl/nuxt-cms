@@ -9,7 +9,7 @@ import {
 } from './runtime/shared/index'
 
 export type Dialect = 'sqlite' | 'postgres'
-export type Driver = Dialect | 'libsql'
+export type Driver = Dialect | 'libsql' | 'd1'
 
 const IDENTIFIER = /^[a-z_]\w*$/i
 const RESERVED_ENTRY_KEYS = ['admin', 'auth', 'login', 'media', 'graphql', 'cms_media']

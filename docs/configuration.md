@@ -37,14 +37,21 @@ cms: {
 database: { driver: 'sqlite', path: 'data/cms.db' } // path defaults to 'data/cms.db'
 
 // postgres: needs a connection string, in config or NUXT_CMS_DATABASE_URL
-database: { driver: 'postgres', url: 'postgres://...' }
+database: { driver: 'postgres', url: 'postgres://...', poolMax: 1 }
 
 // libsql / Turso: url for remote, authToken only needed for remote
 database: { driver: 'libsql', url: 'libsql://...', authToken: '...' }
+
+// d1: Cloudflare Workers only, reads the binding from the worker environment
+database: { driver: 'd1', binding: 'DB' }  // binding defaults to 'DB'
 ```
 
 `path` only exists on the `sqlite` variant; `url` / `authToken` only exist on `postgres` /
-`libsql`. Mixing them is a type error.
+`libsql`; `poolMax` only on `postgres`; `binding` only on `d1`. Mixing them is a type error.
+
+`migrateOnBoot` is shared by every variant and defaults to `true`. Set it to `false` (or
+`NUXT_CMS_MIGRATE_ON_BOOT=false`) when you apply migrations from CI instead. See
+[Deployment → Migrations](deployment.md#migrations).
 
 ### `media` per storage
 
@@ -101,7 +108,11 @@ empty registry and logs a warning.
 
 Selects the driver and its connection. `driver` switches the runtime client, the Drizzle dialect,
 the migration folder (`server/db/migrations/<driver>`) and the generated `drizzle.config.ts`
-together. See [Database](database.md) for the details of each driver.
+together. See [Database](database.md) for the details of each driver, and
+[Deployment](deployment.md#host-and-driver-matrix) for which driver each host supports.
+
+Only the client package for the driver you pick has to be installed (`pg` for `postgres`,
+`@libsql/client` for `libsql`); the build fails with an explicit message if it is missing.
 
 ### `media`
 
@@ -109,8 +120,9 @@ S3-compatible object storage for the media library by default (`storage: 's3'`).
 configured, media endpoints return `501` and media fields simply cannot be uploaded to. Set
 `storage: 'local'` to back the media library with files served from `publicBaseUrl`
 by the host app instead of a bucket — no S3 config needed. In that mode a root-relative
-`publicBaseUrl` (e.g. `/images` → `<rootDir>/public/images`) is also scanned at every server
-startup, so the library mirrors the files on disk. `maxFileSize` caps a single upload in bytes
+`publicBaseUrl` (e.g. `/images` → `<rootDir>/public/images`) also selects the folder the library is
+read from: live from disk wherever that folder exists, otherwise from a manifest baked at build
+time. Nothing is written back to the database. `maxFileSize` caps a single upload in bytes
 (default 10 MB, must be a positive integer); raise it for large assets such as magazine PDFs. See
 [Media](media.md).
 
@@ -136,6 +148,8 @@ Secrets should be provided as env vars rather than committed to `nuxt.config.ts`
 | `NUXT_SESSION_PASSWORD` | in production | session encryption key (min 32 chars) |
 | `NUXT_CMS_DATABASE_URL` | with `postgres`, or remote `libsql` | connection string / libSQL URL |
 | `NUXT_CMS_DATABASE_AUTH_TOKEN` | with remote `libsql` | libSQL/Turso auth token |
+| `NUXT_CMS_MIGRATE_ON_BOOT` | no | set to `false` to apply migrations in CI instead of on boot |
+| `NUXT_CMS_POOL_MAX` | no | max Postgres pool connections per instance (`0` = driver default) |
 | `NUXT_CMS_MEDIA_ENDPOINT` | for media | S3-compatible endpoint |
 | `NUXT_CMS_MEDIA_REGION` | for media | S3 region (default `auto`) |
 | `NUXT_CMS_MEDIA_BUCKET` | for media | bucket name |
