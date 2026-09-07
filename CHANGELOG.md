@@ -1,6 +1,10 @@
 # Changelog
 
 
+## v0.1.39
+
+[compare changes](https://github.com/xleddyl/nuxt-cms/compare/v0.1.38...v0.1.39)
+
 ## v0.1.38
 
 [compare changes](https://github.com/xleddyl/nuxt-cms/compare/v0.1.37...v0.1.38)
