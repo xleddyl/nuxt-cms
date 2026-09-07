@@ -2,18 +2,31 @@ import type { H3Event } from 'h3'
 import { createError, getRequestHeader, getRequestHost } from 'h3'
 import { getUserSession, useRuntimeConfig } from '#imports'
 
-function assertSameOrigin(event: H3Event) {
-   const origin = getRequestHeader(event, 'origin')
-   if (!origin) return
-   let originHost: string | undefined
+const ORIGINLESS_SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS'])
+
+function hostOfUrl(value: string | undefined) {
+   if (!value) return undefined
    try {
-      originHost = new URL(origin).host
+      const url = new URL(value)
+      return url.protocol === 'http:' || url.protocol === 'https:' ? url.host : undefined
    } catch {
-      originHost = undefined
+      return undefined
    }
-   if (!originHost || originHost !== getRequestHost(event, { xForwardedHost: true })) {
-      throw createError({ statusCode: 403, statusMessage: 'Cross-origin request rejected' })
+}
+
+function rejectCrossOrigin(): never {
+   throw createError({ statusCode: 403, statusMessage: 'Cross-origin request rejected' })
+}
+
+export function assertSameOrigin(event: H3Event) {
+   const expectedHost = getRequestHost(event)
+   const origin = getRequestHeader(event, 'origin')
+   if (origin) {
+      if (hostOfUrl(origin) !== expectedHost) rejectCrossOrigin()
+      return
    }
+   if (ORIGINLESS_SAFE_METHODS.has(event.method)) return
+   if (hostOfUrl(getRequestHeader(event, 'referer')) !== expectedHost) rejectCrossOrigin()
 }
 
 export async function requireAdmin(event: H3Event) {

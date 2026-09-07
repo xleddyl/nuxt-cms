@@ -52,3 +52,7 @@ export function useAsyncData<T>(key: string, handler: () => Promise<T>) {
          settled.then(() => onFulfilled(asyncData)),
    }
 }
+
+export async function getUserSession(): Promise<{ user?: { email?: string } }> {
+   throw new Error('getUserSession is not available in unit tests')
+}

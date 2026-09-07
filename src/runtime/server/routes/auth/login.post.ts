@@ -2,6 +2,7 @@ import { createHash, timingSafeEqual } from 'node:crypto'
 import { createError, defineEventHandler, getRequestIP, readValidatedBody } from 'h3'
 import { z } from 'zod'
 import { setUserSession, useRuntimeConfig, useStorage } from '#imports'
+import { assertSameOrigin } from '../../utils/require-admin'
 
 const credentialsSchema = z.object({
    email: z.string().trim().min(1),
@@ -62,6 +63,7 @@ function safeEqual(a: string, b: string) {
 }
 
 export default defineEventHandler(async (event) => {
+   assertSameOrigin(event)
    const ip = rateKey(getRequestIP(event, { xForwardedFor: true }) ?? 'unknown')
    const now = Date.now()
 
