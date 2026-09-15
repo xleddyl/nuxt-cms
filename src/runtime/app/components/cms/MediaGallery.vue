@@ -246,7 +246,13 @@
 <script setup lang="ts">
 import type { MediaItem, MediaSourceInfo, MediaType } from '#nuxt-cms'
 import { computed, onMounted, ref, watch } from '#imports'
-import { MEDIA_TYPES, mediaFilename, mediaIconFor, normalizeMediaFolder } from '#nuxt-cms'
+import {
+   MEDIA_TYPES,
+   mediaFilename,
+   mediaIconFor,
+   mediaTypeFilter,
+   normalizeMediaFolder,
+} from '#nuxt-cms'
 import { useCmsConfirm } from '../../composables/cms-confirm'
 import { useCmsRuntime } from '../../composables/cms-runtime'
 import { useCmsToast } from '../../composables/cms-toast'
@@ -261,7 +267,7 @@ const filterLabels: Record<string, string> = {
 
 const props = defineProps<{
    selectable?: boolean
-   mediaType?: MediaType
+   mediaType?: MediaType | MediaType[]
    accept?: string[]
 }>()
 
@@ -311,12 +317,17 @@ onMounted(reload)
 const notConfigured = computed(() => errorCode.value === 501)
 const loadError = computed(() => errorCode.value !== null && errorCode.value !== 501)
 
-const restricted = computed(() =>
-   props.mediaType && props.mediaType !== 'file' ? props.mediaType : null
-)
-const filters = ['all', ...MEDIA_TYPES] as const
-const filter = ref<(typeof filters)[number]>('all')
-const showTypeFilters = computed(() => !restricted.value && items.value.length > 0)
+const allowedTypes = computed(() => mediaTypeFilter(props.mediaType))
+const filters = computed<('all' | MediaType)[]>(() => [
+   'all',
+   ...(allowedTypes.value ?? MEDIA_TYPES),
+])
+const filter = ref<'all' | MediaType>('all')
+const showTypeFilters = computed(() => filters.value.length > 2 && items.value.length > 0)
+
+watch(filters, (list) => {
+   if (!list.includes(filter.value)) filter.value = 'all'
+})
 
 const search = ref('')
 
@@ -376,8 +387,9 @@ watch(usedFolders, (used) => {
 })
 
 const visible = computed(() => {
-   const active = restricted.value ?? (filter.value === 'all' ? null : filter.value)
-   let list = active ? items.value.filter((item) => item.type === active) : items.value
+   const allowed = allowedTypes.value
+   let list = allowed ? items.value.filter((item) => allowed.includes(item.type)) : items.value
+   if (filter.value !== 'all') list = list.filter((item) => item.type === filter.value)
    if (folder.value) list = list.filter((item) => item.folder === folder.value)
    const query = search.value.trim().toLowerCase()
    if (query) {

@@ -90,11 +90,17 @@ app's public directory (`<rootDir>/public/images`). The list is then resolved in
 3. **nothing**, if neither is available: the library renders empty and the admin panel says so.
 
 Both paths produce the same metadata: mime from the extension, size from the file, width/height read
-from the file header for PNG, JPEG, WebP and GIF, `folder` from the parent directory. The `key` is
-the path relative to that folder, POSIX-style: `hero.webp`, `waters/avisio-river.webp`.
-Sub-directories are walked recursively. Only known media extensions are picked up (`jpg`, `jpeg`,
-`png`, `webp`, `avif`, `gif`, `svg`, `mp4`, `webm`, `mov`, `mp3`, `wav`, `ogg`, `m4a`, `pdf`);
-dotfiles and anything else are ignored.
+from the file itself, `folder` from the parent directory. The `key` is the path relative to that
+folder, POSIX-style: `hero.webp`, `waters/avisio-river.webp`. Sub-directories are walked
+recursively. Only known media extensions are picked up (`jpg`, `jpeg`, `png`, `webp`, `avif`, `gif`,
+`svg`, `mp4`, `m4v`, `webm`, `mkv`, `mov`, `mp3`, `wav`, `ogg`, `m4a`, `pdf`); dotfiles and anything
+else are ignored.
+
+Dimensions are read for PNG, JPEG, WebP and GIF images, and for MP4, M4V, MOV, WebM and MKV videos:
+the video track's display size, with a quarter-turn rotation matrix applied, so a portrait phone
+clip reports `1080x1920` rather than `1920x1080`. An MP4 whose `moov` box sits at the end of the
+file is handled too, so `-movflags +faststart` is not required just to get dimensions. Everything
+else keeps `width` and `height` at `null`.
 
 ### Serverless hosts
 
@@ -133,7 +139,9 @@ through the Nitro server. From the admin panel:
 
 1. The server issues a presigned upload URL (valid for `presignExpiry` seconds).
 2. The browser uploads the file straight to object storage with that URL.
-3. The server records the media metadata (key, mime, size, dimensions).
+3. The server records the media metadata (key, mime, size, dimensions). Dimensions are measured in
+   the browser before the upload: images through `createImageBitmap`, videos from the loaded
+   metadata of a detached `<video>` element.
 
 This all happens through the panel's internal, authenticated same-origin API — there is nothing to
 call yourself.
@@ -157,6 +165,16 @@ Add a `media` field to an entry (optionally constrained by `mediaType` / `accept
 ```ts
 poster: { label: 'Poster', type: 'media', mediaType: 'image' }
 ```
+
+`mediaType` also takes a list, for a slot that accepts more than one kind of file. The picker then
+shows only those types, with a filter pill for each, and uploads are restricted to them:
+
+```ts
+poster: { label: 'Poster', type: 'media', mediaType: ['image', 'video'] }
+```
+
+Omitting `mediaType`, or setting it to `'file'` (on its own or inside the list), leaves the field
+unrestricted.
 
 In GraphQL it resolves to a `CmsMedia` object:
 

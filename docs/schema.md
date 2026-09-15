@@ -52,7 +52,7 @@ Every field has `label: string` and optional `required?: boolean` and `private?:
 | `slug`     | `from: '<fieldKey>'` (required; auto-generated from that text field)                | String (unique)     |
 | `select`   | `options: string[]` (required, unique), `multiple?: boolean`                        | String (enum) or `[String!]!` |
 | `json`     | —                                                                                   | JSON                |
-| `media`    | `mediaType?: 'image' \| 'video' \| 'file'`, `accept?: string[]`, `translatable?: boolean` | CmsMedia object     |
+| `media`    | `mediaType?: T \| T[]` where `T` is `'image' \| 'video' \| 'file'`, `accept?: string[]`, `translatable?: boolean` | CmsMedia object     |
 | `relation` | see [Relations](#relations)                                                         | related entry / list |
 | `blocks`   | `blocks: Record<name, { label, fields }>` (required)                                | array of typed blocks |
 
@@ -257,7 +257,7 @@ export default defineCmsConfig({
          date: { label: 'Date', type: 'date', required: true },
          visibility: { label: 'Visibility', type: 'select', options: ['public', 'hidden'] },
          topics: { label: 'Topics', type: 'select', options: ['tech', 'science', 'art'], multiple: true },
-         poster: { label: 'Poster', type: 'media', mediaType: 'image' },
+         poster: { label: 'Poster', type: 'media', mediaType: ['image', 'video'] },
          category: { label: 'Category', type: 'relation', to: 'categories' },
          tags: { label: 'Tags', type: 'relation', to: 'tags', cardinality: 'many-to-many' },
          body: {

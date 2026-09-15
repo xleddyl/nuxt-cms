@@ -7,11 +7,14 @@ import {
    imageSizeFromBuffer,
    isSyncableMediaKey,
    jpegImageSize,
+   matroskaVideoSize,
    mediaMimeForKey,
    mediaSyncFolder,
+   mp4VideoSize,
    pngImageSize,
    readMediaFileMeta,
    scanMediaDirectory,
+   videoSizeFromBuffer,
    webpImageSize,
 } from '../src/runtime/server/utils/media-sync'
 
@@ -156,6 +159,134 @@ describe('image dimension parsers', () => {
    })
 })
 
+function box(type: string, payload: Uint8Array) {
+   return bytes(uint32be(payload.length + 8), type, payload)
+}
+
+function tkhd(width: number, height: number, rotated = false) {
+   const matrix = new Uint8Array(36)
+   const entries = new DataView(matrix.buffer)
+   if (rotated) {
+      entries.setInt32(4, 0x10000)
+      entries.setInt32(8, -0x10000)
+   } else {
+      entries.setInt32(0, 0x10000)
+      entries.setInt32(16, 0x10000)
+   }
+   return box(
+      'tkhd',
+      bytes(
+         new Uint8Array(4),
+         new Uint8Array(20),
+         new Uint8Array(16),
+         matrix,
+         uint32be(width * 0x10000),
+         uint32be(height * 0x10000)
+      )
+   )
+}
+
+function moov(...traks: Uint8Array[]) {
+   return box('moov', bytes(...traks.map((trak) => box('trak', trak))))
+}
+
+function mp4(width: number, height: number, rotated = false) {
+   return bytes(
+      box('ftyp', bytes('isom', new Uint8Array(4), 'isomavc1')),
+      moov(tkhd(width, height, rotated))
+   )
+}
+
+function mp4MoovLast(width: number, height: number, padding: number) {
+   return bytes(
+      box('ftyp', bytes('isom', new Uint8Array(4))),
+      box('mdat', new Uint8Array(padding)),
+      moov(tkhd(width, height))
+   )
+}
+
+function ebmlSize(length: number) {
+   if (length < 0x7f) return Uint8Array.of(0x80 | length)
+   return Uint8Array.of(0x40 | ((length >> 8) & 0x3f), length & 0xff)
+}
+
+function ebml(id: Uint8Array, payload: Uint8Array) {
+   return bytes(id, ebmlSize(payload.length), payload)
+}
+
+function ebmlUint(id: Uint8Array, value: number) {
+   return ebml(id, uint16be(value))
+}
+
+const EBML_HEADER = Uint8Array.of(0x1a, 0x45, 0xdf, 0xa3)
+const SEGMENT = Uint8Array.of(0x18, 0x53, 0x80, 0x67)
+const TRACKS = Uint8Array.of(0x16, 0x54, 0xae, 0x6b)
+const TRACK_ENTRY = Uint8Array.of(0xae)
+const VIDEO = Uint8Array.of(0xe0)
+const PIXEL_WIDTH = Uint8Array.of(0xb0)
+const PIXEL_HEIGHT = Uint8Array.of(0xba)
+const DISPLAY_WIDTH = Uint8Array.of(0x54, 0xb0)
+const DISPLAY_HEIGHT = Uint8Array.of(0x54, 0xba)
+
+function webm(video: Uint8Array) {
+   return bytes(
+      ebml(EBML_HEADER, bytes('matroska')),
+      ebml(SEGMENT, ebml(TRACKS, ebml(TRACK_ENTRY, ebml(VIDEO, video))))
+   )
+}
+
+function webmPixels(width: number, height: number) {
+   return webm(bytes(ebmlUint(PIXEL_WIDTH, width), ebmlUint(PIXEL_HEIGHT, height)))
+}
+
+function webmDisplay(width: number, height: number, displayWidth: number, displayHeight: number) {
+   return webm(
+      bytes(
+         ebmlUint(PIXEL_WIDTH, width),
+         ebmlUint(PIXEL_HEIGHT, height),
+         ebmlUint(DISPLAY_WIDTH, displayWidth),
+         ebmlUint(DISPLAY_HEIGHT, displayHeight)
+      )
+   )
+}
+
+describe('video dimension parsers', () => {
+   it('reads mp4 track dimensions', () => {
+      expect(mp4VideoSize(mp4(1920, 1080))).toEqual({ width: 1920, height: 1080 })
+      expect(videoSizeFromBuffer(mp4(640, 360))).toEqual({ width: 640, height: 360 })
+   })
+
+   it('swaps mp4 dimensions on a quarter turn matrix', () => {
+      expect(mp4VideoSize(mp4(1920, 1080, true))).toEqual({ width: 1080, height: 1920 })
+   })
+
+   it('skips mp4 tracks without dimensions', () => {
+      const withAudioFirst = bytes(
+         box('ftyp', bytes('isom', new Uint8Array(4))),
+         moov(tkhd(0, 0), tkhd(720, 1280))
+      )
+      expect(mp4VideoSize(withAudioFirst)).toEqual({ width: 720, height: 1280 })
+   })
+
+   it('reads matroska pixel and display dimensions', () => {
+      expect(matroskaVideoSize(webmPixels(1280, 720))).toEqual({ width: 1280, height: 720 })
+      expect(matroskaVideoSize(webmDisplay(1280, 720, 640, 480))).toEqual({
+         width: 640,
+         height: 480,
+      })
+      expect(videoSizeFromBuffer(webmPixels(24, 42))).toEqual({ width: 24, height: 42 })
+   })
+
+   it('returns null for non-video, truncated or unknown containers', () => {
+      expect(videoSizeFromBuffer(new Uint8Array(0))).toBeNull()
+      expect(videoSizeFromBuffer(png(2, 2))).toBeNull()
+      expect(mp4VideoSize(webmPixels(2, 2))).toBeNull()
+      expect(matroskaVideoSize(mp4(2, 2))).toBeNull()
+      expect(mp4VideoSize(mp4(2, 2).subarray(0, 20))).toBeNull()
+      expect(mp4VideoSize(box('ftyp', bytes('isom', new Uint8Array(4))))).toBeNull()
+   })
+})
+
 describe('key helpers', () => {
    it.each(['photo.jpg', 'a/b/photo.JPEG', 'clip.mp4', 'song.mp3', 'doc.pdf', 'logo.svg'])(
       'accepts %s',
@@ -201,6 +332,9 @@ describe('scanMediaDirectory', () => {
       await writeFile(join(root, '.gitkeep'), '')
       await writeFile(join(root, '.hidden', 'secret.png'), png(1, 1))
       await writeFile(join(root, 'brochure.pdf'), '%PDF-1.4')
+      await writeFile(join(root, 'clip.mp4'), mp4(1920, 1080))
+      await writeFile(join(root, 'tail.mp4'), mp4MoovLast(720, 1280, 200_000))
+      await writeFile(join(root, 'loop.webm'), webmPixels(1280, 720))
    })
 
    afterAll(async () => {
@@ -211,7 +345,10 @@ describe('scanMediaDirectory', () => {
       const files = await scanMediaDirectory(root)
       expect(files.map((file) => file.key)).toEqual([
          'brochure.pdf',
+         'clip.mp4',
          'hero.png',
+         'loop.webm',
+         'tail.mp4',
          'waters/river.webp',
       ])
       expect(files.every((file) => file.size > 0)).toBe(true)
@@ -248,6 +385,28 @@ describe('scanMediaDirectory', () => {
          mime: 'application/pdf',
          width: null,
          height: null,
+      })
+   })
+
+   it('reads dimensions for videos, including a moov box past the header window', async () => {
+      const files = await scanMediaDirectory(root)
+      const meta = async (key: string) =>
+         readMediaFileMeta(root, files.find((file) => file.key === key)!)
+
+      expect(await meta('clip.mp4')).toMatchObject({
+         mime: 'video/mp4',
+         width: 1920,
+         height: 1080,
+      })
+      expect(await meta('tail.mp4')).toMatchObject({
+         mime: 'video/mp4',
+         width: 720,
+         height: 1280,
+      })
+      expect(await meta('loop.webm')).toMatchObject({
+         mime: 'video/webm',
+         width: 1280,
+         height: 720,
       })
    })
 })

@@ -41,7 +41,7 @@
 
 <script setup lang="ts">
 import type { MediaItem, MediaType } from '#nuxt-cms'
-import { formatFileSize } from '#nuxt-cms'
+import { formatFileSize, mediaTypeAccept } from '#nuxt-cms'
 import { computed, ref } from '#imports'
 import { useCmsRuntime } from '../../composables/cms-runtime'
 import { useCmsToast } from '../../composables/cms-toast'
@@ -49,7 +49,7 @@ import { useCmsToast } from '../../composables/cms-toast'
 const props = withDefaults(
    defineProps<{
       multiple?: boolean
-      mediaType?: MediaType
+      mediaType?: MediaType | MediaType[]
       accept?: string[]
       folder?: string | null
    }>(),
@@ -70,8 +70,12 @@ interface PresignResponse {
    publicUrl: string | null
 }
 
-async function imageDimensions(file: File): Promise<{ width?: number; height?: number }> {
-   if (!file.type.startsWith('image/')) return {}
+interface Dimensions {
+   width?: number
+   height?: number
+}
+
+async function imageDimensions(file: File): Promise<Dimensions> {
    try {
       const bitmap = await createImageBitmap(file)
       const dims = { width: bitmap.width, height: bitmap.height }
@@ -82,20 +86,41 @@ async function imageDimensions(file: File): Promise<{ width?: number; height?: n
    }
 }
 
+function videoDimensions(file: File): Promise<Dimensions> {
+   return new Promise((resolve) => {
+      const url = URL.createObjectURL(file)
+      const video = document.createElement('video')
+      const settle = (dims: Dimensions) => {
+         URL.revokeObjectURL(url)
+         resolve(dims)
+      }
+      video.preload = 'metadata'
+      video.muted = true
+      video.onloadedmetadata = () =>
+         settle(
+            video.videoWidth && video.videoHeight
+               ? { width: video.videoWidth, height: video.videoHeight }
+               : {}
+         )
+      video.onerror = () => settle({})
+      video.src = url
+   })
+}
+
+async function mediaDimensions(file: File): Promise<Dimensions> {
+   if (file.type.startsWith('image/')) return imageDimensions(file)
+   if (file.type.startsWith('video/')) return videoDimensions(file)
+   return {}
+}
+
 const input = ref<HTMLInputElement | null>(null)
 const dragOver = ref(false)
 const uploading = ref(false)
 const done = ref(0)
 const total = ref(0)
 
-const acceptAttr = computed(() =>
-   props.accept?.length
-      ? props.accept.join(',')
-      : props.mediaType === 'image'
-        ? 'image/*'
-        : props.mediaType === 'video'
-          ? 'video/*'
-          : undefined
+const acceptAttr = computed(
+   () => (props.accept?.length ? props.accept : mediaTypeAccept(props.mediaType))?.join(',')
 )
 
 function matchesAccept(file: File) {
@@ -131,7 +156,7 @@ async function uploadOne(file: File) {
          folder: presign.folder,
          mime: file.type || null,
          size: file.size,
-         ...(await imageDimensions(file)),
+         ...(await mediaDimensions(file)),
       },
    })
    done.value++

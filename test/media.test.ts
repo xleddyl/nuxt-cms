@@ -5,7 +5,12 @@ import {
    assertUploadContentType,
    assertUploadSize,
 } from '../src/runtime/server/utils/media'
-import { DEFAULT_MEDIA_MAX_FILE_SIZE, formatFileSize } from '../src/runtime/shared/index'
+import {
+   DEFAULT_MEDIA_MAX_FILE_SIZE,
+   formatFileSize,
+   mediaTypeAccept,
+   mediaTypeFilter,
+} from '../src/runtime/shared/index'
 
 function s3Media(overrides: Partial<Parameters<typeof assertMediaConfigured>[0]> = {}) {
    return {
@@ -136,5 +141,33 @@ describe('assertUploadSize', () => {
       expect(() => assertUploadSize(60 * 1024 * 1024, 50 * 1024 * 1024)).toThrow(
          /maximum size of 50 MB/
       )
+   })
+})
+
+describe('mediaTypeFilter', () => {
+   it('restricts to the requested types', () => {
+      expect(mediaTypeFilter('image')).toEqual(['image'])
+      expect(mediaTypeFilter(['image', 'video'])).toEqual(['image', 'video'])
+      expect(mediaTypeFilter(['video', 'video'])).toEqual(['video'])
+   })
+
+   it('treats file, empty and missing values as unrestricted', () => {
+      expect(mediaTypeFilter('file')).toBeNull()
+      expect(mediaTypeFilter(['image', 'file'])).toBeNull()
+      expect(mediaTypeFilter([])).toBeNull()
+      expect(mediaTypeFilter(undefined)).toBeNull()
+      expect(mediaTypeFilter(null)).toBeNull()
+   })
+})
+
+describe('mediaTypeAccept', () => {
+   it('builds accept patterns from the allowed types', () => {
+      expect(mediaTypeAccept('image')).toEqual(['image/*'])
+      expect(mediaTypeAccept(['image', 'video'])).toEqual(['image/*', 'video/*'])
+   })
+
+   it('returns null when any file is allowed', () => {
+      expect(mediaTypeAccept('file')).toBeNull()
+      expect(mediaTypeAccept(undefined)).toBeNull()
    })
 })

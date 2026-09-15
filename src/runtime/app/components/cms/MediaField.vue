@@ -52,7 +52,7 @@ import { mediaFilename, mediaIconFor, mediaPublicUrl, mediaTypeForKey } from '#n
 import { useCmsRuntime } from '../../composables/cms-runtime'
 
 defineProps<{
-   mediaType?: MediaType
+   mediaType?: MediaType | MediaType[]
    accept?: string[]
 }>()
 

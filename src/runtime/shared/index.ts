@@ -72,6 +72,22 @@ export function mediaIconFor(type: MediaType): string {
    return type === 'image' ? 'photo' : type === 'video' ? 'film' : 'document'
 }
 
+export function mediaTypeFilter(
+   mediaType: MediaType | MediaType[] | null | undefined
+): MediaType[] | null {
+   const requested = Array.isArray(mediaType) ? mediaType : mediaType ? [mediaType] : []
+   const types = [...new Set(requested.filter((type) => MEDIA_TYPES.includes(type)))]
+   if (!types.length || types.includes('file')) return null
+   return types
+}
+
+export function mediaTypeAccept(
+   mediaType: MediaType | MediaType[] | null | undefined
+): string[] | null {
+   const types = mediaTypeFilter(mediaType)
+   return types ? types.map((type) => `${type}/*`) : null
+}
+
 export function mediaPublicUrl(baseUrl: string | null | undefined, key: string): string | null {
    return baseUrl ? `${baseUrl.replace(/\/+$/, '')}/${key}` : null
 }
@@ -154,7 +170,7 @@ export interface FieldConfig {
    multiple?: boolean
    from?: string
    blocks?: Record<string, BlockConfig>
-   mediaType?: MediaType
+   mediaType?: MediaType | MediaType[]
    accept?: string[]
    to?: string
    cardinality?: 'many-to-one' | 'one-to-one' | 'many-to-many'
@@ -398,7 +414,7 @@ export interface JsonFieldInput extends FieldInputBase {
 
 export interface MediaFieldInput extends FieldInputBase {
    type: 'media'
-   mediaType?: MediaType
+   mediaType?: MediaType | MediaType[]
    accept?: string[]
    translatable?: boolean
 }
