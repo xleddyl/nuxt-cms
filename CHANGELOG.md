@@ -1,6 +1,18 @@
 # Changelog
 
 
+## v0.1.40
+
+[compare changes](https://github.com/xleddyl/nuxt-cms/compare/v0.1.39...v0.1.40)
+
+### 🚀 Enhancements
+
+- Media fields accept lists of types and read video dimensions ([6a23a3b](https://github.com/xleddyl/nuxt-cms/commit/6a23a3b))
+
+### ❤️ Contributors
+
+- Edoardo Alberti <edoalberti99@gmail.com>
+
 ## v0.1.39
 
 [compare changes](https://github.com/xleddyl/nuxt-cms/compare/v0.1.38...v0.1.39)
