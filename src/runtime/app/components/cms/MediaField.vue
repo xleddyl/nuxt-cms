@@ -1,41 +1,47 @@
 <template>
-   <div v-if="model" class="cms-card cms-media-field">
-      <div class="cms-media-field-preview">
-         <img v-if="kind === 'image' && url" :src="url" alt="" />
+   <div v-if="model" class="cms-card cms-block-tile cms-media-single">
+      <button
+         type="button"
+         class="cms-block-preview"
+         aria-label="Replace media"
+         @click="openGallery"
+      >
+         <img v-if="kind === 'image' && url" :src="url" alt="" loading="lazy" />
          <video
             v-else-if="kind === 'video' && url"
             :src="url"
-            controls
             preload="metadata"
+            muted
             playsinline
          />
-         <CmsIcon v-else :name="icon" class="size-10" />
-      </div>
-      <div class="cms-media-field-bar">
-         <CmsIcon :name="icon" class="cms-media-bar-icon size-4" />
-         <span class="cms-media-bar-name" :title="model">{{ mediaFilename(model) }}</span>
-         <CmsButton
-            label="Replace"
-            icon="arrow-path"
-            variant="soft"
-            color="neutral"
-            size="xs"
-            @click="openGallery"
-         />
-         <CmsButton
-            label="Remove"
-            icon="trash"
-            variant="soft"
-            color="error"
-            size="xs"
-            @click="clear"
-         />
+         <CmsIcon v-else :name="icon" class="size-7" />
+      </button>
+      <div class="cms-block-bar">
+         <span class="cms-block-bar-name" :title="model">{{ mediaFilename(model) }}</span>
+         <div class="cms-block-bar-actions">
+            <CmsButton
+               icon="arrow-path"
+               size="xs"
+               variant="ghost"
+               color="neutral"
+               aria-label="Replace"
+               @click="openGallery"
+            />
+            <CmsButton
+               icon="trash"
+               size="xs"
+               variant="ghost"
+               color="error"
+               aria-label="Remove"
+               @click="clear"
+            />
+         </div>
       </div>
    </div>
 
-   <button v-else type="button" class="cms-dropzone is-dense" @click="openGallery">
-      <CmsIcon name="photo" class="size-5 shrink-0" />
-      <span class="text-sm font-medium">Choose from the gallery</span>
+   <button v-else type="button" class="cms-block-add cms-media-single" @click="openGallery">
+      <CmsIcon name="photo" class="size-5" />
+      <span>Choose</span>
    </button>
 
    <CmsModal v-model:open="galleryOpen" title="Media" size="lg">

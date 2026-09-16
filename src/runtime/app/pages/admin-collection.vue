@@ -52,7 +52,7 @@
                <CmsIcon
                   v-if="node.depth"
                   name="arrow-turn-left-up"
-                  class="cms-tree-branch size-3.5 rotate-90"
+                  class="cms-tree-branch size-3.5"
                />
                <div class="min-w-0 flex-1">
                   <div class="truncate font-medium text-(--ui-text-highlighted)">
@@ -60,7 +60,7 @@
                   </div>
                   <div class="cms-label truncate">{{ node.row.path }}</div>
                </div>
-               <span class="cms-label shrink-0">{{ node.row.updatedAt ? 'edited' : 'empty' }}</span>
+               <span class="cms-label shrink-0">{{ lastEdit(node.row.updatedAt) }}</span>
                <CmsIcon name="chevron-right" class="size-4 shrink-0 text-(--ui-text-dimmed)" />
             </NuxtLink>
          </div>
@@ -254,6 +254,10 @@ function isList(value: ListResponse | Row | null | undefined): value is ListResp
 }
 
 const rows = computed<Row[]>(() => (isList(data.value) ? data.value.items : []))
+
+function lastEdit(value: unknown) {
+   return typeof value === 'string' && value ? value.slice(0, 10) : 'never saved'
+}
 
 const pageTree = computed(() => {
    const byPath = new Set(rows.value.map((row) => String(row.path)))

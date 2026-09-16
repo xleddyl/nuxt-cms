@@ -337,6 +337,7 @@ body:has(.cms-scope) {
    width: 1rem;
    flex-shrink: 0;
    color: var(--ui-text-dimmed);
+   transform: scaleY(-1) rotate(90deg);
 }
 
 .cms-toolbar {
@@ -1628,58 +1629,9 @@ textarea.cms-field {
    color: var(--ui-text-dimmed);
 }
 
-.cms-media-field {
-   overflow: hidden;
-}
-
-.cms-media-field-preview {
-   display: flex;
-   align-items: center;
-   justify-content: center;
-   min-height: 8rem;
-   max-height: 16rem;
-   padding: 0.75rem;
-   background-color: var(--cms-canvas);
-   background-image: repeating-conic-gradient(
-      from 0deg,
-      rgb(255 255 255 / 0.045) 0% 25%,
-      rgb(255 255 255 / 0) 0% 50%
-   );
-   background-size: 16px 16px;
-   background-position: 50%;
-   color: var(--ui-text-dimmed);
-}
-
-.cms-media-field-preview > img,
-.cms-media-field-preview > video {
-   max-height: 14.5rem;
-   max-width: 100%;
-   object-fit: contain;
-}
-
-.cms-media-field-bar {
-   display: flex;
-   align-items: center;
-   gap: 0.5rem;
-   padding: 0.625rem 0.75rem;
-   border-top: 1px solid var(--cms-line);
-   background: var(--cms-surface);
-}
-
-.cms-media-bar-icon {
-   flex-shrink: 0;
-   color: var(--ui-text-dimmed);
-}
-
-.cms-media-bar-name {
-   min-width: 0;
-   flex: 1;
-   overflow: hidden;
-   text-overflow: ellipsis;
-   white-space: nowrap;
-   font-size: 0.875rem;
-   font-weight: 500;
-   color: var(--ui-text-highlighted);
+.cms-media-single {
+   width: 100%;
+   max-width: 15rem;
 }
 
 .cms-media-thumb {
