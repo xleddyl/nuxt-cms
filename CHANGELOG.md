@@ -1,6 +1,18 @@
 # Changelog
 
 
+## v0.1.46
+
+[compare changes](https://github.com/xleddyl/nuxt-cms/compare/v0.1.45...v0.1.46)
+
+### 🩹 Fixes
+
+- Keep the page route discovery inside runtime so the seed entry builds ([a5603ed](https://github.com/xleddyl/nuxt-cms/commit/a5603ed))
+
+### ❤️ Contributors
+
+- Edoardo Alberti <edoalberti99@gmail.com>
+
 ## v0.1.45
 
 [compare changes](https://github.com/xleddyl/nuxt-cms/compare/v0.1.44...v0.1.45)
