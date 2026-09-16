@@ -85,6 +85,55 @@ function entryTs(config: CmsConfig, name: string, entry: CmsEntry): string {
    return `export interface ${typeName(name)} {\n${lines.join('\n')}\n}`
 }
 
+function relationKeys(entry: CmsEntry): string[] {
+   return Object.entries(entry.fields)
+      .filter(([, field]) => field.type === 'relation' && !isPrivateField(field))
+      .map(([key]) => key)
+}
+
+function quotedKeys(keys: string[]): string {
+   return keys.map((key) => `'${key}'`).join(' | ')
+}
+
+function shallowTypeTs(config: CmsConfig, name: string): string {
+   const target = typeName(name)
+   const entry = config[name]
+   const keys = entry ? relationKeys(entry) : []
+   return keys.length ? `Omit<${target}, ${quotedKeys(keys)}>` : target
+}
+
+function autoTypeTs(config: CmsConfig, name: string, entry: CmsEntry): string {
+   const auto = `${typeName(name)}Auto`
+   const keys = relationKeys(entry)
+   if (!keys.length) return `export type ${auto} = ${typeName(name)}`
+   const lines = keys.map((key) => {
+      const field = entry.fields[key]!
+      const shallow = shallowTypeTs(config, field.to!)
+      if (field.cardinality === 'many-to-many') return `  ${key}: ${shallow}[]`
+      const nonNull = isRequiredField(field) && !config[field.to!]?.drafts
+      return `  ${key}: ${shallow}${nonNull ? '' : ' | null'}`
+   })
+   return `export type ${auto} = Omit<${typeName(name)}, ${quotedKeys(keys)}> & {\n${lines.join(
+      '\n'
+   )}\n}`
+}
+
+function entryMapsTs(config: CmsConfig): string[] {
+   const singles: string[] = []
+   const collections: string[] = []
+   for (const [name, entry] of Object.entries(config)) {
+      const line = `  ${JSON.stringify(name)}: ${typeName(name)}Auto`
+      if (entry.kind === 'single') singles.push(line)
+      else collections.push(line)
+   }
+   return [
+      `export interface CmsSingleTypes {\n${singles.join('\n')}\n}`,
+      `export interface CmsCollectionTypes {\n${collections.join('\n')}\n}`,
+      `export type CmsSingleName = keyof CmsSingleTypes`,
+      `export type CmsCollectionName = keyof CmsCollectionTypes`,
+   ]
+}
+
 export function renderTypesFile(config: CmsConfig): string {
    const parts = [
       `export type CmsMediaType = 'image' | 'video' | 'file'`,
@@ -107,5 +156,7 @@ export function renderTypesFile(config: CmsConfig): string {
       }
       parts.push(entryTs(config, name, entry))
    }
+   for (const [name, entry] of Object.entries(config)) parts.push(autoTypeTs(config, name, entry))
+   parts.push(...entryMapsTs(config))
    return `${parts.join('\n\n')}\n`
 }

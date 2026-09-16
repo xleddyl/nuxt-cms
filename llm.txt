@@ -103,9 +103,13 @@ export default defineCmsConfig({
 
 ## 3. Querying content
 
-Public read-only GraphQL endpoint at `POST /api/cms/graphql`. Two auto-imported composables (typed end-to-end from the query string — no codegen step):
+Public read-only GraphQL endpoint at `POST /api/cms/graphql`. Four auto-imported composables. `useCms` and `$cmsQuery` are typed end-to-end from the query string, with no codegen step:
 
 ```ts
+// one entry, query and types generated from cms.config.ts
+const { data } = await useCmsSingle('homepage', { locale })
+const { data } = await useCmsCollection('events', { filters, sort, limit, offset, locale })
+
 // reactive, SSR-friendly (wraps useAsyncData) — use in components/pages
 const { data, error, refresh } = useCms(`{ ... }`, variables?, options?)
 
@@ -113,9 +117,17 @@ const { data, error, refresh } = useCms(`{ ... }`, variables?, options?)
 const result = await $cmsQuery(`{ ... }`, variables?)
 ```
 
+`useCmsSingle` / `useCmsCollection` need no query string. They select every public field of the
+entry plus `id`, `updatedAt` and `createdAt`: media with all its keys, blocks with one inline
+fragment per block type, relations one level deep (without the relations of the related entry).
+`data` is `null` for a single and `[]` for a collection while loading and after a failure.
+`sort.field` accepts only that entry's field names. Use `useCms` for a count, for a relation two
+levels deep, for several entries in one request, or for a narrower selection.
+
 `useCms` takes a third argument that forwards options to `useAsyncData`: `key` (replaces the
 generated cache key), `default` (the value `data` holds before the query resolves and after it
-fails), plus `server`, `lazy`, `immediate`, `deep`, `dedupe` and `watch`.
+fails), plus `server`, `lazy`, `immediate`, `deep`, `dedupe` and `watch`. The entry helpers take the
+same options next to their own.
 
 ### Generated queries
 

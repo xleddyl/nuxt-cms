@@ -39,6 +39,7 @@ import {
 } from './migrations-codegen'
 import type { Driver } from './schema-codegen'
 import { renderSchemaFile, validateConfig } from './schema-codegen'
+import { renderQueriesFile } from './queries-codegen'
 import { renderTypesFile } from './types-codegen'
 import { CMS_ENABLED_ENV, resolveCmsEnabled } from './enabled'
 
@@ -195,6 +196,124 @@ function resolveModuleOptions(options: ModuleOptions): ResolvedModuleOptions {
    }
 }
 
+const moduleRequire = createRequire(import.meta.url)
+
+function resolveImport(specifier: string) {
+   try {
+      return fileURLToPath(import.meta.resolve(specifier)).replace(/\\/g, '/')
+   } catch {
+      return moduleRequire.resolve(specifier).replace(/\\/g, '/')
+   }
+}
+
+async function loadCmsConfig(
+   nuxt: Nuxt,
+   resolver: ReturnType<typeof createResolver>,
+   configPathOption: string,
+   i18n: ResolvedModuleOptions['i18n'],
+   logger: ReturnType<typeof useLogger>
+): Promise<CmsConfig> {
+   const configPath = await resolvePath(configPathOption, { cwd: nuxt.options.rootDir })
+   nuxt.options.alias['#nuxt-cms'] = resolver.resolve('./runtime/shared/index')
+   nuxt.options.watch.push(configPath)
+
+   let cmsConfig: CmsConfig = {}
+   if (existsSync(configPath)) {
+      nuxt.options.alias['#cms-config'] = configPath
+      const jiti = createJiti(import.meta.url, {
+         moduleCache: false,
+         alias: { '#nuxt-cms': resolver.resolve('./runtime/shared/index') },
+      })
+      cmsConfig = (await jiti.import(configPath, { default: true })) as CmsConfig
+   } else {
+      logger.warn(
+         `[nuxt-cms] Config file not found: ${configPath}. Using an empty registry — create a ${configPathOption}.ts with defineCmsConfig().`
+      )
+      nuxt.options.alias['#cms-config'] = resolver.resolve('./runtime/shared/empty-config')
+   }
+
+   const configErrors = validateConfig(cmsConfig, i18n)
+   if (configErrors.length) {
+      for (const error of configErrors) logger.error(error)
+      throw new Error(
+         `[nuxt-cms] Invalid cms config (${configErrors.length} error${
+            configErrors.length > 1 ? 's' : ''
+         })`
+      )
+   }
+
+   return cmsConfig
+}
+
+function addCmsTypeTemplates(nuxt: Nuxt, cmsConfig: CmsConfig) {
+   addTemplate({
+      filename: 'cms/schema.graphql',
+      write: true,
+      getContents: () => renderGraphqlSdl(cmsConfig),
+   })
+
+   const typesTemplate = addTemplate({
+      filename: 'cms/types.ts',
+      write: true,
+      getContents: () => renderTypesFile(cmsConfig),
+   })
+   nuxt.options.alias['#cms-types'] = typesTemplate.dst
+
+   const queriesTemplate = addTemplate({
+      filename: 'cms/queries.ts',
+      write: true,
+      getContents: () => renderQueriesFile(cmsConfig),
+   })
+   nuxt.options.alias['#cms-queries'] = queriesTemplate.dst
+
+   addTemplate({
+      filename: 'cms/graphql-env.d.ts',
+      write: true,
+      getContents: () => {
+         const introspection = minifyIntrospection(
+            introspectionFromSchema(buildSchema(renderGraphqlSdl(cmsConfig)))
+         )
+         return outputIntrospectionFile(introspection, {
+            fileType: '.d.ts',
+            shouldPreprocess: true,
+         }).split("import * as gqlTada from 'gql.tada';")[0]!
+      },
+   })
+
+   const gqlTadaTypesPath = resolveImport('gql.tada').replace(/\.[mc]?js$/, '')
+   const graphqlTemplate = addTemplate({
+      filename: 'cms/graphql.ts',
+      write: true,
+      getContents: () =>
+         [
+            `import type { initGraphQLTada, ResultOf, VariablesOf } from '${gqlTadaTypesPath}'`,
+            `import type { introspection } from './graphql-env'`,
+            ``,
+            `export type CmsGraphql = initGraphQLTada<{`,
+            `  introspection: introspection`,
+            `  scalars: {`,
+            `    JSON: unknown`,
+            `  }`,
+            `}>`,
+            ``,
+            `declare const graphql: CmsGraphql`,
+            ``,
+            `// @ts-ignore: gql.tada's cache overload rejects this instantiation, but the parse overload still resolves`,
+            `export type CmsDocument<Query extends string> = ReturnType<typeof graphql<Query, []>>`,
+            ``,
+            `export type CmsResult<Query extends string> = string extends Query`,
+            `  ? Record<string, unknown>`,
+            `  : ResultOf<CmsDocument<Query>>`,
+            ``,
+            `export type CmsVariables<Query extends string> = string extends Query`,
+            `  ? Record<string, unknown>`,
+            `  : VariablesOf<CmsDocument<Query>>`,
+            ``,
+         ].join('\n'),
+   })
+   nuxt.options.alias['#cms-graphql'] = graphqlTemplate.dst
+}
+
 export default defineNuxtModule<ModuleOptions>({
    meta: {
       name: '@xleddyl/nuxt-cms',
@@ -243,11 +362,18 @@ export default defineNuxtModule<ModuleOptions>({
       const resolved = resolveModuleOptions(options)
 
       if (!resolveCmsEnabled(options.enabled, process.env[CMS_ENABLED_ENV])) {
-         const stub = resolver.resolve('./runtime/app/composables/cms-query-disabled')
+         const queryStub = resolver.resolve('./runtime/app/composables/cms-query-disabled')
+         const entryStub = resolver.resolve('./runtime/app/composables/cms-entry-disabled')
          addImports([
-            { name: 'useCms', from: stub },
-            { name: '$cmsQuery', from: stub },
+            { name: 'useCms', from: queryStub },
+            { name: '$cmsQuery', from: queryStub },
+            { name: 'useCmsSingle', from: entryStub },
+            { name: 'useCmsCollection', from: entryStub },
          ])
+         addCmsTypeTemplates(
+            nuxt,
+            await loadCmsConfig(nuxt, resolver, resolved.configPath, resolved.i18n, logger)
+         )
          nuxt.options.runtimeConfig.public.cms = {
             mediaBaseUrl: resolved.media.publicBaseUrl,
             mediaStorage: resolved.media.storage,
@@ -255,7 +381,7 @@ export default defineNuxtModule<ModuleOptions>({
             i18n: resolved.i18n,
          }
          logger.info(
-            '[nuxt-cms] disabled: registering no-op useCms/$cmsQuery stubs, skipping admin, server and database setup'
+            '[nuxt-cms] disabled: registering no-op query composables and generated types, skipping admin, server and database setup'
          )
          return
       }
@@ -293,43 +419,13 @@ export default defineNuxtModule<ModuleOptions>({
          )
       }
 
-      const configPath = await resolvePath(resolved.configPath, { cwd: nuxt.options.rootDir })
-      nuxt.options.alias['#nuxt-cms'] = resolver.resolve('./runtime/shared/index')
-      nuxt.options.watch.push(configPath)
-
-      let cmsConfig: CmsConfig = {}
-      if (existsSync(configPath)) {
-         nuxt.options.alias['#cms-config'] = configPath
-         const jiti = createJiti(import.meta.url, {
-            moduleCache: false,
-            alias: { '#nuxt-cms': resolver.resolve('./runtime/shared/index') },
-         })
-         cmsConfig = (await jiti.import(configPath, { default: true })) as CmsConfig
-      } else {
-         logger.warn(
-            `[nuxt-cms] Config file not found: ${configPath}. Using an empty registry — create a ${resolved.configPath}.ts with defineCmsConfig().`
-         )
-         nuxt.options.alias['#cms-config'] = resolver.resolve('./runtime/shared/empty-config')
-      }
-
-      const configErrors = validateConfig(cmsConfig, resolved.i18n)
-      if (configErrors.length) {
-         for (const error of configErrors) logger.error(error)
-         throw new Error(
-            `[nuxt-cms] Invalid cms config (${configErrors.length} error${
-               configErrors.length > 1 ? 's' : ''
-            })`
-         )
-      }
-
-      const moduleRequire = createRequire(import.meta.url)
-      const resolveImport = (specifier: string) => {
-         try {
-            return fileURLToPath(import.meta.resolve(specifier)).replace(/\\/g, '/')
-         } catch {
-            return moduleRequire.resolve(specifier).replace(/\\/g, '/')
-         }
-      }
+      const cmsConfig = await loadCmsConfig(
+         nuxt,
+         resolver,
+         resolved.configPath,
+         resolved.i18n,
+         logger
+      )
 
       const schemaTemplate = addTemplate({
          filename: 'cms/schema.ts',
@@ -343,69 +439,15 @@ export default defineNuxtModule<ModuleOptions>({
       })
       nuxt.options.alias['#cms-tables'] = schemaTemplate.dst
 
-      addTemplate({
-         filename: 'cms/schema.graphql',
-         write: true,
-         getContents: () => renderGraphqlSdl(cmsConfig),
-      })
+      addCmsTypeTemplates(nuxt, cmsConfig)
 
-      const typesTemplate = addTemplate({
-         filename: 'cms/types.ts',
-         write: true,
-         getContents: () => renderTypesFile(cmsConfig),
-      })
-      nuxt.options.alias['#cms-types'] = typesTemplate.dst
-
-      addTemplate({
-         filename: 'cms/graphql-env.d.ts',
-         write: true,
-         getContents: () => {
-            const introspection = minifyIntrospection(
-               introspectionFromSchema(buildSchema(renderGraphqlSdl(cmsConfig)))
-            )
-            return outputIntrospectionFile(introspection, {
-               fileType: '.d.ts',
-               shouldPreprocess: true,
-            }).split("import * as gqlTada from 'gql.tada';")[0]!
-         },
-      })
-
-      const gqlTadaTypesPath = resolveImport('gql.tada').replace(/\.[mc]?js$/, '')
-      const graphqlTemplate = addTemplate({
-         filename: 'cms/graphql.ts',
-         write: true,
-         getContents: () =>
-            [
-               `import type { initGraphQLTada, ResultOf, VariablesOf } from '${gqlTadaTypesPath}'`,
-               `import type { introspection } from './graphql-env'`,
-               ``,
-               `export type CmsGraphql = initGraphQLTada<{`,
-               `  introspection: introspection`,
-               `  scalars: {`,
-               `    JSON: unknown`,
-               `  }`,
-               `}>`,
-               ``,
-               `declare const graphql: CmsGraphql`,
-               ``,
-               `// @ts-ignore: gql.tada's cache overload rejects this instantiation, but the parse overload still resolves`,
-               `export type CmsDocument<Query extends string> = ReturnType<typeof graphql<Query, []>>`,
-               ``,
-               `export type CmsResult<Query extends string> = string extends Query`,
-               `  ? Record<string, unknown>`,
-               `  : ResultOf<CmsDocument<Query>>`,
-               ``,
-               `export type CmsVariables<Query extends string> = string extends Query`,
-               `  ? Record<string, unknown>`,
-               `  : VariablesOf<CmsDocument<Query>>`,
-               ``,
-            ].join('\n'),
-      })
-      nuxt.options.alias['#cms-graphql'] = graphqlTemplate.dst
-
+      const queryComposables = resolver.resolve('./runtime/app/composables/cms-query')
+      const entryComposables = resolver.resolve('./runtime/app/composables/cms-entry')
       addImports([
-         { name: 'useCms', from: resolver.resolve('./runtime/app/composables/cms-query') },
-         { name: '$cmsQuery', from: resolver.resolve('./runtime/app/composables/cms-query') },
+         { name: 'useCms', from: queryComposables },
+         { name: '$cmsQuery', from: queryComposables },
+         { name: 'useCmsSingle', from: entryComposables },
+         { name: 'useCmsCollection', from: entryComposables },
       ])
 
       const {

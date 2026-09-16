@@ -40,7 +40,7 @@
             <h2 class="cms-label cms-rise" style="animation-delay: 180ms">upcoming events</h2>
 
             <div
-               v-if="!data?.events.length"
+               v-if="!events.length"
                class="cms-empty cms-rise mt-6 flex flex-col items-center gap-3 px-6 py-16 text-center"
                style="animation-delay: 220ms"
             >
@@ -52,7 +52,7 @@
 
             <div v-else class="mt-6 grid gap-5 sm:grid-cols-2">
                <article
-                  v-for="(event, index) in data.events"
+                  v-for="(event, index) in events"
                   :key="event.id"
                   class="cms-card cms-rise group flex flex-col overflow-hidden"
                   :class="{ 'sm:col-span-2 sm:flex-row': event.featured }"
@@ -128,28 +128,17 @@
 </template>
 
 <script setup lang="ts">
-const { data } = useCms(`{
+const { data } = await useCms(`{
    homepage { heroTitle heroSubtitle launchDate }
-   events(sort: [{ field: date }]) {
-      id
-      title
-      date
-      seats
-      featured
-      description
-      poster { url alt }
-      brochure { url }
-      category { id name }
-      tags { id name }
-      body { type ... on EventsBodyHero { heading } }
-   }
    eventsCount
    categories { id }
    tags { id }
 }`)
 
-const blocks = computed(
-   () => data.value?.events.flatMap((event) => event.body?.map((block) => block.type) ?? []) ?? []
+const { data: events } = await useCmsCollection('events', { sort: [{ field: 'date' }] })
+
+const blocks = computed(() =>
+   events.value.flatMap((event) => event.body?.map((block) => block.type) ?? [])
 )
 
 const stats = computed(() => [

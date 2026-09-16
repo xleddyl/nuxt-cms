@@ -87,13 +87,19 @@ order:
    disable.
 3. Enabled.
 
-When disabled the module registers **only** stubs for `useCms` and `$cmsQuery`, with the same
-signatures as the real ones. `useCms` returns a resolved `useAsyncData` result whose `data` is
-`null`, `$cmsQuery` resolves to `{}`. Everything else is skipped: the admin pages, layout,
-components and route middleware, all server handlers and plugins, the database aliases, the Drizzle
-schema/config templates, migrations and the `nuxt-auth-utils` dependency. Components can therefore
-call the composables unconditionally and render their empty states, with no crash at build, SSR
-prerender or on the client.
+When disabled the module registers stubs for `useCms`, `$cmsQuery`, `useCmsSingle` and
+`useCmsCollection`, with the same signatures as the real ones. `useCms().data` and
+`useCmsSingle().data` are `null`, `useCmsCollection().data` is `[]` and `$cmsQuery()` resolves to
+`{}`.
+
+`cms.config.ts` is still read and validated, and the generated types stay available: `#cms-types`,
+`#cms-queries` and `#cms-graphql`. One code base therefore type-checks with the CMS on and off. An
+invalid `cms.config.ts` fails the build in both modes.
+
+Everything else is skipped: the admin pages, layout, components and route middleware, all server
+handlers and plugins, the database aliases, the Drizzle schema/config templates, migrations and the
+`nuxt-auth-utils` dependency. Components can therefore call the composables unconditionally and
+render their empty states, with no crash at build, SSR prerender or on the client.
 
 Note that the generated aliases (`#cms-types`, `#cms-graphql`, `#cms-tables`, `#cms-db`) are not
 registered when disabled, so application code must not import from them directly.

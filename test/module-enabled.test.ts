@@ -79,13 +79,18 @@ describe('module setup when disabled', () => {
 
       expect(kit.addImports).toHaveBeenCalledTimes(1)
       const imports = kit.addImports.mock.calls[0]![0] as { name: string; from: string }[]
-      expect(imports.map((entry) => entry.name).sort()).toEqual(['$cmsQuery', 'useCms'])
+      expect(imports.map((entry) => entry.name).sort()).toEqual([
+         '$cmsQuery',
+         'useCms',
+         'useCmsCollection',
+         'useCmsSingle',
+      ])
       for (const entry of imports) {
-         expect(entry.from).toContain('cms-query-disabled')
+         expect(entry.from).toContain('-disabled')
       }
    })
 
-   it('skips server handlers, plugins, pages, components and templates', async () => {
+   it('skips server handlers, plugins, pages and components', async () => {
       const nuxt = createNuxt()
       await moduleDefinition.setup(options({ enabled: false }), nuxt)
 
@@ -95,16 +100,35 @@ describe('module setup when disabled', () => {
       expect(kit.addComponentsDir).not.toHaveBeenCalled()
       expect(nuxt.hook).not.toHaveBeenCalledWith('app:templates', expect.any(Function))
       expect(kit.addRouteMiddleware).not.toHaveBeenCalled()
-      expect(kit.addTemplate).not.toHaveBeenCalled()
       expect(kit.addTypeTemplate).not.toHaveBeenCalled()
       expect(kit.addVitePlugin).not.toHaveBeenCalled()
+   })
+
+   it('still generates the types and the queries', async () => {
+      const nuxt = createNuxt()
+      await moduleDefinition.setup(options({ enabled: false }), nuxt)
+
+      const filenames = kit.addTemplate.mock.calls.map((call) => call[0]!.filename)
+      expect(filenames).toEqual([
+         'cms/schema.graphql',
+         'cms/types.ts',
+         'cms/queries.ts',
+         'cms/graphql-env.d.ts',
+         'cms/graphql.ts',
+      ])
    })
 
    it('registers no database or schema aliases', async () => {
       const nuxt = createNuxt()
       await moduleDefinition.setup(options({ enabled: false }), nuxt)
 
-      expect(Object.keys(nuxt.options.alias)).toEqual([])
+      expect(Object.keys(nuxt.options.alias)).toEqual([
+         '#nuxt-cms',
+         '#cms-config',
+         '#cms-types',
+         '#cms-queries',
+         '#cms-graphql',
+      ])
       expect(nuxt.options.runtimeConfig.cms).toBeUndefined()
    })
 
@@ -147,9 +171,14 @@ describe('module setup when enabled', () => {
       await moduleDefinition.setup(options(), nuxt)
 
       const imports = kit.addImports.mock.calls[0]![0] as { name: string; from: string }[]
-      expect(imports.map((entry) => entry.name).sort()).toEqual(['$cmsQuery', 'useCms'])
+      expect(imports.map((entry) => entry.name).sort()).toEqual([
+         '$cmsQuery',
+         'useCms',
+         'useCmsCollection',
+         'useCmsSingle',
+      ])
       for (const entry of imports) {
-         expect(entry.from).toContain('composables/cms-query')
+         expect(entry.from).toContain('composables/cms-')
          expect(entry.from).not.toContain('disabled')
       }
    })

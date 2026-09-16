@@ -1,16 +1,22 @@
 # Querying content
 
-Content is read through a **public, read-only GraphQL API** at `POST /api/cms/graphql`. Two
-auto-imported composables wrap it and are typed end-to-end from the query string via gql.tada — no
-codegen step, no manual types.
+Content is read through a **public, read-only GraphQL API** at `POST /api/cms/graphql`. Four
+auto-imported composables wrap it.
 
 ```ts
+// one entry, query and types generated from cms.config.ts — no query string to write
+const { data } = await useCmsSingle('homepage', { locale })
+const { data } = await useCmsCollection('events', { sort: [{ field: 'date' }], limit: 10 })
+
 // reactive, SSR-friendly (wraps useAsyncData) — use in components/pages
-const { data, error, refresh } = useCms(`{ ... }`, variables?)
+const { data, error, refresh } = useCms(`{ ... }`, variables?, options?)
 
 // plain promise — use in event handlers or server-side logic
 const result = await $cmsQuery(`{ ... }`, variables?)
 ```
+
+`useCms` and `$cmsQuery` are typed end-to-end from the query string via gql.tada, with no codegen
+step and no manual types.
 
 `useCms` keys the cache on the query + variables and returns Nuxt's `AsyncData`. `$cmsQuery` throws
 if the response contains GraphQL errors.
@@ -27,9 +33,44 @@ const { data } = await useCms(query, { locale }, {
 })
 ```
 
-With [`cms.enabled: false`](configuration.md#enabled) both composables stay defined but become
-no-ops: `useCms().data` is `null` and `$cmsQuery()` resolves to `{}`. Callers therefore never need a
-`typeof useCms === 'function'` guard, they just render their empty state.
+With [`cms.enabled: false`](configuration.md#enabled) the four composables stay defined but become
+no-ops: `useCms().data` and `useCmsSingle().data` are `null`, `useCmsCollection().data` is `[]` and
+`$cmsQuery()` resolves to `{}`. The generated types stay available too, so the same code type-checks
+in both modes. Callers therefore never need a `typeof useCms === 'function'` guard, they just render
+their empty state.
+
+## Entry helpers
+
+`useCmsSingle` and `useCmsCollection` build the query from `cms.config.ts`, so adding a field to an
+entry adds it to the result with no change in the page.
+
+```ts
+const { data: home } = await useCmsSingle('homepage', { locale: 'it' })
+home.value?.heroTitle
+
+const { data: events } = await useCmsCollection('events', {
+   filters: { date: { gte: '2026-01-01' } },
+   sort: [{ field: 'date', direction: 'desc' }],
+   limit: 10,
+   offset: 0,
+   locale: 'it',
+})
+events.value[0]?.poster?.url
+```
+
+What they select:
+
+- every public field of the entry, plus `id` and `updatedAt` (and `createdAt` for a collection);
+- media fields with all their keys (`key url type alt folder mime size width height`);
+- blocks fields with `type` plus an inline fragment per block type;
+- relations one level deep. The related entry brings its own fields, but not its own relations.
+
+`data` holds `null` for a single and `[]` for a collection before the query resolves and after it
+fails. Both helpers accept the same `useAsyncData` options as `useCms`, `key` and `default`
+included. `sort.field` accepts only the field names of that entry.
+
+Write a query with `useCms` when you need a count, a relation two levels deep, several entries in
+one request, or a narrower selection.
 
 ## Generated queries
 

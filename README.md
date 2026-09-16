@@ -57,8 +57,9 @@ Then declare your content types in a `cms.config.ts` at the project root with `d
 ### Disabling the CMS
 
 Keep the module in `modules[]` at all times and turn it off with the `enabled` option or the
-`NUXT_CMS_ENABLED` env var. When disabled the module registers no-op `useCms` / `$cmsQuery` stubs and
-nothing else, so components can call them unconditionally and simply render their empty states:
+`NUXT_CMS_ENABLED` env var. When disabled the module registers no-op query composables and keeps the
+generated types, and nothing else, so components can call them unconditionally and simply render
+their empty states:
 
 ```ts
 export default defineNuxtConfig({
@@ -97,7 +98,7 @@ Full documentation lives in [`docs/`](docs/README.md):
 - [Configuration](docs/configuration.md) — every `cms.*` option and the `NUXT_CMS_*` env vars.
 - [Database](docs/database.md) — SQLite, Postgres, libSQL/Turso and D1 drivers, migrations, studio.
 - [Schema](docs/schema.md) — `defineCmsConfig`, entries, field types, relations, blocks, i18n.
-- [Querying content](docs/querying.md) — GraphQL API, `useCms` / `$cmsQuery`, filters, sorting, pagination.
+- [Querying content](docs/querying.md) — GraphQL API, `useCmsSingle` / `useCmsCollection` / `useCms` / `$cmsQuery`, filters, sorting, pagination.
 - [Admin panel & security](docs/admin.md) — pages, authentication, sessions, admin REST API.
 - [Media](docs/media.md) — S3-compatible storage or local mode backed by your `public/` folder, upload flow, allowed file types.
 - [Deployment](docs/deployment.md) — host/driver matrix, migrations on serverless, horizontal scaling, Cloudflare Workers.
