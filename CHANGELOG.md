@@ -1,6 +1,18 @@
 # Changelog
 
 
+## v0.1.44
+
+[compare changes](https://github.com/xleddyl/nuxt-cms/compare/v0.1.43...v0.1.44)
+
+### 🚀 Enhancements
+
+- An override can remove a shared field from one page with null ([7c1ecb7](https://github.com/xleddyl/nuxt-cms/commit/7c1ecb7))
+
+### ❤️ Contributors
+
+- Edoardo Alberti <edoalberti99@gmail.com>
+
 ## v0.1.43
 
 [compare changes](https://github.com/xleddyl/nuxt-cms/compare/v0.1.42...v0.1.43)
