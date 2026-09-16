@@ -1,6 +1,18 @@
 # Changelog
 
 
+## v0.1.50
+
+[compare changes](https://github.com/xleddyl/nuxt-cms/compare/v0.1.49...v0.1.50)
+
+### 🚀 Enhancements
+
+- Show date and time of the last save on a page row, smaller breadcrumb chevrons ([d889482](https://github.com/xleddyl/nuxt-cms/commit/d889482))
+
+### ❤️ Contributors
+
+- Edoardo Alberti <edoalberti99@gmail.com>
+
 ## v0.1.49
 
 [compare changes](https://github.com/xleddyl/nuxt-cms/compare/v0.1.48...v0.1.49)
