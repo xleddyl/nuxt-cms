@@ -1,6 +1,18 @@
 # Changelog
 
 
+## v0.1.51
+
+[compare changes](https://github.com/xleddyl/nuxt-cms/compare/v0.1.50...v0.1.51)
+
+### 🚀 Enhancements
+
+- Name a block tile by its media file instead of the block type ([2d4dd0e](https://github.com/xleddyl/nuxt-cms/commit/2d4dd0e))
+
+### ❤️ Contributors
+
+- Edoardo Alberti <edoalberti99@gmail.com>
+
 ## v0.1.50
 
 [compare changes](https://github.com/xleddyl/nuxt-cms/compare/v0.1.49...v0.1.50)
