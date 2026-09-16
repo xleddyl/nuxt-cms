@@ -1,6 +1,6 @@
 import { buildSchema, parse, validate } from 'graphql'
 import { describe, expect, it } from 'vitest'
-import { resolvePageRoutes, routePathFromFile } from '../src/page-routes'
+import { resolvePageRoutes, routePathFromFile } from '../src/runtime/shared/page-routes'
 import { pageQuery, renderQueriesFile } from '../src/queries-codegen'
 import { renderSchemaFile, validateConfig } from '../src/schema-codegen'
 import { renderGraphqlSdl } from '../src/runtime/shared/graphql-sdl'

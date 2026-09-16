@@ -1,6 +1,6 @@
 import { mkdirSync } from 'node:fs'
 import { dirname, isAbsolute, resolve } from 'node:path'
-import { resolvePageRoutes, routePathsFromDir } from '../page-routes'
+import { resolvePageRoutes, routePathsFromDir } from './shared/page-routes'
 import type { CmsConfig, CmsPageRoute } from './shared/index'
 import { customId, ID_LENGTH } from './server/utils/custom-id'
 

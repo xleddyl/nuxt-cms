@@ -40,7 +40,7 @@ import {
 import type { Driver } from './schema-codegen'
 import { renderSchemaFile, validateConfig } from './schema-codegen'
 import { renderQueriesFile } from './queries-codegen'
-import { resolvePageRoutes, routePathsFromDir } from './page-routes'
+import { resolvePageRoutes, routePathsFromDir } from './runtime/shared/page-routes'
 import { renderTypesFile } from './types-codegen'
 import { CMS_ENABLED_ENV, resolveCmsEnabled } from './enabled'
 

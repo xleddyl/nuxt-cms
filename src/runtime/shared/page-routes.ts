@@ -1,7 +1,7 @@
 import { existsSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
-import type { CmsEntry, CmsPageRoute } from './runtime/shared/index'
-import { pageKeyFromPath, pageLabelFromPath } from './runtime/shared/index'
+import type { CmsEntry, CmsPageRoute } from './index'
+import { pageKeyFromPath, pageLabelFromPath } from './index'
 
 const DYNAMIC = /[[\]]/
 
