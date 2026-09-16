@@ -1,6 +1,18 @@
 # Changelog
 
 
+## v0.1.48
+
+[compare changes](https://github.com/xleddyl/nuxt-cms/compare/v0.1.47...v0.1.48)
+
+### 🚀 Enhancements
+
+- Reorder the blocks of a grid by dragging a tile instead of the arrow buttons ([e4c3114](https://github.com/xleddyl/nuxt-cms/commit/e4c3114))
+
+### ❤️ Contributors
+
+- Edoardo Alberti <edoalberti99@gmail.com>
+
 ## v0.1.47
 
 [compare changes](https://github.com/xleddyl/nuxt-cms/compare/v0.1.46...v0.1.47)
