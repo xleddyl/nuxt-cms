@@ -233,3 +233,12 @@ describe('page codegen', () => {
       expect(file).toContain('"/a-tavola/ristorante"')
    })
 })
+
+describe('resolveCmsPages', () => {
+   it('fills the routes of a page entry from the pages folder', async () => {
+      const { resolveCmsPages } = await import('../src/runtime/seed')
+      const config = { pages: { ...pageEntry(), pages: undefined } } as CmsConfig
+      resolveCmsPages(config, { root: process.cwd(), pagesDir: 'playground/app/pages' })
+      expect(config.pages!.pages!.map((route) => route.path)).toEqual(['/', '/about', '/guides'])
+   })
+})

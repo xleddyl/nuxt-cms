@@ -86,6 +86,16 @@ pages are untouched. The admin form of a path shows exactly the fields of that p
 path (`/asolo-e-dintorni/venezia` gives `asoloEDintorniVenezia`, `/` gives `home`), which is the
 address of the page in the admin.
 
+**Scripts.** A script that reads `cms.config.ts` on its own (a seed, an import) gets no routes,
+because the module resolves them at build time. `resolveCmsPages` fills them in:
+
+```ts
+import { resolveCmsPages } from '@xleddyl/nuxt-cms/seed'
+
+const config = resolveCmsPages(await jiti.import('./cms.config.ts', { default: true }))
+config.pages.pages // [{ path: '/about', key: 'about', label: 'About' }, ...]
+```
+
 **Limits.** One page entry per config. `titleField` and `drafts` do not apply. Rows are created
 when a page is saved for the first time, and they cannot be deleted from the admin.
 

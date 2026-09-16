@@ -83,6 +83,7 @@ pages: {
 - `path` is reserved and unique; the row id comes from the path (`/a-b/c` gives `aBC`, `/` gives `home`).
 - One page entry per config; no `titleField`, no `drafts`, no delete from the admin.
 - Queries: `<entry>(locale)` for the list, `<entry>ByPath(path, locale)` for one page.
+- A script that loads `cms.config.ts` by itself gets no routes: fill them with `resolveCmsPages(config, { root?, pagesDir? })` from `@xleddyl/nuxt-cms/seed`.
 
 ### Example
 

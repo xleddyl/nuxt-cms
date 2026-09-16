@@ -1,8 +1,33 @@
 import { mkdirSync } from 'node:fs'
 import { dirname, isAbsolute, resolve } from 'node:path'
+import { resolvePageRoutes, routePathsFromDir } from '../page-routes'
+import type { CmsConfig, CmsPageRoute } from './shared/index'
 import { customId, ID_LENGTH } from './server/utils/custom-id'
 
 export { customId, ID_LENGTH }
+export type { CmsPageRoute }
+
+export interface ResolveCmsPagesOptions {
+   root?: string
+   pagesDir?: string
+}
+
+export function resolveCmsPages<T extends CmsConfig>(
+   config: T,
+   options: ResolveCmsPagesOptions = {}
+): T {
+   const root = options.root ?? process.cwd()
+   const pagesDir = options.pagesDir
+      ? isAbsolute(options.pagesDir)
+         ? options.pagesDir
+         : resolve(root, options.pagesDir)
+      : resolve(root, 'app/pages')
+   const discovered = routePathsFromDir(pagesDir)
+   for (const entry of Object.values(config)) {
+      if (entry.kind === 'page') entry.pages = resolvePageRoutes(entry, discovered)
+   }
+   return config
+}
 
 export type SeedDriver = 'sqlite' | 'libsql' | 'postgres'
 
