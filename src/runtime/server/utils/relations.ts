@@ -6,12 +6,13 @@ import type { CmsDb } from '#cms-db'
 import { useDb } from '#cms-db'
 import * as cmsTables from '#cms-tables'
 import type { CmsEntry } from '../../shared/index'
+import { entryFieldsFor } from '../../shared/index'
 import { resolveTable, tableColumns } from './registry'
 
 type Row = Record<string, unknown>
 
 function manyToManyKeys(entry: CmsEntry): string[] {
-   return Object.entries(entry.fields)
+   return Object.entries(entryFieldsFor(entry))
       .filter(([, field]) => field.type === 'relation' && field.cardinality === 'many-to-many')
       .map(([key]) => key)
 }
@@ -49,7 +50,7 @@ export async function assertRelationTargets(entry: CmsEntry, lists: Record<strin
    const db = useDb()
    for (const [key, ids] of Object.entries(lists)) {
       if (!ids.length) continue
-      const field = entry.fields[key]!
+      const field = entryFieldsFor(entry)[key]!
       const target = resolveTable(field.to!)
       if (!target) continue
       const idCol = tableColumns(target).id!
@@ -92,7 +93,7 @@ export async function relationTitles(
    const config = cmsConfig as Record<string, CmsEntry>
    const titles: Record<string, Record<string, unknown>> = {}
 
-   for (const [key, field] of Object.entries(entry.fields)) {
+   for (const [key, field] of Object.entries(entryFieldsFor(entry))) {
       if (field.type !== 'relation' || !field.to) continue
       const targetEntry = config[field.to]
       const target = resolveTable(field.to)

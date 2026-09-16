@@ -24,7 +24,7 @@ export default defineCmsConfig({
    <entryKey>: {
       id: '<entryKey>',            // must equal the object key
       label: 'Human label',
-      kind: 'collection' | 'single',
+      kind: 'collection' | 'single' | 'page',
       titleField: 'name',          // collections: field shown as entry title in admin
       drafts: true,                // optional; adds draft/published status (GraphQL returns published only)
       fields: { <fieldKey>: <FieldInput>, ... },
@@ -32,7 +32,7 @@ export default defineCmsConfig({
 })
 ```
 
-- `collection` = many rows (list + detail queries). `single` = one document (single query).
+- `collection` = many rows (list + detail queries). `single` = one document (single query). `page` = one row per route of the app (see Pages below).
 - `id`, `createdAt` (collections only), `updatedAt` are automatic — never declare them as fields.
 
 ### Field types
@@ -62,6 +62,27 @@ Notes:
 - `showIf: { field, eq }` / `{ field, in: [...] }` (array = AND) hides a field in the admin until another field of the entry matches. Admin-only: schema, column and query shape are unchanged. A hidden field keeps its stored value. On a conditional field `required` means "required while visible": enforced by the admin form only, so the column stays nullable and the GraphQL field optional (two opposite branches can never both be filled). It can target `select`, `boolean`, `text`, `number`, `date`, `email`, `slug` — not blocks/relation/media/json/multi-select/translatable — and values are checked against a target select's `options` at build time. Not allowed on the `titleField` nor inside `blocks`.
 - After changing the schema, restart dev (migrations are generated + applied on boot).
 - Migrations live in `server/db/migrations/<driver>` and must be committed. They are inlined into the server bundle at build time (no filesystem access at runtime), which is what makes serverless hosts work; `migrateOnBoot: false` / `NUXT_CMS_MIGRATE_ON_BOOT=false` defers them to CI. D1 has no transactions and applies migrations on the first request instead of at boot.
+
+### Pages
+
+`kind: 'page'` holds the content of the pages of the app: one row per route, one table, one admin section.
+
+```ts
+pages: {
+   id: 'pages', label: 'Pages', kind: 'page',
+   routes: 'auto',                 // default: one row per page file; or an explicit list of paths
+   include: ['/extra'], exclude: ['/cms'],
+   order: ['/', '/about'], labels: { '/': 'Home' },
+   fields: { title: { label: 'Title', type: 'text', translatable: true } },   // every page
+   overrides: { '/about': { intro: { label: 'Intro', type: 'text' } } },      // one path only
+}
+```
+
+- `routes: 'auto'` reads the page files: dynamic routes are skipped, route groups leave the path.
+- An override may only add a field; two paths declaring the same field name must use the same type.
+- `path` is reserved and unique; the row id comes from the path (`/a-b/c` gives `aBC`, `/` gives `home`).
+- One page entry per config; no `titleField`, no `drafts`, no delete from the admin.
+- Queries: `<entry>(locale)` for the list, `<entry>ByPath(path, locale)` for one page.
 
 ### Example
 
@@ -109,6 +130,7 @@ Public read-only GraphQL endpoint at `POST /api/cms/graphql`. Four auto-imported
 // one entry, query and types generated from cms.config.ts
 const { data } = await useCmsSingle('homepage', { locale })
 const { data } = await useCmsCollection('events', { filters, sort, limit, offset, locale })
+const { data } = await useCmsPage('/about', { locale })
 
 // reactive, SSR-friendly (wraps useAsyncData) — use in components/pages
 const { data, error, refresh } = useCms(`{ ... }`, variables?, options?)
@@ -117,7 +139,7 @@ const { data, error, refresh } = useCms(`{ ... }`, variables?, options?)
 const result = await $cmsQuery(`{ ... }`, variables?)
 ```
 
-`useCmsSingle` / `useCmsCollection` need no query string. They select every public field of the
+`useCmsSingle` / `useCmsCollection` / `useCmsPage` need no query string. `useCmsPage` takes a typed path of the `page` entry and returns the fields of that path (shared plus its own). They select every public field of the
 entry plus `id`, `updatedAt` and `createdAt`: media with all its keys, blocks with one inline
 fragment per block type, relations one level deep (without the relations of the related entry).
 `data` is `null` for a single and `[]` for a collection while loading and after a failure.

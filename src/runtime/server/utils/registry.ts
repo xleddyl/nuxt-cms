@@ -5,8 +5,13 @@ import { z } from 'zod'
 import cmsConfig from '#cms-config'
 import * as cmsTables from '#cms-tables'
 import { useRuntimeConfig } from '#imports'
-import type { CmsEntry, CmsI18n } from '../../shared/index'
-import { decodeEntryTranslatableMedia, encodeEntryTranslatableMedia } from '../../shared/index'
+import type { CmsEntry, CmsI18n, CmsPageRoute } from '../../shared/index'
+import {
+   decodeEntryTranslatableMedia,
+   encodeEntryTranslatableMedia,
+   pageFields,
+   pageRouteOf,
+} from '../../shared/index'
 import { buildEntrySchema } from '../../shared/validation'
 
 let contentI18n: CmsI18n | undefined
@@ -55,8 +60,15 @@ export function getRegistryEntry(event: H3Event): {
    return { name, entry: config[name]!, table }
 }
 
-export function buildValidator(entry: CmsEntry) {
-   return buildEntrySchema(entry, getContentI18n())
+export function buildValidator(entry: CmsEntry, path?: string) {
+   const fields = path ? pageFields(entry, path) : entry.fields
+   return buildEntrySchema({ ...entry, fields }, getContentI18n())
+}
+
+export function requirePageRoute(entry: CmsEntry, key: string): CmsPageRoute {
+   const route = pageRouteOf(entry, key)
+   if (!route) throw createError({ statusCode: 404, statusMessage: `Unknown page: ${key}` })
+   return route
 }
 
 export function encodeColumnValues(entry: CmsEntry, values: Record<string, unknown>) {

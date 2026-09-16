@@ -76,6 +76,11 @@ const groups = computed(() =>
          links: links.filter((l) => l.kind === 'single'),
       },
       {
+         title: 'Pages',
+         icon: 'window',
+         links: links.filter((l) => l.kind === 'page'),
+      },
+      {
          title: 'Library',
          icon: 'photo',
          links: [{ name: 'media', label: 'Media', kind: 'media', to: '/cms/media' }],

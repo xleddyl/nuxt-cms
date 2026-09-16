@@ -83,6 +83,7 @@ describe('module setup when disabled', () => {
          '$cmsQuery',
          'useCms',
          'useCmsCollection',
+         'useCmsPage',
          'useCmsSingle',
       ])
       for (const entry of imports) {
@@ -175,6 +176,7 @@ describe('module setup when enabled', () => {
          '$cmsQuery',
          'useCms',
          'useCmsCollection',
+         'useCmsPage',
          'useCmsSingle',
       ])
       for (const entry of imports) {

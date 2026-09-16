@@ -10,9 +10,13 @@ one account, read from environment variables.
 | `/cms` | dashboard / entry-type index |
 | `/cms/login` | admin login |
 | `/cms/media` | media library |
-| `/cms/:collection` | collection list |
+| `/cms/:collection` | collection list, single editor, or page list |
 | `/cms/:collection/new` | create entry |
-| `/cms/:collection/:id` | edit entry |
+| `/cms/:collection/:id` | edit entry, or edit one page |
+
+A [`page` entry](schema.md#pages) gets its own section in the sidebar. The list shows one line per
+route of the app, and the editor of a page shows the shared fields plus the fields of that path. A
+page row is written the first time the page is saved, and pages cannot be deleted from the admin.
 
 All pages except `/cms/login` require an authenticated admin session (enforced by the `cms-auth`
 route middleware). The admin UI ships in English and Italian.

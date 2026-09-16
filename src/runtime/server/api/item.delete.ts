@@ -9,7 +9,10 @@ export default defineEventHandler(async (event) => {
    await requireAdmin(event)
    const { entry, table } = getRegistryEntry(event)
    if (entry.kind !== 'collection') {
-      throw createError({ statusCode: 405, statusMessage: 'Single objects cannot be deleted' })
+      throw createError({
+         statusCode: 405,
+         statusMessage: 'Only collection entries can be deleted',
+      })
    }
 
    const id = parseId(event)

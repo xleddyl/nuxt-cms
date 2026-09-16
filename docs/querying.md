@@ -7,6 +7,7 @@ auto-imported composables wrap it.
 // one entry, query and types generated from cms.config.ts — no query string to write
 const { data } = await useCmsSingle('homepage', { locale })
 const { data } = await useCmsCollection('events', { sort: [{ field: 'date' }], limit: 10 })
+const { data } = await useCmsPage('/about', { locale })
 
 // reactive, SSR-friendly (wraps useAsyncData) — use in components/pages
 const { data, error, refresh } = useCms(`{ ... }`, variables?, options?)
@@ -33,16 +34,16 @@ const { data } = await useCms(query, { locale }, {
 })
 ```
 
-With [`cms.enabled: false`](configuration.md#enabled) the four composables stay defined but become
-no-ops: `useCms().data` and `useCmsSingle().data` are `null`, `useCmsCollection().data` is `[]` and
-`$cmsQuery()` resolves to `{}`. The generated types stay available too, so the same code type-checks
+With [`cms.enabled: false`](configuration.md#enabled) the five composables stay defined but become
+no-ops: `useCms().data`, `useCmsSingle().data` and `useCmsPage().data` are `null`,
+`useCmsCollection().data` is `[]` and `$cmsQuery()` resolves to `{}`. The generated types stay available too, so the same code type-checks
 in both modes. Callers therefore never need a `typeof useCms === 'function'` guard, they just render
 their empty state.
 
 ## Entry helpers
 
-`useCmsSingle` and `useCmsCollection` build the query from `cms.config.ts`, so adding a field to an
-entry adds it to the result with no change in the page.
+`useCmsSingle`, `useCmsCollection` and `useCmsPage` build the query from `cms.config.ts`, so adding
+a field to an entry adds it to the result with no change in the page.
 
 ```ts
 const { data: home } = await useCmsSingle('homepage', { locale: 'it' })
@@ -69,6 +70,18 @@ What they select:
 fails. Both helpers accept the same `useAsyncData` options as `useCms`, `key` and `default`
 included. `sort.field` accepts only the field names of that entry.
 
+`useCmsPage` takes the path of a page of a [`page` entry](schema.md#pages) and returns exactly the
+fields of that path, the shared ones plus its own:
+
+```ts
+const { data: page } = await useCmsPage('/about', { locale })
+page.value?.intro
+```
+
+The path is typed: only the paths of the config are accepted, and `page.value` carries the fields of
+that path alone. The entry also answers the generated queries `<entry>(locale)` for the whole list
+and `<entry>ByPath(path, locale)` for one page.
+
 Write a query with `useCms` when you need a count, a relation two levels deep, several entries in
 one request, or a narrower selection.
 
@@ -86,6 +99,13 @@ For each **single** (e.g. `homepage`):
 
 ```graphql
 homepage(locale: String): Homepage
+```
+
+For a **page** entry (e.g. `pages`):
+
+```graphql
+pages(locale: String): [Pages!]!
+pagesByPath(path: String!, locale: String): Pages
 ```
 
 ## Filters, sorting, pagination

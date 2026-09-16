@@ -25,7 +25,7 @@ import { buildSchema, introspectionFromSchema } from 'graphql'
 import { minifyIntrospection, outputIntrospectionFile } from 'gql.tada/internal'
 import { createJiti } from 'jiti'
 import { renderGraphqlSdl } from './runtime/shared/graphql-sdl'
-import type { CmsConfig, MediaStorageMode } from './runtime/shared/index'
+import type { CmsConfig, CmsPageRoute, MediaStorageMode } from './runtime/shared/index'
 import { DEFAULT_MEDIA_MAX_FILE_SIZE } from './runtime/shared/index'
 import {
    collectMediaManifest,
@@ -40,6 +40,7 @@ import {
 import type { Driver } from './schema-codegen'
 import { renderSchemaFile, validateConfig } from './schema-codegen'
 import { renderQueriesFile } from './queries-codegen'
+import { resolvePageRoutes, routePathsFromDir } from './page-routes'
 import { renderTypesFile } from './types-codegen'
 import { CMS_ENABLED_ENV, resolveCmsEnabled } from './enabled'
 
@@ -232,6 +233,43 @@ async function loadCmsConfig(
       nuxt.options.alias['#cms-config'] = resolver.resolve('./runtime/shared/empty-config')
    }
 
+   const pagesDir = join(
+      nuxt.options.srcDir ?? nuxt.options.rootDir,
+      nuxt.options.dir?.pages ?? 'pages'
+   )
+   const discoveredRoutes = routePathsFromDir(pagesDir)
+   const routesByEntry: Record<string, CmsPageRoute[]> = {}
+   for (const [name, entry] of Object.entries(cmsConfig)) {
+      if (entry.kind !== 'page') continue
+      entry.pages = resolvePageRoutes(entry, discoveredRoutes)
+      routesByEntry[name] = entry.pages
+   }
+
+   if (Object.keys(routesByEntry).length) {
+      const source = (nuxt.options.alias['#cms-config'] ?? '')
+         .replace(/\\/g, '/')
+         .replace(/\.[cm]?[jt]s$/, '')
+      const wrapper = addTemplate({
+         filename: 'cms/config.ts',
+         write: true,
+         getContents: () =>
+            [
+               `import config from '${source}'`,
+               ``,
+               `const pageRoutes = ${JSON.stringify(routesByEntry, null, 3)}`,
+               ``,
+               `for (const [name, routes] of Object.entries(pageRoutes)) {`,
+               `   const entry = (config as Record<string, { pages?: unknown }>)[name]`,
+               `   if (entry) entry.pages = routes`,
+               `}`,
+               ``,
+               `export default config`,
+               ``,
+            ].join('\n'),
+      })
+      nuxt.options.alias['#cms-config'] = wrapper.dst
+   }
+
    const configErrors = validateConfig(cmsConfig, i18n)
    if (configErrors.length) {
       for (const error of configErrors) logger.error(error)
@@ -369,6 +407,7 @@ export default defineNuxtModule<ModuleOptions>({
             { name: '$cmsQuery', from: queryStub },
             { name: 'useCmsSingle', from: entryStub },
             { name: 'useCmsCollection', from: entryStub },
+            { name: 'useCmsPage', from: entryStub },
          ])
          addCmsTypeTemplates(
             nuxt,
@@ -448,6 +487,7 @@ export default defineNuxtModule<ModuleOptions>({
          { name: '$cmsQuery', from: queryComposables },
          { name: 'useCmsSingle', from: entryComposables },
          { name: 'useCmsCollection', from: entryComposables },
+         { name: 'useCmsPage', from: entryComposables },
       ])
 
       const {

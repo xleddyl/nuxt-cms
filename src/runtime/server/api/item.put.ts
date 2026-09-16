@@ -8,6 +8,7 @@ import {
    getRegistryEntry,
    idColumn,
    parseId,
+   requirePageRoute,
    withUpdatedAt,
 } from '../utils/registry'
 import {
@@ -22,7 +23,7 @@ import { mapConstraintErrors } from '../utils/db-errors'
 export default defineEventHandler(async (event) => {
    await requireAdmin(event)
    const { name, entry, table } = getRegistryEntry(event)
-   if (entry.kind !== 'collection') {
+   if (entry.kind === 'single') {
       throw createError({
          statusCode: 405,
          statusMessage: 'Single objects are updated with PUT without id',
@@ -30,6 +31,24 @@ export default defineEventHandler(async (event) => {
    }
 
    const id = parseId(event)
+
+   if (entry.kind === 'page') {
+      const route = requirePageRoute(entry, id)
+      const body = await readValidatedBody(event, buildValidator(entry, route.path).parse)
+      const values = encodeColumnValues(entry, body as Record<string, unknown>)
+      const set = withUpdatedAt(table, values)
+      return mapConstraintErrors(() =>
+         withTransaction(async (db) => {
+            const [row] = await db
+               .insert(table)
+               .values({ id: route.key, path: route.path, ...set } as Record<string, unknown>)
+               .onConflictDoUpdate({ target: idColumn(table), set })
+               .returning()
+            return decodeRows(entry, [row as Record<string, unknown>])[0]
+         })
+      )
+   }
+
    const body = await readValidatedBody(event, buildValidator(entry).parse)
    const { values, lists } = splitRelationValues(
       entry,

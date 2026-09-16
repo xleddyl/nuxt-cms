@@ -25,6 +25,7 @@ import { useRuntimeConfig } from '#imports'
 import type { CmsConfig, CmsEntry, FieldConfig, MediaStorageMode } from '../../shared/index'
 import {
    decodeTranslatableMedia,
+   entryFieldsFor,
    hasTranslatableBlockFields,
    isPrivateField,
    isTranslatableMediaField,
@@ -133,8 +134,9 @@ function resolveLocaleArg(locale: unknown): string {
 function localizeRow(entry: CmsEntry, row: Record<string, unknown>, locale: string): Row {
    const { defaultLocale } = getContentI18n()
    const result: Row = { ...row, [LOCALE]: locale }
+   const fields = entryFieldsFor(entry)
    for (const key of translatableFieldKeys(entry)) {
-      if (isTranslatableMediaField(entry.fields[key]!)) {
+      if (isTranslatableMediaField(fields[key]!)) {
          const media = decodeTranslatableMedia(row[key], defaultLocale)
          result[key] = pickTranslatedMedia(media, locale, defaultLocale)
          continue
@@ -142,7 +144,7 @@ function localizeRow(entry: CmsEntry, row: Record<string, unknown>, locale: stri
       const value = row[key] as Record<string, string> | null | undefined
       result[key] = value?.[locale] ?? value?.[defaultLocale] ?? null
    }
-   for (const [key, field] of Object.entries(entry.fields)) {
+   for (const [key, field] of Object.entries(fields)) {
       if (isPrivateField(field) || !hasTranslatableBlockFields(field)) continue
       result[key] = localizeBlocks(field, result[key], locale, defaultLocale)
    }
@@ -330,7 +332,7 @@ function mediaObject(key: string, row: Record<string, unknown> | undefined) {
 
 function entryResolvers(config: CmsConfig, name: string, entry: CmsEntry) {
    const resolvers: Record<string, unknown> = {}
-   for (const [key, field] of Object.entries(entry.fields)) {
+   for (const [key, field] of Object.entries(entryFieldsFor(entry))) {
       if (isPrivateField(field)) continue
       if (field.type === 'relation' && field.cardinality === 'many-to-many') {
          resolvers[key] = async (parent: Row, _args: unknown, ctx: Ctx) => {
@@ -393,9 +395,36 @@ export function buildCmsSchema() {
       const fieldLevel = entryResolvers(config, name, entry)
       if (Object.keys(fieldLevel).length) typeResolvers[gqlType] = fieldLevel
 
-      for (const [key, field] of Object.entries(entry.fields)) {
+      for (const [key, field] of Object.entries(entryFieldsFor(entry))) {
          if (field.type === 'blocks' && !isPrivateField(field))
             Object.assign(typeResolvers, blockResolvers(name, key, field))
+      }
+
+      if (entry.kind === 'page') {
+         queryResolvers[name] = async (_: unknown, args: { locale?: string }) => {
+            const locale = resolveLocaleArg(args.locale)
+            const table = tableFor(name)
+            const rows = await useDb()
+               .select()
+               .from(table)
+               .orderBy(asc(tableColumns(table).path!))
+            return (rows as Record<string, unknown>[]).map((row) => localizeRow(entry, row, locale))
+         }
+
+         queryResolvers[`${name}ByPath`] = async (
+            _: unknown,
+            args: { path: string; locale?: string }
+         ) => {
+            const locale = resolveLocaleArg(args.locale)
+            const table = tableFor(name)
+            const [row] = await useDb()
+               .select()
+               .from(table)
+               .where(eq(tableColumns(table).path!, args.path))
+               .limit(1)
+            return row ? localizeRow(entry, row as Record<string, unknown>, locale) : null
+         }
+         continue
       }
 
       if (entry.kind === 'single') {

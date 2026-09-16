@@ -30,6 +30,49 @@
          />
       </div>
 
+      <template v-else-if="config.kind === 'page'">
+         <div class="cms-toolbar">
+            <CmsInput
+               v-if="total || searchTerm"
+               v-model="search"
+               icon="magnifying-glass"
+               placeholder="Search…"
+               class="flex-1"
+            />
+         </div>
+
+         <div v-if="rows.length" class="cms-card divide-y divide-(--cms-line)">
+            <NuxtLink
+               v-for="row in rows"
+               :key="String(row.id)"
+               :to="`/cms/${name}/${row.id}`"
+               class="flex items-center gap-4 px-4 py-3 transition-colors hover:bg-(--ui-bg-elevated)"
+            >
+               <div class="min-w-0 flex-1">
+                  <div class="truncate font-medium text-(--ui-text-highlighted)">
+                     {{ row.label }}
+                  </div>
+                  <div class="cms-label truncate">{{ row.path }}</div>
+               </div>
+               <span class="cms-label shrink-0">{{ row.updatedAt ? 'edited' : 'empty' }}</span>
+               <CmsIcon name="chevron-right" class="size-4 shrink-0 text-(--ui-text-dimmed)" />
+            </NuxtLink>
+         </div>
+
+         <CmsSpinner v-else-if="status === 'pending'" />
+
+         <CmsEmptyState v-else-if="searchTerm" icon="magnifying-glass" title="No matching pages" />
+
+         <CmsEmptyState
+            v-else
+            icon="document-text"
+            title="No pages yet"
+            body="Pages come from the routes of the app."
+         />
+
+         <CmsPagination v-model:page="page" :total="total" :items-per-page="PAGE_SIZE" />
+      </template>
+
       <template v-else>
          <div class="cms-toolbar">
             <CmsInput
@@ -192,7 +235,7 @@ const listQuery = computed(() => ({
 }))
 
 const { data, refresh, error, status } = await useFetch<ListResponse | Row | null>(endpoint, {
-   query: config.kind === 'collection' ? listQuery : undefined,
+   query: config.kind === 'single' ? undefined : listQuery,
 })
 
 function isList(value: ListResponse | Row | null | undefined): value is ListResponse {

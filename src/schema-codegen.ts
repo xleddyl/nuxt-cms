@@ -1,11 +1,14 @@
 import { typeName } from './runtime/shared/graphql-sdl'
 import type { CmsConfig, CmsEntry, CmsI18n, FieldConfig } from './runtime/shared/index'
 import {
+   PAGE_PATH_FIELD,
    fieldConditions,
    isMultiSelect,
    isRequiredField,
    isTranslatableField,
    isTranslatableMediaField,
+   pageAllFields,
+   pageRoutes,
 } from './runtime/shared/index'
 
 export type Dialect = 'sqlite' | 'postgres'
@@ -42,6 +45,7 @@ export function validateConfig(config: CmsConfig, i18n?: CmsI18n): string[] {
       )
    }
 
+   let pageEntry: string | undefined
    const entryIds = new Map<string, string>()
    const typeNames = new Map<string, string>()
    for (const [name, entry] of Object.entries(config)) {
@@ -67,8 +71,51 @@ export function validateConfig(config: CmsConfig, i18n?: CmsI18n): string[] {
       } else {
          entryIds.set(entry.id, name)
       }
-      if (entry.kind !== 'collection' && entry.kind !== 'single')
-         errors.push(`${at}: kind must be 'collection' or 'single'`)
+      if (entry.kind !== 'collection' && entry.kind !== 'single' && entry.kind !== 'page')
+         errors.push(`${at}: kind must be 'collection', 'single' or 'page'`)
+      if (entry.kind === 'page') {
+         if (pageEntry) {
+            errors.push(
+               `${at}: only one page entry is allowed (already declared as '${pageEntry}')`
+            )
+         } else {
+            pageEntry = name
+         }
+         if (entry.titleField) errors.push(`${at}: pages have no titleField`)
+         if (Object.hasOwn(entry.fields ?? {}, PAGE_PATH_FIELD))
+            errors.push(`${at}: '${PAGE_PATH_FIELD}' is a reserved field name on pages`)
+         const known = new Set(pageRoutes(entry).map((route) => route.path))
+         const keys = new Map<string, string>()
+         for (const route of pageRoutes(entry)) {
+            const clash = keys.get(route.key)
+            if (clash) errors.push(`${at}: paths '${clash}' and '${route.path}' give the same key`)
+            else keys.set(route.key, route.path)
+         }
+         for (const [path, override] of Object.entries(entry.overrides ?? {})) {
+            const oat = `${at}, override '${path}'`
+            if (known.size && !known.has(path)) errors.push(`${oat}: '${path}' is not a page path`)
+            for (const key of Object.keys(override)) {
+               if (Object.hasOwn(entry.fields ?? {}, key))
+                  errors.push(`${oat}: field '${key}' is already declared for every page`)
+               if (key === PAGE_PATH_FIELD)
+                  errors.push(`${oat}: '${PAGE_PATH_FIELD}' is a reserved field name on pages`)
+            }
+         }
+         const declared = new Map<string, string>()
+         for (const [path, override] of Object.entries(entry.overrides ?? {})) {
+            for (const [key, field] of Object.entries(override)) {
+               const seen = declared.get(key)
+               if (seen && seen !== field.type) {
+                  errors.push(
+                     `${at}: field '${key}' is declared as '${seen}' and '${field.type}' by different pages`
+                  )
+               }
+               declared.set(key, field.type)
+            }
+         }
+      } else if (entry.overrides || entry.routes || entry.include || entry.exclude) {
+         errors.push(`${at}: routes, include, exclude and overrides need kind 'page'`)
+      }
       if (entry.drafts && entry.kind !== 'collection')
          errors.push(`${at}: drafts are only supported on collections`)
       if (!entry.fields || !Object.keys(entry.fields).length)
@@ -88,8 +135,9 @@ export function validateConfig(config: CmsConfig, i18n?: CmsI18n): string[] {
          }
       }
 
+      const allFields = entry.kind === 'page' ? pageAllFields(entry) : entry.fields ?? {}
       const columnNames = new Set<string>()
-      for (const [key, field] of Object.entries(entry.fields ?? {})) {
+      for (const [key, field] of Object.entries(allFields)) {
          const fat = `${at}, field '${key}'`
          if (!IDENTIFIER.test(key)) errors.push(`${fat}: key must be a valid identifier`)
          const column = snakeCase(key)
@@ -119,7 +167,7 @@ export function validateConfig(config: CmsConfig, i18n?: CmsI18n): string[] {
                errors.push(`${fat}: the titleField cannot be conditional`)
             for (const condition of fieldConditions(field)) {
                const cat = `${fat}, showIf on '${condition.field}'`
-               const target = entry.fields?.[condition.field]
+               const target = allFields[condition.field]
                if (!condition.field || !target) {
                   errors.push(`${cat}: '${condition.field}' is not a declared field`)
                   continue
@@ -343,7 +391,11 @@ function tableExpr(name: string, entry: CmsEntry, dialect: Dialect): string {
 
    lines.push(`  id: text('id').primaryKey(),`)
 
-   for (const [key, field] of Object.entries(entry.fields)) {
+   if (entry.kind === 'page') lines.push(`  path: text('path').notNull().unique(),`)
+
+   for (const [key, field] of Object.entries(
+      entry.kind === 'page' ? pageAllFields(entry) : entry.fields
+   )) {
       if (isManyToMany(field)) continue
       lines.push(columnExpr(key, field, dialect))
    }
@@ -426,7 +478,7 @@ export function renderSchemaFile(
 
    const tables = derived.map(([name, entry]) => tableExpr(name, entry, dialect))
    const joins = derived.flatMap(([name, entry]) =>
-      Object.entries(entry.fields)
+      Object.entries(entry.kind === 'page' ? pageAllFields(entry) : entry.fields)
          .filter(([, field]) => isManyToMany(field))
          .map(([key, field]) => joinTableExpr(name, key, field, dialect))
    )

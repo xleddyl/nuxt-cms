@@ -97,8 +97,8 @@ Full documentation lives in [`docs/`](docs/README.md):
 - [Getting started](docs/getting-started.md) — install, configure, first content type, run.
 - [Configuration](docs/configuration.md) — every `cms.*` option and the `NUXT_CMS_*` env vars.
 - [Database](docs/database.md) — SQLite, Postgres, libSQL/Turso and D1 drivers, migrations, studio.
-- [Schema](docs/schema.md) — `defineCmsConfig`, entries, field types, relations, blocks, i18n.
-- [Querying content](docs/querying.md) — GraphQL API, `useCmsSingle` / `useCmsCollection` / `useCms` / `$cmsQuery`, filters, sorting, pagination.
+- [Schema](docs/schema.md) — `defineCmsConfig`, entries, pages, field types, relations, blocks, i18n.
+- [Querying content](docs/querying.md) — GraphQL API, `useCmsSingle` / `useCmsCollection` / `useCmsPage` / `useCms` / `$cmsQuery`, filters, sorting, pagination.
 - [Admin panel & security](docs/admin.md) — pages, authentication, sessions, admin REST API.
 - [Media](docs/media.md) — S3-compatible storage or local mode backed by your `public/` folder, upload flow, allowed file types.
 - [Deployment](docs/deployment.md) — host/driver matrix, migrations on serverless, horizontal scaling, Cloudflare Workers.

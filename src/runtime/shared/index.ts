@@ -260,14 +260,14 @@ export function pickTranslatedMedia(
    return values[locale] || values[defaultLocale] || Object.values(values).find(Boolean) || null
 }
 
-export function translatableMediaKeys(entry: Pick<CmsEntry, 'fields'>): string[] {
-   return Object.entries(entry.fields)
+export function translatableMediaKeys(entry: EntryLike): string[] {
+   return Object.entries(entryFieldsFor(entry))
       .filter(([, field]) => isTranslatableMediaField(field))
       .map(([key]) => key)
 }
 
 export function encodeEntryTranslatableMedia(
-   entry: Pick<CmsEntry, 'fields'>,
+   entry: EntryLike,
    values: Record<string, unknown>
 ): Record<string, unknown> {
    const keys = translatableMediaKeys(entry)
@@ -280,7 +280,7 @@ export function encodeEntryTranslatableMedia(
 }
 
 export function decodeEntryTranslatableMedia<T extends Record<string, unknown>>(
-   entry: Pick<CmsEntry, 'fields'>,
+   entry: EntryLike,
    rows: T[],
    defaultLocale: string
 ): T[] {
@@ -300,8 +300,8 @@ export function isMultiSelect(field: FieldConfig): boolean {
    return field.type === 'select' && !!field.multiple
 }
 
-export function translatableFieldKeys(entry: CmsEntry): string[] {
-   return Object.entries(entry.fields)
+export function translatableFieldKeys(entry: EntryLike): string[] {
+   return Object.entries(entryFieldsFor(entry))
       .filter(([, field]) => isTranslatableField(field))
       .map(([key]) => key)
 }
@@ -350,17 +350,98 @@ export function localizeBlocks(
    return value.map((item) => localizeBlock(field, item, locale, defaultLocale))
 }
 
+export type CmsEntryKind = 'collection' | 'single' | 'page'
+
+export interface CmsPageRoute {
+   path: string
+   key: string
+   label: string
+}
+
 export interface CmsEntry {
    id: string
    label: string
-   kind: 'collection' | 'single'
+   kind: CmsEntryKind
    titleField?: string
    drafts?: boolean
    fields: Record<string, FieldConfig>
+   routes?: 'auto' | string[]
+   include?: string[]
+   exclude?: string[]
+   order?: string[]
+   labels?: Record<string, string>
+   overrides?: Record<string, Record<string, FieldConfig>>
+   pages?: CmsPageRoute[]
    table?: CmsTable
 }
 
 export type CmsConfig = Record<string, CmsEntry>
+
+export const PAGE_PATH_FIELD = 'path'
+
+export function isPageEntry(entry: CmsEntry): boolean {
+   return entry.kind === 'page'
+}
+
+export function pageSegments(path: string): string[] {
+   return path.split('/').filter(Boolean)
+}
+
+export function pageKeyFromPath(path: string): string {
+   const words = pageSegments(path).flatMap((segment) => segment.split('-'))
+   if (!words.length) return 'home'
+   return words
+      .map((word, index) => (index === 0 ? word : word.charAt(0).toUpperCase() + word.slice(1)))
+      .join('')
+}
+
+export function pageLabelFromPath(path: string): string {
+   const last = pageSegments(path).pop()
+   if (!last) return 'Home'
+   return last
+      .split('-')
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ')
+}
+
+export function pageParentPath(path: string): string | undefined {
+   const segments = pageSegments(path)
+   if (segments.length < 2) return undefined
+   return `/${segments.slice(0, -1).join('/')}`
+}
+
+export function pageRoutes(entry: CmsEntry): CmsPageRoute[] {
+   return entry.pages ?? []
+}
+
+export function pageRouteOf(entry: CmsEntry, key: string): CmsPageRoute | undefined {
+   return pageRoutes(entry).find((route) => route.key === key)
+}
+
+export function pageOverrideFields(entry: CmsEntry, path: string): Record<string, FieldConfig> {
+   return entry.overrides?.[path] ?? {}
+}
+
+export function pageFields(entry: CmsEntry, path: string): Record<string, FieldConfig> {
+   return { ...entry.fields, ...pageOverrideFields(entry, path) }
+}
+
+export function pageAllFields(entry: CmsEntry): Record<string, FieldConfig> {
+   const fields: Record<string, FieldConfig> = { ...entry.fields }
+   for (const override of Object.values(entry.overrides ?? {})) {
+      for (const [key, field] of Object.entries(override)) {
+         if (!fields[key]) fields[key] = field
+      }
+   }
+   return fields
+}
+
+type EntryLike = Pick<CmsEntry, 'fields'> & Partial<Pick<CmsEntry, 'kind' | 'overrides'>>
+
+export function entryFieldsFor(entry: EntryLike, path?: string): Record<string, FieldConfig> {
+   if (entry.kind !== 'page') return entry.fields
+   return path ? pageFields(entry as CmsEntry, path) : pageAllFields(entry as CmsEntry)
+}
 
 export function typeName(name: string) {
    return name.replace(/(?:^|_)([a-z0-9])/gi, (_, c: string) => c.toUpperCase())
@@ -492,7 +573,19 @@ export interface CmsSingleInput extends CmsEntryInputBase {
    titleField?: never
 }
 
-export type CmsEntryInput = CmsCollectionInput | CmsSingleInput
+export interface CmsPageInput extends CmsEntryInputBase {
+   kind: 'page'
+   titleField?: never
+   drafts?: never
+   routes?: 'auto' | string[]
+   include?: string[]
+   exclude?: string[]
+   order?: string[]
+   labels?: Record<string, string>
+   overrides?: Record<string, Record<string, CmsFieldInput>>
+}
+
+export type CmsEntryInput = CmsCollectionInput | CmsSingleInput | CmsPageInput
 
 export type CmsConfigInput = Record<string, CmsEntryInput>
 

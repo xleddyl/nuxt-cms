@@ -3,6 +3,7 @@ import { asc, count, desc, sql } from 'drizzle-orm'
 import { defineEventHandler, getValidatedQuery } from 'h3'
 import { z } from 'zod'
 import { useDb } from '#cms-db'
+import { pageRoutes } from '../../shared/index'
 import { decodeRows, getRegistryEntry, idColumn, tableColumns } from '../utils/registry'
 import { attachManyToMany, relationTitles } from '../utils/relations'
 import { requireAdmin } from '../utils/require-admin'
@@ -35,6 +36,28 @@ export default defineEventHandler(async (event) => {
       event,
       querySchema.parse
    )
+
+   if (entry.kind === 'page') {
+      const rows = (await db.select().from(table)) as Record<string, unknown>[]
+      decodeRows(entry, rows)
+      const saved = new Map(rows.map((row) => [row.id as string, row]))
+      const items = pageRoutes(entry).map((route) => {
+         const row = saved.get(route.key) ?? {}
+         return { ...row, id: route.key, path: route.path, label: route.label }
+      })
+      const term = search?.toLowerCase()
+      const matching = term
+         ? items.filter(
+              (item) =>
+                 item.path.toLowerCase().includes(term) || item.label.toLowerCase().includes(term)
+           )
+         : items
+      return {
+         items: matching.slice(offset, offset + limit),
+         total: matching.length,
+         relations: {},
+      }
+   }
 
    const columns = tableColumns(table)
    const titleColumn =

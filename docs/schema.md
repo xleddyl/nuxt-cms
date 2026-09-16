@@ -24,6 +24,8 @@ export default defineCmsConfig({
 
 - **`collection`** — many rows, with list + detail + count queries.
 - **`single`** — one document, with a single query.
+- **`page`** — one row per route of the app, with a list query and a query by path. See
+  [Pages](#pages).
 - `id` (equal to the object key), `label`, `kind` and `fields` are required.
 - `titleField` is **required on collections** and not allowed on singles. It picks the field used as
   the entry title: in the admin list, in relation pickers, and to render relation columns (a
@@ -35,6 +37,49 @@ export default defineCmsConfig({
   them as fields. Row ids are opaque strings.
 
 The GraphQL type name is the PascalCase of the entry key (`blog_posts` → `BlogPosts`).
+
+## Pages
+
+A `page` entry holds the content of the pages of the app: one row per route, in one table, with one
+section in the admin. Use it for the images and the texts that belong to a page, instead of one
+`single` per page.
+
+```ts
+pages: {
+   id: 'pages',
+   label: 'Pages',
+   kind: 'page',
+   exclude: ['/cms'],
+   labels: { '/': 'Home' },
+   order: ['/', '/about'],
+   fields: {
+      title: { label: 'Title', type: 'text', translatable: true },
+      cover: { label: 'Cover', type: 'media', mediaType: ['image', 'video'] },
+   },
+   overrides: {
+      '/about': { intro: { label: 'Intro', type: 'text', textarea: true } },
+   },
+}
+```
+
+**Where the rows come from.** By default (`routes: 'auto'`) the module reads the page files of the
+app and makes one row per route. Dynamic routes (`[slug].vue`, `[...all].vue`) are skipped, and
+route groups (`(marketing)/`) do not appear in the path. `routes: ['/a', '/b']` replaces the
+discovered list with an explicit one. `include` adds paths that are not page files, `exclude`
+removes paths, `order` puts the given paths first in the admin, and `labels` overrides the label
+that is otherwise built from the last segment of the path.
+
+**Fields.** `fields` applies to every page. `overrides` adds fields to one path: an override may
+only add a field, never redeclare a shared one, and two paths that declare the same field name must
+declare the same type, because the column is shared. The admin form of a path shows the shared
+fields plus its own.
+
+**Identity.** `path` is a reserved field name and is unique. Each row has an `id` built from the
+path (`/asolo-e-dintorni/venezia` gives `asoloEDintorniVenezia`, `/` gives `home`), which is the
+address of the page in the admin.
+
+**Limits.** One page entry per config. `titleField` and `drafts` do not apply. Rows are created
+when a page is saved for the first time, and they cannot be deleted from the admin.
 
 ## Field types
 

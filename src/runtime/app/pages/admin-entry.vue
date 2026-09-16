@@ -1,6 +1,6 @@
 <template>
    <div class="cms-page">
-      <CmsPageHeader :title="isNew ? 'New entry' : 'Edit entry'">
+      <CmsPageHeader :title="headerTitle">
          <template v-if="drafts" #badge>
             <CmsStatusBadge :published="published" />
          </template>
@@ -21,7 +21,7 @@
       <div class="cms-card cms-panel">
          <CmsEntryForm
             v-model="formState"
-            :fields="config.fields"
+            :fields="fields"
             :drafts="drafts"
             :form-id="FORM_ID"
             :loading="saving"
@@ -34,6 +34,7 @@
 
 <script setup lang="ts">
 import type { CmsConfig } from '#nuxt-cms'
+import { pageFields, pageRouteOf } from '#nuxt-cms'
 import {
    computed,
    createError,
@@ -66,14 +67,22 @@ const toast = useCmsToast()
 
 const name = route.params.collection as string
 const config = (cmsConfig as CmsConfig)[name]
-if (!config || config.kind !== 'collection') {
+if (!config || (config.kind !== 'collection' && config.kind !== 'page')) {
    throw createError({ statusCode: 404, statusMessage: 'Unknown collection', fatal: true })
 }
 
 const id = route.params.id as string | undefined
-const isNew = id === undefined
-const drafts = !!config.drafts
-const fieldKeys = Object.keys(config.fields)
+const isPage = config.kind === 'page'
+const pageRoute = isPage && id ? pageRouteOf(config, id) : undefined
+if (isPage && !pageRoute) {
+   throw createError({ statusCode: 404, statusMessage: 'Unknown page', fatal: true })
+}
+
+const isNew = !isPage && id === undefined
+const drafts = !isPage && !!config.drafts
+const fields = pageRoute ? pageFields(config, pageRoute.path) : config.fields
+const headerTitle = pageRoute ? pageRoute.label : isNew ? 'New entry' : 'Edit entry'
+const fieldKeys = Object.keys(fields)
 const formKeys = drafts ? [...fieldKeys, 'status'] : fieldKeys
 
 const endpoint: string = `/api/cms/admin/${name}`

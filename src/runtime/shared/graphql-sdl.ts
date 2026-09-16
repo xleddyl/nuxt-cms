@@ -1,14 +1,20 @@
 import type { CmsConfig, CmsEntry, FieldConfig } from './index'
 import {
+   PAGE_PATH_FIELD,
    blockTypeName,
    blocksFieldTypeName,
    isPrivateField,
    isRequiredField,
    isTranslatableField,
+   pageAllFields,
    typeName,
 } from './index'
 
 export { blockTypeName, blocksFieldTypeName, typeName }
+
+function entryFields(entry: CmsEntry): Record<string, FieldConfig> {
+   return entry.kind === 'page' ? pageAllFields(entry) : entry.fields
+}
 
 function scalarFor(field: FieldConfig): string {
    switch (field.type) {
@@ -71,7 +77,8 @@ function fieldSdl(config: CmsConfig, entryName: string, key: string, field: Fiel
 
 function entrySdl(config: CmsConfig, name: string, entry: CmsEntry): string {
    const lines = ['  id: ID!']
-   for (const [key, field] of Object.entries(entry.fields)) {
+   if (entry.kind === 'page') lines.push(`  ${PAGE_PATH_FIELD}: String!`)
+   for (const [key, field] of Object.entries(entryFields(entry))) {
       if (isPrivateField(field)) continue
       lines.push(fieldSdl(config, name, key, field))
    }
@@ -149,13 +156,19 @@ export function renderGraphqlSdl(config: CmsConfig): string {
    for (const [name, entry] of Object.entries(config)) {
       const gqlType = typeName(name)
       types.push(entrySdl(config, name, entry))
-      for (const [key, field] of Object.entries(entry.fields)) {
+      for (const [key, field] of Object.entries(entryFields(entry))) {
          if (field.type === 'blocks' && !isPrivateField(field))
             types.push(...blocksSdl(name, key, field))
       }
 
       if (entry.kind === 'single') {
          queryLines.push(`  ${name}(locale: String): ${gqlType}`)
+         continue
+      }
+
+      if (entry.kind === 'page') {
+         queryLines.push(`  ${name}(locale: String): [${gqlType}!]!`)
+         queryLines.push(`  ${name}ByPath(path: String!, locale: String): ${gqlType}`)
          continue
       }
 

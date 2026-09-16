@@ -2,10 +2,12 @@ import type { AsyncData } from 'nuxt/app'
 import type {
    CmsCollectionName,
    CmsCollectionTypes,
+   CmsPagePath,
+   CmsPageTypes,
    CmsSingleName,
    CmsSingleTypes,
 } from '#cms-types'
-import { cmsCollectionQueries, cmsSingleQueries } from '#cms-queries'
+import { cmsCollectionQueries, cmsPageQueries, cmsSingleQueries } from '#cms-queries'
 import { useAsyncData } from '#imports'
 import type { CmsAsyncDataOptions } from './cms-query'
 import { $cmsQuery } from './cms-query'
@@ -16,6 +18,10 @@ export interface CmsSortInput<Entry> {
 }
 
 export interface CmsSingleOptions<ResT, DefaultT> extends CmsAsyncDataOptions<ResT, DefaultT> {
+   locale?: string
+}
+
+export interface CmsPageOptions<ResT, DefaultT> extends CmsAsyncDataOptions<ResT, DefaultT> {
    locale?: string
 }
 
@@ -84,4 +90,26 @@ export function useCmsCollection<K extends CmsCollectionName, DefaultT = CmsColl
          ...asyncDataOptions,
       }
    ) as AsyncData<CmsCollectionTypes[K][] | DefaultT, Error | undefined>
+}
+
+export function useCmsPage<P extends CmsPagePath, DefaultT = null>(
+   path: P,
+   options: CmsPageOptions<CmsPageTypes[P] | null, DefaultT> = {}
+): AsyncData<CmsPageTypes[P] | DefaultT | null, Error | undefined> {
+   const { locale, key, default: fallback, ...asyncDataOptions } = options
+   const pagePath = String(path)
+   const query = cmsPageQueries[pagePath]
+
+   return useAsyncData(
+      key ?? `cms-page:${pagePath}:${locale ?? ''}`,
+      async () => {
+         if (!query) unknownEntry(pagePath)
+         const result = await $cmsQuery(query, { path: pagePath, locale })
+         return (result?.page ?? null) as CmsPageTypes[P] | null
+      },
+      {
+         default: (fallback ?? (() => null)) as () => CmsPageTypes[P] | null,
+         ...asyncDataOptions,
+      }
+   ) as AsyncData<CmsPageTypes[P] | DefaultT | null, Error | undefined>
 }

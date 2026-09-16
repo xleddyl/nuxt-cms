@@ -1,10 +1,13 @@
 import { blockTypeName, blocksFieldTypeName, typeName } from './runtime/shared/graphql-sdl'
 import type { CmsConfig, CmsEntry, FieldConfig } from './runtime/shared/index'
 import {
+   entryFieldsFor,
    isPrivateField,
    isRequiredField,
    isTranslatableField,
    mediaTypeFilter,
+   pageFields,
+   pageRoutes,
 } from './runtime/shared/index'
 
 function mediaTsType(field: FieldConfig): string {
@@ -76,7 +79,8 @@ function blockTypesTs(entryName: string, key: string, field: FieldConfig): strin
 
 function entryTs(config: CmsConfig, name: string, entry: CmsEntry): string {
    const lines = ['  id: string']
-   for (const [key, field] of Object.entries(entry.fields)) {
+   if (entry.kind === 'page') lines.push('  path: string')
+   for (const [key, field] of Object.entries(entryFieldsFor(entry))) {
       if (isPrivateField(field)) continue
       lines.push(`  ${key}: ${fieldTsType(config, name, key, field)}`)
    }
@@ -86,7 +90,7 @@ function entryTs(config: CmsConfig, name: string, entry: CmsEntry): string {
 }
 
 function relationKeys(entry: CmsEntry): string[] {
-   return Object.entries(entry.fields)
+   return Object.entries(entryFieldsFor(entry))
       .filter(([, field]) => field.type === 'relation' && !isPrivateField(field))
       .map(([key]) => key)
 }
@@ -118,19 +122,40 @@ function autoTypeTs(config: CmsConfig, name: string, entry: CmsEntry): string {
    )}\n}`
 }
 
+function pageTypesTs(name: string, entry: CmsEntry): string[] {
+   const auto = `${typeName(name)}Auto`
+   const lines = pageRoutes(entry).map((route) => {
+      const keys = ['id', 'path', 'updatedAt', ...Object.keys(pageFields(entry, route.path))]
+      return `  ${JSON.stringify(route.path)}: Pick<${auto}, ${quotedKeys(keys)}>`
+   })
+   return [
+      `export interface CmsPageTypes {\n${lines.join('\n')}\n}`,
+      `export type CmsPagePath = keyof CmsPageTypes`,
+   ]
+}
+
 function entryMapsTs(config: CmsConfig): string[] {
    const singles: string[] = []
    const collections: string[] = []
+   const pages: string[] = []
    for (const [name, entry] of Object.entries(config)) {
       const line = `  ${JSON.stringify(name)}: ${typeName(name)}Auto`
       if (entry.kind === 'single') singles.push(line)
+      else if (entry.kind === 'page') pages.push(...pageTypesTs(name, entry))
       else collections.push(line)
+   }
+   if (!pages.length) {
+      pages.push(
+         `export interface CmsPageTypes {\n  [path: string]: never\n}`,
+         `export type CmsPagePath = keyof CmsPageTypes`
+      )
    }
    return [
       `export interface CmsSingleTypes {\n${singles.join('\n')}\n}`,
       `export interface CmsCollectionTypes {\n${collections.join('\n')}\n}`,
       `export type CmsSingleName = keyof CmsSingleTypes`,
       `export type CmsCollectionName = keyof CmsCollectionTypes`,
+      ...pages,
    ]
 }
 
@@ -150,7 +175,7 @@ export function renderTypesFile(config: CmsConfig): string {
 }`,
    ]
    for (const [name, entry] of Object.entries(config)) {
-      for (const [key, field] of Object.entries(entry.fields)) {
+      for (const [key, field] of Object.entries(entryFieldsFor(entry))) {
          if (field.type === 'blocks' && !isPrivateField(field))
             parts.push(...blockTypesTs(name, key, field))
       }

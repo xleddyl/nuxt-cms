@@ -2,6 +2,8 @@ import type { AsyncData } from 'nuxt/app'
 import type {
    CmsCollectionName,
    CmsCollectionTypes,
+   CmsPagePath,
+   CmsPageTypes,
    CmsSingleName,
    CmsSingleTypes,
 } from '#cms-types'
@@ -14,6 +16,10 @@ export interface CmsSortInput<Entry> {
 }
 
 export interface CmsSingleOptions<ResT, DefaultT> extends CmsAsyncDataOptions<ResT, DefaultT> {
+   locale?: string
+}
+
+export interface CmsPageOptions<ResT, DefaultT> extends CmsAsyncDataOptions<ResT, DefaultT> {
    locale?: string
 }
 
@@ -46,4 +52,14 @@ export function useCmsCollection<K extends CmsCollectionName, DefaultT = CmsColl
       key ?? `cms-collection:${String(name)}:${JSON.stringify(variables)}`,
       async () => (fallback ? fallback() : [])
    ) as unknown as AsyncData<CmsCollectionTypes[K][] | DefaultT, Error | undefined>
+}
+
+export function useCmsPage<P extends CmsPagePath, DefaultT = null>(
+   path: P,
+   options: CmsPageOptions<CmsPageTypes[P] | null, DefaultT> = {}
+): AsyncData<CmsPageTypes[P] | DefaultT | null, Error | undefined> {
+   const { locale, key, default: fallback } = options
+   return useAsyncData(`cms-page:${String(path)}:${locale ?? ''}`, async () =>
+      fallback ? fallback() : null
+   ) as unknown as AsyncData<CmsPageTypes[P] | DefaultT | null, Error | undefined>
 }

@@ -1,6 +1,6 @@
 import { blockTypeName, typeName } from './runtime/shared/graphql-sdl'
 import type { CmsConfig, CmsEntry, FieldConfig } from './runtime/shared/index'
-import { isPrivateField } from './runtime/shared/index'
+import { entryFieldsFor, isPrivateField, pageFields, pageRoutes } from './runtime/shared/index'
 
 const MEDIA_SELECTION = 'key url type alt folder mime size width height'
 
@@ -20,10 +20,12 @@ function entrySelection(
    config: CmsConfig,
    name: string,
    entry: CmsEntry,
-   withRelations: boolean
+   withRelations: boolean,
+   fields: Record<string, FieldConfig> = entryFieldsFor(entry)
 ): string {
    const parts = ['id']
-   for (const [key, field] of Object.entries(entry.fields)) {
+   if (entry.kind === 'page') parts.push('path')
+   for (const [key, field] of Object.entries(fields)) {
       if (isPrivateField(field)) continue
       if (field.type === 'relation') {
          const target = config[field.to!]
@@ -64,10 +66,26 @@ export function collectionQuery(config: CmsConfig, name: string, entry: CmsEntry
    return `query CmsCollection(${args}) { ${name}(locale: $locale, filters: $filters, sort: $sort, limit: $limit, offset: $offset) { ${selection} } }`
 }
 
+export function pageQuery(config: CmsConfig, name: string, entry: CmsEntry, path: string): string {
+   const selection = entrySelection(config, name, entry, true, pageFields(entry, path))
+   return `query CmsPage($path: String!, $locale: String) { page: ${name}ByPath(path: $path, locale: $locale) { ${selection} } }`
+}
+
 export function renderQueriesFile(config: CmsConfig): string {
    const singles: string[] = []
    const collections: string[] = []
+   const pages: string[] = []
    for (const [name, entry] of Object.entries(config)) {
+      if (entry.kind === 'page') {
+         for (const route of pageRoutes(entry)) {
+            pages.push(
+               `   ${JSON.stringify(route.path)}: ${JSON.stringify(
+                  pageQuery(config, name, entry, route.path)
+               )},`
+            )
+         }
+         continue
+      }
       const line = `   ${JSON.stringify(name)}: ${JSON.stringify(
          entry.kind === 'single'
             ? singleQuery(config, name, entry)
@@ -83,6 +101,10 @@ export function renderQueriesFile(config: CmsConfig): string {
       ``,
       `export const cmsCollectionQueries: Record<string, string> = {`,
       ...collections,
+      `}`,
+      ``,
+      `export const cmsPageQueries: Record<string, string> = {`,
+      ...pages,
       `}`,
       ``,
    ].join('\n')

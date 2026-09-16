@@ -1,6 +1,22 @@
 import { defineCmsConfig } from '#nuxt-cms'
 
 export default defineCmsConfig({
+   pages: {
+      id: 'pages',
+      label: 'Pages',
+      kind: 'page',
+      exclude: ['/cms'],
+      labels: { '/': 'Home' },
+      order: ['/', '/about'],
+      fields: {
+         title: { label: 'Title', type: 'text', translatable: true },
+         cover: { label: 'Cover', type: 'media', mediaType: ['image', 'video'] },
+      },
+      overrides: {
+         '/about': { intro: { label: 'Intro', type: 'text', textarea: true } },
+      },
+   },
+
    categories: {
       id: 'categories',
       label: 'Categories',
