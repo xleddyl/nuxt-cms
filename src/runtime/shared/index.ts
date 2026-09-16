@@ -370,7 +370,7 @@ export interface CmsEntry {
    exclude?: string[]
    order?: string[]
    labels?: Record<string, string>
-   overrides?: Record<string, Record<string, FieldConfig>>
+   overrides?: Record<string, Record<string, FieldConfig | null>>
    pages?: CmsPageRoute[]
    table?: CmsTable
 }
@@ -418,19 +418,27 @@ export function pageRouteOf(entry: CmsEntry, key: string): CmsPageRoute | undefi
    return pageRoutes(entry).find((route) => route.key === key)
 }
 
-export function pageOverrideFields(entry: CmsEntry, path: string): Record<string, FieldConfig> {
+export function pageOverrideFields(
+   entry: CmsEntry,
+   path: string
+): Record<string, FieldConfig | null> {
    return entry.overrides?.[path] ?? {}
 }
 
 export function pageFields(entry: CmsEntry, path: string): Record<string, FieldConfig> {
-   return { ...entry.fields, ...pageOverrideFields(entry, path) }
+   const fields: Record<string, FieldConfig> = { ...entry.fields }
+   for (const [key, field] of Object.entries(pageOverrideFields(entry, path))) {
+      if (field) fields[key] = field
+      else delete fields[key]
+   }
+   return fields
 }
 
 export function pageAllFields(entry: CmsEntry): Record<string, FieldConfig> {
    const fields: Record<string, FieldConfig> = { ...entry.fields }
    for (const override of Object.values(entry.overrides ?? {})) {
       for (const [key, field] of Object.entries(override)) {
-         if (!fields[key]) fields[key] = field
+         if (field && !fields[key]) fields[key] = field
       }
    }
    return fields
@@ -582,7 +590,7 @@ export interface CmsPageInput extends CmsEntryInputBase {
    exclude?: string[]
    order?: string[]
    labels?: Record<string, string>
-   overrides?: Record<string, Record<string, CmsFieldInput>>
+   overrides?: Record<string, Record<string, CmsFieldInput | null>>
 }
 
 export type CmsEntryInput = CmsCollectionInput | CmsSingleInput | CmsPageInput

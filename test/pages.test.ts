@@ -101,6 +101,28 @@ describe('page fields', () => {
    })
 })
 
+describe('page field removal', () => {
+   const entry = pageEntry({
+      overrides: { '/about': { cover: null, intro: { label: 'Intro', type: 'text' } } },
+   })
+
+   it('removes a shared field from one path', () => {
+      expect(Object.keys(pageFields(entry, '/about'))).toEqual(['title', 'intro'])
+      expect(Object.keys(pageFields(entry, '/'))).toEqual(['title', 'cover'])
+   })
+
+   it('keeps the column for the other pages', () => {
+      const schema = renderSchemaFile({ pages: entry }, 'sqlite', () => 'drizzle-orm')
+      expect(schema).toContain("cover: text('cover')")
+   })
+
+   it('leaves the removed field out of the query of that path', () => {
+      const config = { pages: entry }
+      expect(pageQuery(config, 'pages', entry, '/about')).not.toContain('cover')
+      expect(pageQuery(config, 'pages', entry, '/')).toContain('cover')
+   })
+})
+
 describe('page validation', () => {
    const errorsOf = (entry: Partial<CmsEntry>) => validateConfig(pageConfig(entry), undefined)
 
@@ -130,6 +152,12 @@ describe('page validation', () => {
       expect(
          errorsOf({ overrides: { '/about': { title: { label: 'Title', type: 'text' } } } }).join()
       ).toContain('already declared for every page')
+   })
+
+   it('rejects the removal of a field that is not shared', () => {
+      expect(errorsOf({ overrides: { '/about': { nope: null } } }).join()).toContain(
+         'nothing to remove'
+      )
    })
 
    it('rejects the same field declared with two types', () => {

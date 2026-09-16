@@ -69,10 +69,18 @@ discovered list with an explicit one. `include` adds paths that are not page fil
 removes paths, `order` puts the given paths first in the admin, and `labels` overrides the label
 that is otherwise built from the last segment of the path.
 
-**Fields.** `fields` applies to every page. `overrides` adds fields to one path: an override may
-only add a field, never redeclare a shared one, and two paths that declare the same field name must
-declare the same type, because the column is shared. The admin form of a path shows the shared
-fields plus its own.
+**Fields.** `fields` applies to every page. `overrides` changes the fields of one path: it adds
+fields, and `null` removes a shared field from that path alone.
+
+```ts
+overrides: {
+   '/': { gallery: null, slideshow: { label: 'Slideshow', type: 'blocks', blocks: { ... } } },
+}
+```
+
+An override may not redeclare a shared field, and two paths that declare the same field name must
+declare the same type, because the column is shared. A removed field keeps its column, so the other
+pages are untouched. The admin form of a path shows exactly the fields of that path.
 
 **Identity.** `path` is a reserved field name and is unique. Each row has an `id` built from the
 path (`/asolo-e-dintorni/venezia` gives `asoloEDintorniVenezia`, `/` gives `home`), which is the

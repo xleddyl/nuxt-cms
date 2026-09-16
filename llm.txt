@@ -79,7 +79,7 @@ pages: {
 ```
 
 - `routes: 'auto'` reads the page files: dynamic routes are skipped, route groups leave the path.
-- An override may only add a field; two paths declaring the same field name must use the same type.
+- An override adds fields to one path; `null` removes a shared field from that path (`overrides: { '/': { gallery: null } }`). It may not redeclare a shared field, and two paths declaring the same field name must use the same type.
 - `path` is reserved and unique; the row id comes from the path (`/a-b/c` gives `aBC`, `/` gives `home`).
 - One page entry per config; no `titleField`, no `drafts`, no delete from the admin.
 - Queries: `<entry>(locale)` for the list, `<entry>ByPath(path, locale)` for one page.

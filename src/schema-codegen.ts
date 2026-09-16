@@ -94,16 +94,22 @@ export function validateConfig(config: CmsConfig, i18n?: CmsI18n): string[] {
          for (const [path, override] of Object.entries(entry.overrides ?? {})) {
             const oat = `${at}, override '${path}'`
             if (known.size && !known.has(path)) errors.push(`${oat}: '${path}' is not a page path`)
-            for (const key of Object.keys(override)) {
-               if (Object.hasOwn(entry.fields ?? {}, key))
+            for (const [key, field] of Object.entries(override)) {
+               const shared = Object.hasOwn(entry.fields ?? {}, key)
+               if (field && shared)
                   errors.push(`${oat}: field '${key}' is already declared for every page`)
+               if (!field && !shared)
+                  errors.push(
+                     `${oat}: field '${key}' is not declared for every page, nothing to remove`
+                  )
                if (key === PAGE_PATH_FIELD)
                   errors.push(`${oat}: '${PAGE_PATH_FIELD}' is a reserved field name on pages`)
             }
          }
          const declared = new Map<string, string>()
-         for (const [path, override] of Object.entries(entry.overrides ?? {})) {
+         for (const override of Object.values(entry.overrides ?? {})) {
             for (const [key, field] of Object.entries(override)) {
+               if (!field) continue
                const seen = declared.get(key)
                if (seen && seen !== field.type) {
                   errors.push(
