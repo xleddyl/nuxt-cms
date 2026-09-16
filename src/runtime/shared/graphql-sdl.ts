@@ -1,17 +1,14 @@
 import type { CmsConfig, CmsEntry, FieldConfig } from './index'
-import { isPrivateField, isRequiredField, isTranslatableField } from './index'
+import {
+   blockTypeName,
+   blocksFieldTypeName,
+   isPrivateField,
+   isRequiredField,
+   isTranslatableField,
+   typeName,
+} from './index'
 
-export function typeName(name: string) {
-   return name.replace(/(?:^|_)([a-z0-9])/gi, (_, c: string) => c.toUpperCase())
-}
-
-export function blockUnionName(entryName: string, fieldKey: string) {
-   return `${typeName(entryName)}${typeName(fieldKey)}Block`
-}
-
-export function blockTypeName(entryName: string, fieldKey: string, blockName: string) {
-   return `${typeName(entryName)}${typeName(fieldKey)}${typeName(blockName)}`
-}
+export { blockTypeName, blocksFieldTypeName, typeName }
 
 function scalarFor(field: FieldConfig): string {
    switch (field.type) {
@@ -66,7 +63,9 @@ function fieldSdl(config: CmsConfig, entryName: string, key: string, field: Fiel
    if (field.type === 'media') return `  ${key}: CmsMedia`
    if (field.type === 'select' && field.multiple) return `  ${key}: [String!]!`
    if (field.type === 'blocks')
-      return `  ${key}: [${blockUnionName(entryName, key)}!]${isRequiredField(field) ? '!' : ''}`
+      return `  ${key}: [${blocksFieldTypeName(entryName, key)}!]${
+         isRequiredField(field) ? '!' : ''
+      }`
    return `  ${key}: ${scalarFor(field)}${isRequiredField(field) ? '!' : ''}`
 }
 
@@ -81,23 +80,42 @@ function entrySdl(config: CmsConfig, name: string, entry: CmsEntry): string {
    return `type ${typeName(name)} {\n${lines.join('\n')}\n}`
 }
 
+function blockFieldSdl(field: FieldConfig): { base: string; nonNull: boolean } {
+   if (field.type === 'media') return { base: 'CmsMedia', nonNull: false }
+   return { base: scalarFor(field), nonNull: !!field.required }
+}
+
+function sharedBlockFieldsSdl(field: FieldConfig): string[] {
+   const blocks = Object.values(field.blocks ?? {})
+   const first = blocks[0]
+   if (!first) return []
+   const lines: string[] = []
+   for (const key of Object.keys(first.fields)) {
+      const rendered = blocks.map((block) => block.fields[key])
+      if (rendered.some((blockField) => !blockField)) continue
+      const types = rendered.map((blockField) => blockFieldSdl(blockField!))
+      if (types.some((type) => type.base !== types[0]!.base)) continue
+      const nonNull = types.every((type) => type.nonNull)
+      lines.push(`  ${key}: ${types[0]!.base}${nonNull ? '!' : ''}`)
+   }
+   return lines
+}
+
 function blocksSdl(name: string, key: string, field: FieldConfig): string[] {
-   const defs: string[] = []
-   const members: string[] = []
-   for (const [blockName, block] of Object.entries(field.blocks ?? {})) {
-      const gqlType = blockTypeName(name, key, blockName)
-      members.push(gqlType)
+   const blocks = Object.entries(field.blocks ?? {})
+   if (!blocks.length) return []
+   const interfaceName = blocksFieldTypeName(name, key)
+   const shared = ['  type: String!', ...sharedBlockFieldsSdl(field)]
+   const defs = [`interface ${interfaceName} {\n${shared.join('\n')}\n}`]
+   for (const [blockName, block] of blocks) {
       const lines = ['  type: String!']
       for (const [blockFieldKey, blockField] of Object.entries(block.fields)) {
-         if (blockField.type === 'media') {
-            lines.push(`  ${blockFieldKey}: CmsMedia`)
-            continue
-         }
-         lines.push(`  ${blockFieldKey}: ${scalarFor(blockField)}${blockField.required ? '!' : ''}`)
+         const type = blockFieldSdl(blockField)
+         lines.push(`  ${blockFieldKey}: ${type.base}${type.nonNull ? '!' : ''}`)
       }
-      defs.push(`type ${gqlType} {\n${lines.join('\n')}\n}`)
+      const gqlType = blockTypeName(name, key, blockName)
+      defs.push(`type ${gqlType} implements ${interfaceName} {\n${lines.join('\n')}\n}`)
    }
-   if (members.length) defs.push(`union ${blockUnionName(name, key)} = ${members.join(' | ')}`)
    return defs
 }
 
@@ -120,7 +138,8 @@ const COMMON_SDL = [
    'input FloatFilter {\n  eq: Float\n  neq: Float\n  gt: Float\n  gte: Float\n  lt: Float\n  lte: Float\n  in: [Float!]\n  isNull: Boolean\n}',
    'input StringFilter {\n  eq: String\n  neq: String\n  gt: String\n  gte: String\n  lt: String\n  lte: String\n  like: String\n  in: [String!]\n  isNull: Boolean\n}',
    'input BooleanFilter {\n  eq: Boolean\n  neq: Boolean\n  isNull: Boolean\n}',
-   'type CmsMedia {\n  key: String!\n  url: String\n  type: String!\n  alt: String\n  folder: String\n  mime: String\n  size: Int\n  width: Int\n  height: Int\n}',
+   'enum CmsMediaType {\n  image\n  video\n  file\n}',
+   'type CmsMedia {\n  key: String!\n  url: String\n  type: CmsMediaType!\n  alt: String\n  folder: String\n  mime: String\n  size: Int\n  width: Int\n  height: Int\n}',
 ]
 
 export function renderGraphqlSdl(config: CmsConfig): string {

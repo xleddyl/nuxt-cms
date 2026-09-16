@@ -1,4 +1,4 @@
-import { buildSchema } from 'graphql'
+import { buildSchema, parse, validate } from 'graphql'
 import { describe, expect, it } from 'vitest'
 import { renderGraphqlSdl } from '../src/runtime/shared/graphql-sdl'
 import { sampleConfig } from './fixtures'
@@ -50,6 +50,53 @@ describe('renderGraphqlSdl', () => {
       const out = renderGraphqlSdl(config)
       expect(() => buildSchema(out)).not.toThrow()
       expect(out.match(/enum EventsSortField \{[^}]*\}/)![0]).not.toContain('poster')
+   })
+
+   it('renders blocks fields as an interface implemented by every block', () => {
+      expect(sdl).toContain('interface EventsBodyBlock {')
+      expect(sdl).toContain('type EventsBodyHero implements EventsBodyBlock {')
+      expect(sdl).toContain('type EventsBodyQuote implements EventsBodyBlock {')
+      expect(sdl).not.toContain('union EventsBodyBlock')
+   })
+
+   it('keeps on the interface only the fields that every block declares', () => {
+      const iface = sdl.match(/interface EventsBodyBlock \{[^}]*\}/)![0]
+      expect(iface).toContain('type: String!')
+      expect(iface).not.toContain('heading')
+      expect(iface).not.toContain('text')
+   })
+
+   it('makes a shared field nullable when one block leaves it optional', () => {
+      const config = sampleConfig()
+      config.events!.fields.body!.blocks!.quote!.fields.heading = {
+         label: 'Heading',
+         type: 'text',
+      }
+      const out = renderGraphqlSdl(config)
+      expect(() => buildSchema(out)).not.toThrow()
+      expect(out.match(/interface EventsBodyBlock \{[^}]*\}/)![0]).toContain('heading: String')
+      expect(out.match(/interface EventsBodyBlock \{[^}]*\}/)![0]).not.toContain('heading: String!')
+   })
+
+   it('lets a single-block field select its fields without an inline fragment', () => {
+      const config = sampleConfig()
+      config.events!.fields.body!.blocks = {
+         image: {
+            label: 'Image',
+            fields: {
+               photo: { label: 'Photo', type: 'media', mediaType: 'image', required: true },
+               hidden: { label: 'Hidden', type: 'boolean' },
+            },
+         },
+      }
+      const schema = buildSchema(renderGraphqlSdl(config))
+      const query = parse('{ events { body { hidden photo { url type } } } }')
+      expect(validate(schema, query)).toEqual([])
+   })
+
+   it('renders the media type as an enum', () => {
+      expect(sdl).toContain('enum CmsMediaType {')
+      expect(sdl).toContain('type: CmsMediaType!')
    })
 
    it('omits private fields from the type, filters and sort enum', () => {

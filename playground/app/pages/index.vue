@@ -141,16 +141,22 @@ const { data } = useCms(`{
       brochure { url }
       category { id name }
       tags { id name }
+      body { type ... on EventsBodyHero { heading } }
    }
    eventsCount
    categories { id }
    tags { id }
 }`)
 
+const blocks = computed(
+   () => data.value?.events.flatMap((event) => event.body?.map((block) => block.type) ?? []) ?? []
+)
+
 const stats = computed(() => [
    { value: data.value?.eventsCount ?? 0, label: 'events' },
    { value: data.value?.categories.length ?? 0, label: 'categories' },
    { value: data.value?.tags.length ?? 0, label: 'tags' },
+   { value: blocks.value.length, label: 'blocks' },
 ])
 
 function formatDate(date: string) {

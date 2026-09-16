@@ -362,6 +362,18 @@ export interface CmsEntry {
 
 export type CmsConfig = Record<string, CmsEntry>
 
+export function typeName(name: string) {
+   return name.replace(/(?:^|_)([a-z0-9])/gi, (_, c: string) => c.toUpperCase())
+}
+
+export function blocksFieldTypeName(entryName: string, fieldKey: string) {
+   return `${typeName(entryName)}${typeName(fieldKey)}Block`
+}
+
+export function blockTypeName(entryName: string, fieldKey: string, blockName: string) {
+   return `${typeName(entryName)}${typeName(fieldKey)}${typeName(blockName)}`
+}
+
 interface FieldInputBase {
    label: string
    required?: boolean

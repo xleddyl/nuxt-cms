@@ -107,11 +107,15 @@ Public read-only GraphQL endpoint at `POST /api/cms/graphql`. Two auto-imported 
 
 ```ts
 // reactive, SSR-friendly (wraps useAsyncData) — use in components/pages
-const { data, error, refresh } = useCms(`{ ... }`, variables?)
+const { data, error, refresh } = useCms(`{ ... }`, variables?, options?)
 
 // plain promise — use in event handlers or server-side logic
 const result = await $cmsQuery(`{ ... }`, variables?)
 ```
+
+`useCms` takes a third argument that forwards options to `useAsyncData`: `key` (replaces the
+generated cache key), `default` (the value `data` holds before the query resolves and after it
+fails), plus `server`, `lazy`, `immediate`, `deep`, `dedupe` and `watch`.
 
 ### Generated queries
 
@@ -139,11 +143,17 @@ Sort: `[{ field: <fieldName>, direction: asc | desc }]` (direction defaults to `
 
 ### Media & blocks in queries
 
-`media` fields resolve to: `{ key url type alt folder mime size width height }`.
+`media` fields resolve to: `{ key url type alt folder mime size width height }`, where `type` is the
+enum `CmsMediaType` (`image` / `video` / `file`) and `url` is `publicBaseUrl` + "/" + `key`, `null`
+only when `publicBaseUrl` is not configured.
 
-`blocks` fields are unions — use inline fragments; block type names are `<Entry><Field><Block>`:
+Each `blocks` field has an interface `<Entry><Field>Block` implemented by all its block types. The
+interface holds `type` plus every field that all blocks of the field declare, so a field with one
+block type needs no inline fragment. Use an inline fragment for the fields of one block type; block
+type names are `<Entry><Field><Block>`:
 
 ```graphql
+gallery { type hidden photo { url alt } }
 body { type ... on EventsBodyHero { heading image { url alt } } }
 ```
 

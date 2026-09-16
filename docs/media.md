@@ -186,7 +186,7 @@ The database stores only the **`key`** (the object path in your bucket). In quer
 - **`url`** is constructed as `publicBaseUrl` + "/" + `key` (e.g. `https://cdn.example.com/2024/photo.jpg`).
 - A relative `publicBaseUrl` (e.g. `/images`) also works and yields site-relative urls like `/images/waters/photo.jpg`, useful when files are served from the app's own `public/` directory.
 - When `publicBaseUrl` is empty, `url` is `null`; construct it yourself from `key`.
-- **`type`** is derived from the mime type (`image` / `video` / `file`).
+- **`type`** is the enum `CmsMediaType`, derived from the mime type (`image` / `video` / `file`). In `#cms-types` the field is narrowed to the declared `mediaType`, for example `CmsMedia<'image' | 'video'>`.
 
 ## One file per locale
 

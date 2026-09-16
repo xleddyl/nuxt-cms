@@ -15,6 +15,18 @@ const result = await $cmsQuery(`{ ... }`, variables?)
 `useCms` keys the cache on the query + variables and returns Nuxt's `AsyncData`. `$cmsQuery` throws
 if the response contains GraphQL errors.
 
+A third argument forwards options to `useAsyncData`. `key` replaces the generated cache key.
+`default` gives the value that `data` holds before the query resolves and after it fails, which
+keeps a failed query out of the rendering path. `server`, `lazy`, `immediate`, `deep`, `dedupe` and
+`watch` are passed through unchanged.
+
+```ts
+const { data } = await useCms(query, { locale }, {
+   key: `page:${path}:${locale}`,
+   default: () => null,
+})
+```
+
 With [`cms.enabled: false`](configuration.md#enabled) both composables stay defined but become
 no-ops: `useCms().data` is `null` and `$cmsQuery()` resolves to `{}`. Callers therefore never need a
 `typeof useCms === 'function'` guard, they just render their empty state.
@@ -59,14 +71,23 @@ homepage(locale: String): Homepage
 poster { key url type alt folder mime size width height }
 ```
 
-- **`key`** — the object key in your S3-compatible storage (the media field stores only this).
-- **`url`** — the public URL, constructed as `publicBaseUrl` + "/" + `key`. When `publicBaseUrl` is not configured or relative (e.g. `/images`), `url` is `null` and you must construct it yourself.
-- **`type`** — derived from the mime type: `image`, `video`, or `file`.
-- Other fields — metadata set at upload time (alt text, folder, dimensions, etc.).
+- **`key`**: the object key in your S3-compatible storage (the media field stores only this).
+- **`url`**: the public URL, built as `publicBaseUrl` + "/" + `key`. A relative `publicBaseUrl` (e.g. `/images`) gives a root-relative URL. `url` is `null` only when `publicBaseUrl` is not configured.
+- **`type`**: the enum `CmsMediaType`, derived from the mime type: `image`, `video` or `file`.
+- Other fields: metadata set at upload time (alt text, folder, dimensions).
 
 ## Blocks
 
-`blocks` fields are unions — use inline fragments. Block type names are `<Entry><Field><Block>`:
+Each `blocks` field has a GraphQL interface named `<Entry><Field>Block`, and every block type of
+that field implements it. The interface holds `type` plus each field that all blocks of the field
+declare. A field with one block type therefore needs no inline fragment:
+
+```graphql
+gallery { type hidden photo { url alt } }
+```
+
+Use an inline fragment to select the fields of one block type. Block type names are
+`<Entry><Field><Block>`:
 
 ```graphql
 body {

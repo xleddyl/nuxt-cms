@@ -1,6 +1,16 @@
-import { blockTypeName, blockUnionName, typeName } from './runtime/shared/graphql-sdl'
+import { blockTypeName, blocksFieldTypeName, typeName } from './runtime/shared/graphql-sdl'
 import type { CmsConfig, CmsEntry, FieldConfig } from './runtime/shared/index'
-import { isPrivateField, isRequiredField, isTranslatableField } from './runtime/shared/index'
+import {
+   isPrivateField,
+   isRequiredField,
+   isTranslatableField,
+   mediaTypeFilter,
+} from './runtime/shared/index'
+
+function mediaTsType(field: FieldConfig): string {
+   const types = mediaTypeFilter(field.mediaType)
+   return types ? `CmsMedia<${types.map((type) => `'${type}'`).join(' | ')}>` : 'CmsMedia'
+}
 
 function scalarTsType(field: FieldConfig): string {
    switch (field.type) {
@@ -28,13 +38,13 @@ function fieldTsType(
       if (field.cardinality === 'many-to-many') return `${target}[]`
       return isRequiredField(field) && !config[field.to!]?.drafts ? target : `${target} | null`
    }
-   if (field.type === 'media') return 'CmsMedia | null'
+   if (field.type === 'media') return `${mediaTsType(field)} | null`
    if (field.type === 'select' && field.multiple) {
       const union = field.options!.map((o) => JSON.stringify(o)).join(' | ')
       return `(${union})[]`
    }
    if (field.type === 'blocks') {
-      const union = blockUnionName(entryName, key)
+      const union = blocksFieldTypeName(entryName, key)
       return isRequiredField(field) ? `${union}[]` : `${union}[] | null`
    }
    if (isTranslatableField(field)) return isRequiredField(field) ? 'string' : 'string | null'
@@ -51,7 +61,7 @@ function blockTypesTs(entryName: string, key: string, field: FieldConfig): strin
       const lines = [`  __typename?: '${name}'`, `  type: '${blockName}'`]
       for (const [blockFieldKey, blockField] of Object.entries(block.fields)) {
          if (blockField.type === 'media') {
-            lines.push(`  ${blockFieldKey}: CmsMedia | null`)
+            lines.push(`  ${blockFieldKey}: ${mediaTsType(blockField)} | null`)
             continue
          }
          const base = scalarTsType(blockField)
@@ -60,7 +70,7 @@ function blockTypesTs(entryName: string, key: string, field: FieldConfig): strin
       defs.push(`export interface ${name} {\n${lines.join('\n')}\n}`)
    }
    if (members.length)
-      defs.push(`export type ${blockUnionName(entryName, key)} = ${members.join(' | ')}`)
+      defs.push(`export type ${blocksFieldTypeName(entryName, key)} = ${members.join(' | ')}`)
    return defs
 }
 
@@ -77,10 +87,11 @@ function entryTs(config: CmsConfig, name: string, entry: CmsEntry): string {
 
 export function renderTypesFile(config: CmsConfig): string {
    const parts = [
-      `export interface CmsMedia {
+      `export type CmsMediaType = 'image' | 'video' | 'file'`,
+      `export interface CmsMedia<T extends CmsMediaType = CmsMediaType> {
   key: string
   url: string | null
-  type: 'image' | 'video' | 'file'
+  type: T
   alt: string | null
   folder: string | null
   mime: string | null

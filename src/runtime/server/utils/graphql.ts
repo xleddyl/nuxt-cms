@@ -34,7 +34,12 @@ import {
    pickTranslatedMedia,
    translatableFieldKeys,
 } from '../../shared/index'
-import { blockTypeName, blockUnionName, renderGraphqlSdl, typeName } from '../../shared/graphql-sdl'
+import {
+   blockTypeName,
+   blocksFieldTypeName,
+   renderGraphqlSdl,
+   typeName,
+} from '../../shared/graphql-sdl'
 import { useMediaIndex } from './media-index'
 import { getContentI18n, resolveTable, tableColumns } from './registry'
 
@@ -349,7 +354,7 @@ function entryResolvers(config: CmsConfig, name: string, entry: CmsEntry) {
 function blockResolvers(name: string, key: string, field: FieldConfig) {
    const resolvers: Record<string, Record<string, unknown>> = {}
 
-   resolvers[blockUnionName(name, key)] = {
+   resolvers[blocksFieldTypeName(name, key)] = {
       __resolveType: (value: Record<string, unknown>) =>
          blockTypeName(name, key, String(value.type)),
    }
