@@ -255,8 +255,22 @@ function isList(value: ListResponse | Row | null | undefined): value is ListResp
 
 const rows = computed<Row[]>(() => (isList(data.value) ? data.value.items : []))
 
+const mounted = ref(false)
+
+onMounted(() => {
+   mounted.value = true
+})
+
 function lastEdit(value: unknown) {
-   return typeof value === 'string' && value ? value.slice(0, 10) : 'never saved'
+   if (typeof value !== 'string' || !value) return 'Never saved'
+   const stamp = value.includes('T') ? value : value.replace(' ', 'T') + 'Z'
+   const date = new Date(stamp)
+   if (Number.isNaN(date.getTime())) return `Last edit ${value.slice(0, 10)}`
+   if (!mounted.value) return `Last edit ${value.slice(0, 10)}`
+   return `Last edit ${date.toLocaleDateString()} ${date.toLocaleTimeString([], {
+      hour: '2-digit',
+      minute: '2-digit',
+   })}`
 }
 
 const pageTree = computed(() => {

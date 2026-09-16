@@ -4,7 +4,7 @@
          <nav v-if="links?.length" class="cms-breadcrumb">
             <template v-for="link in links" :key="link.to">
                <NuxtLink :to="link.to" class="cms-breadcrumb-link">{{ link.label }}</NuxtLink>
-               <CmsIcon name="chevron-right" class="cms-breadcrumb-separator size-3" />
+               <CmsIcon name="chevron-right" class="cms-breadcrumb-separator size-2.5" />
             </template>
          </nav>
          <div class="cms-actions">

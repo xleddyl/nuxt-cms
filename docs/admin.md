@@ -16,8 +16,9 @@ one account, read from environment variables.
 
 A [`page` entry](schema.md#pages) gets its own section in the sidebar. The list is a tree that
 follows the routes of the site: a child path sits under its parent, indented. On the right of each
-row is the date of the last save, or `never saved` when the page has no row yet, because a page row
-is written the first time that page is saved. The editor of a page shows the shared fields plus the
+row is the date and time of the last save, or `Never saved` when the page has no row yet, because a
+page row is written the first time that page is saved. The stamp is rendered in the timezone of the
+browser. The editor of a page shows the shared fields plus the
 fields of that path, and its title carries a breadcrumb back to each ancestor page and to the list.
 Pages cannot be deleted from the admin.
 
