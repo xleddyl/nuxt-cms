@@ -117,6 +117,16 @@ export function slugify(value: string): string {
 
 export const MEDIA_FOLDER_MAX_DEPTH = 4
 
+export const MEDIA_FOLDER_MARKER = '.keep'
+
+export function mediaFolderMarkerKey(folder: string) {
+   return `${folder}/${MEDIA_FOLDER_MARKER}`
+}
+
+export function isMediaFolderMarker(key: string) {
+   return key.endsWith(`/${MEDIA_FOLDER_MARKER}`)
+}
+
 export function normalizeMediaFolder(value: string | null | undefined): string | null {
    if (!value) return null
    const segments = value.split('/').map(slugify).filter(Boolean).slice(0, MEDIA_FOLDER_MAX_DEPTH)

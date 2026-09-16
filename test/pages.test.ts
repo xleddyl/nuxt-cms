@@ -239,6 +239,11 @@ describe('resolveCmsPages', () => {
       const { resolveCmsPages } = await import('../src/runtime/seed')
       const config = { pages: { ...pageEntry(), pages: undefined } } as CmsConfig
       resolveCmsPages(config, { root: process.cwd(), pagesDir: 'playground/app/pages' })
-      expect(config.pages!.pages!.map((route) => route.path)).toEqual(['/', '/about', '/guides'])
+      expect(config.pages!.pages!.map((route) => route.path)).toEqual([
+         '/',
+         '/about',
+         '/guides',
+         '/guides/knots',
+      ])
    })
 })

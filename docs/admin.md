@@ -14,9 +14,16 @@ one account, read from environment variables.
 | `/cms/:collection/new` | create entry |
 | `/cms/:collection/:id` | edit entry, or edit one page |
 
-A [`page` entry](schema.md#pages) gets its own section in the sidebar. The list shows one line per
-route of the app, and the editor of a page shows the shared fields plus the fields of that path. A
-page row is written the first time the page is saved, and pages cannot be deleted from the admin.
+A [`page` entry](schema.md#pages) gets its own section in the sidebar. The list is a tree that
+follows the routes of the site: a child path sits under its parent, indented. The editor of a page
+shows the shared fields plus the fields of that path, and its title carries a breadcrumb back to
+each ancestor page and to the list. A page row is written the first time the page is saved, and
+pages cannot be deleted from the admin.
+
+A `blocks` field is edited as a grid of tiles, not as a stack of forms. Each tile previews the
+first media of the block (or its first text), and a click opens that block alone with its fields, a
+duplicate and a remove action. The tile carries the reorder arrows, and the last cell of the grid
+adds a block. A block with a `boolean` field named `hidden` set to true is dimmed in the grid.
 
 All pages except `/cms/login` require an authenticated admin session (enforced by the `cms-auth`
 route middleware). The admin UI ships in English and Italian.

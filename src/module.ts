@@ -813,6 +813,16 @@ export default defineNuxtModule<ModuleOptions>({
          method: 'delete',
          handler: resolver.resolve('./runtime/server/api/media.delete'),
       })
+      addServerHandler({
+         route: '/api/cms/admin/media/folders',
+         method: 'post',
+         handler: resolver.resolve('./runtime/server/api/media-folder.post'),
+      })
+      addServerHandler({
+         route: '/api/cms/admin/media/folders',
+         method: 'delete',
+         handler: resolver.resolve('./runtime/server/api/media-folder.delete'),
+      })
 
       const api = '/api/cms/admin/:collection'
       addServerHandler({

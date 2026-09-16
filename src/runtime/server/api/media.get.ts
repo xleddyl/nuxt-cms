@@ -3,9 +3,18 @@ import { defineEventHandler } from 'h3'
 import { useDb } from '#cms-db'
 import { cms_media } from '#cms-tables'
 import type { MediaItem, MediaSourceInfo } from '../../shared/index'
+import { isMediaFolderMarker } from '../../shared/index'
 import { useMediaIndex } from '../utils/media-index'
 import { toMediaItem, useMediaConfig } from '../utils/media'
 import { requireAdmin } from '../utils/require-admin'
+
+function foldersOf(items: MediaItem[]) {
+   const folders = new Set<string>()
+   for (const item of items) {
+      if (item.folder) folders.add(item.folder)
+   }
+   return [...folders].sort()
+}
 
 export default defineEventHandler(async (event) => {
    await requireAdmin(event)
@@ -20,7 +29,7 @@ export default defineEventHandler(async (event) => {
          toMediaItem({ ...file, alt: altByKey.get(file.key) ?? null, createdAt: null }, publicUrl)
       )
 
-      return { items, source: index.source }
+      return { items, folders: foldersOf(items), source: index.source }
    }
 
    const rows = await useDb()
@@ -28,8 +37,9 @@ export default defineEventHandler(async (event) => {
       .from(cms_media)
       .orderBy(desc(cms_media.createdAt), desc(cms_media.id))
 
-   const items: MediaItem[] = rows.map((row) => toMediaItem(row, publicUrl))
+   const all: MediaItem[] = rows.map((row) => toMediaItem(row, publicUrl))
+   const items = all.filter((item) => !isMediaFolderMarker(item.key))
    const source: MediaSourceInfo = { kind: 'database', root: '', builtAt: null }
 
-   return { items, source }
+   return { items, folders: foldersOf(all), source }
 })

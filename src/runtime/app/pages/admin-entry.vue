@@ -1,6 +1,6 @@
 <template>
    <div class="cms-page">
-      <CmsPageHeader :title="headerTitle">
+      <CmsPageHeader :title="headerTitle" :links="breadcrumb">
          <template v-if="drafts" #badge>
             <CmsStatusBadge :published="published" />
          </template>
@@ -34,7 +34,7 @@
 
 <script setup lang="ts">
 import type { CmsConfig } from '#nuxt-cms'
-import { pageFields, pageRouteOf } from '#nuxt-cms'
+import { pageFields, pageParentPath, pageRouteOf, pageRoutes } from '#nuxt-cms'
 import {
    computed,
    createError,
@@ -77,6 +77,22 @@ const pageRoute = isPage && id ? pageRouteOf(config, id) : undefined
 if (isPage && !pageRoute) {
    throw createError({ statusCode: 404, statusMessage: 'Unknown page', fatal: true })
 }
+
+const breadcrumb = (() => {
+   const links = [{ label: config.label, to: `/cms/${name}` }]
+   if (!pageRoute) return links
+   const ancestors: string[] = []
+   let parent = pageParentPath(pageRoute.path)
+   while (parent) {
+      ancestors.unshift(parent)
+      parent = pageParentPath(parent)
+   }
+   for (const path of ancestors) {
+      const route = pageRoutes(config).find((candidate) => candidate.path === path)
+      if (route) links.push({ label: route.label, to: `/cms/${name}/${route.key}` })
+   }
+   return links
+})()
 
 const isNew = !isPage && id === undefined
 const drafts = !isPage && !!config.drafts

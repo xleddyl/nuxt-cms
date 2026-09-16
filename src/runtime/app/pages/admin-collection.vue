@@ -41,20 +41,26 @@
             />
          </div>
 
-         <div v-if="rows.length" class="cms-card divide-y divide-(--cms-line)">
+         <div v-if="pageTree.length" class="cms-card divide-y divide-(--cms-line)">
             <NuxtLink
-               v-for="row in rows"
-               :key="String(row.id)"
-               :to="`/cms/${name}/${row.id}`"
-               class="flex items-center gap-4 px-4 py-3 transition-colors hover:bg-(--ui-bg-elevated)"
+               v-for="node in pageTree"
+               :key="String(node.row.id)"
+               :to="`/cms/${name}/${node.row.id}`"
+               class="cms-tree-row"
+               :style="{ paddingLeft: `${1 + node.depth * 1.5}rem` }"
             >
+               <CmsIcon
+                  v-if="node.depth"
+                  name="arrow-turn-left-up"
+                  class="cms-tree-branch size-3.5 rotate-90"
+               />
                <div class="min-w-0 flex-1">
                   <div class="truncate font-medium text-(--ui-text-highlighted)">
-                     {{ row.label }}
+                     {{ node.row.label }}
                   </div>
-                  <div class="cms-label truncate">{{ row.path }}</div>
+                  <div class="cms-label truncate">{{ node.row.path }}</div>
                </div>
-               <span class="cms-label shrink-0">{{ row.updatedAt ? 'edited' : 'empty' }}</span>
+               <span class="cms-label shrink-0">{{ node.row.updatedAt ? 'edited' : 'empty' }}</span>
                <CmsIcon name="chevron-right" class="size-4 shrink-0 text-(--ui-text-dimmed)" />
             </NuxtLink>
          </div>
@@ -153,7 +159,12 @@
 
 <script setup lang="ts">
 import type { CmsConfig, FieldConfig } from '#nuxt-cms'
-import { isTranslatableField, isTranslatableMediaField, pickTranslatedMedia } from '#nuxt-cms'
+import {
+   isTranslatableField,
+   isTranslatableMediaField,
+   pageParentPath,
+   pickTranslatedMedia,
+} from '#nuxt-cms'
 import {
    computed,
    createError,
@@ -243,6 +254,20 @@ function isList(value: ListResponse | Row | null | undefined): value is ListResp
 }
 
 const rows = computed<Row[]>(() => (isList(data.value) ? data.value.items : []))
+
+const pageTree = computed(() => {
+   const byPath = new Set(rows.value.map((row) => String(row.path)))
+   const depthOf = (path: string) => {
+      let depth = 0
+      let parent = pageParentPath(path)
+      while (parent) {
+         if (byPath.has(parent)) depth++
+         parent = pageParentPath(parent)
+      }
+      return depth
+   }
+   return rows.value.map((row) => ({ row, depth: depthOf(String(row.path)) }))
+})
 const total = computed(() => (isList(data.value) ? data.value.total : 0))
 const relations = computed(() => (isList(data.value) ? data.value.relations ?? {} : {}))
 

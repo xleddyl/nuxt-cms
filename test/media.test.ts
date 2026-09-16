@@ -8,8 +8,11 @@ import {
 import {
    DEFAULT_MEDIA_MAX_FILE_SIZE,
    formatFileSize,
+   isMediaFolderMarker,
+   mediaFolderMarkerKey,
    mediaTypeAccept,
    mediaTypeFilter,
+   normalizeMediaFolder,
 } from '../src/runtime/shared/index'
 
 function s3Media(overrides: Partial<Parameters<typeof assertMediaConfigured>[0]> = {}) {
@@ -169,5 +172,25 @@ describe('mediaTypeAccept', () => {
    it('returns null when any file is allowed', () => {
       expect(mediaTypeAccept('file')).toBeNull()
       expect(mediaTypeAccept(undefined)).toBeNull()
+   })
+})
+
+describe('media folders', () => {
+   it('builds the marker key of a folder', () => {
+      expect(mediaFolderMarkerKey('photos')).toBe('photos/.keep')
+      expect(mediaFolderMarkerKey('photos/2026')).toBe('photos/2026/.keep')
+   })
+
+   it('recognises a marker key', () => {
+      expect(isMediaFolderMarker('photos/.keep')).toBe(true)
+      expect(isMediaFolderMarker('photos/2026/.keep')).toBe(true)
+      expect(isMediaFolderMarker('photos/keep.jpg')).toBe(false)
+      expect(isMediaFolderMarker('.keep')).toBe(false)
+   })
+
+   it('normalises a nested folder name', () => {
+      expect(normalizeMediaFolder('Foto Estate/2026')).toBe('foto-estate/2026')
+      expect(normalizeMediaFolder('/a/b/c/d/e/')).toBe('a/b/c/d')
+      expect(normalizeMediaFolder('   ')).toBeNull()
    })
 })

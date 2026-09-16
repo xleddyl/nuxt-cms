@@ -39,13 +39,14 @@
                   @click="folder = folder === chip.name ? null : chip.name"
                >
                   <CmsIcon name="folder" class="size-3" />{{ chip.name }}
+                  <span v-if="chip.count" class="cms-pill-count">{{ chip.count }}</span>
                </button>
                <button
-                  v-if="chip.empty && !readOnly"
+                  v-if="!readOnly"
                   type="button"
                   class="cms-pill-discard"
-                  aria-label="Discard empty folder"
-                  @click="discardFolder(chip.name)"
+                  :aria-label="`Delete folder ${chip.name}`"
+                  @click="deleteFolder(chip.name)"
                >
                   <CmsIcon name="x-mark" class="size-3" />
                </button>
@@ -161,7 +162,7 @@
                   <CmsMediaFolderPicker
                      v-model="uploadFolder"
                      :folders="folderNames"
-                     @create="registerFolder"
+                     @create="onFolderCreate"
                   />
                </CmsFormField>
                <CmsMediaUpload
@@ -225,7 +226,7 @@
                   <CmsMediaFolderPicker
                      v-model="editFolder"
                      :folders="folderNames"
-                     @create="registerFolder"
+                     @create="onFolderCreate"
                   />
                </CmsFormField>
                <div class="cms-actions is-end">
@@ -281,9 +282,8 @@ const canEditAlt = computed(() => true)
 const readOnly = computed(() => !canUpload.value)
 
 const endpoint = '/api/cms/admin/media'
-const DRAFT_FOLDERS_KEY = 'nuxt-cms:media-folders'
-
 const items = ref<MediaItem[]>([])
+const serverFolders = ref<string[]>([])
 const source = ref<MediaSourceInfo | null>(null)
 const loading = ref(true)
 const errorCode = ref<number | null>(null)
@@ -292,8 +292,13 @@ async function reload() {
    loading.value = true
    errorCode.value = null
    try {
-      const result = await $fetch<{ items: MediaItem[]; source: MediaSourceInfo }>(endpoint)
+      const result = await $fetch<{
+         items: MediaItem[]
+         folders?: string[]
+         source: MediaSourceInfo
+      }>(endpoint)
       items.value = result.items
+      serverFolders.value = result.folders ?? []
       source.value = result.source
    } catch (err) {
       errorCode.value = (err as { statusCode?: number }).statusCode ?? 500
@@ -331,60 +336,67 @@ watch(filters, (list) => {
 
 const search = ref('')
 
-const draftFolders = ref<string[]>([])
-
-onMounted(() => {
-   try {
-      const stored = JSON.parse(localStorage.getItem(DRAFT_FOLDERS_KEY) ?? '[]')
-      if (Array.isArray(stored)) draftFolders.value = stored.filter((f) => typeof f === 'string')
-   } catch {
-      draftFolders.value = []
-   }
-})
-
-function persistDraftFolders() {
-   try {
-      localStorage.setItem(DRAFT_FOLDERS_KEY, JSON.stringify(draftFolders.value))
-   } catch {
-      /* storage unavailable */
-   }
-}
-
 const usedFolders = computed(() => {
    const set = new Set(items.value.map((item) => item.folder).filter((f): f is string => !!f))
    return [...set].sort()
 })
 
 const folderNames = computed(() =>
-   [...new Set([...usedFolders.value, ...draftFolders.value])].sort()
+   [...new Set([...serverFolders.value, ...usedFolders.value])].sort()
 )
 
+const folderCounts = computed(() => {
+   const counts = new Map<string, number>()
+   for (const item of items.value) {
+      if (!item.folder) continue
+      counts.set(item.folder, (counts.get(item.folder) ?? 0) + 1)
+   }
+   return counts
+})
+
 const folderChips = computed(() =>
-   folderNames.value.map((name) => ({ name, empty: !usedFolders.value.includes(name) }))
+   folderNames.value.map((name) => ({
+      name,
+      count: folderCounts.value.get(name) ?? 0,
+      empty: !folderCounts.value.get(name),
+   }))
 )
 
 const folder = ref<string | null>(null)
 
-function registerFolder(name: string) {
-   if (!draftFolders.value.includes(name) && !usedFolders.value.includes(name)) {
-      draftFolders.value = [...draftFolders.value, name]
-      persistDraftFolders()
-   }
+function onFolderCreate(name: string) {
+   registerFolder(name).catch((err) =>
+      toast.add({
+         title: 'Could not create the folder',
+         description: errorMessage(err),
+         color: 'error',
+      })
+   )
 }
 
-function discardFolder(name: string) {
-   draftFolders.value = draftFolders.value.filter((f) => f !== name)
-   persistDraftFolders()
-   if (folder.value === name) folder.value = null
+async function registerFolder(name: string) {
+   if (folderNames.value.includes(name)) return
+   await $fetch(`${endpoint}/folders`, { method: 'POST', body: { name } })
+   await reload()
 }
 
-watch(usedFolders, (used) => {
-   const next = draftFolders.value.filter((f) => !used.includes(f))
-   if (next.length !== draftFolders.value.length) {
-      draftFolders.value = next
-      persistDraftFolders()
+async function deleteFolder(name: string) {
+   const count = folderCounts.value.get(name) ?? 0
+   const question = count
+      ? `Delete the folder "${name}" and its ${count} file${count > 1 ? 's' : ''}?`
+      : `Delete the empty folder "${name}"?`
+   if (!(await confirmAction(question))) return
+   try {
+      await $fetch(`${endpoint}/folders`, {
+         method: 'DELETE',
+         query: { name, recursive: count ? 'true' : 'false' },
+      })
+      if (folder.value === name) folder.value = null
+      await reload()
+   } catch (error) {
+      toast.add({ title: 'Delete failed', description: errorMessage(error), color: 'error' })
    }
-})
+}
 
 const visible = computed(() => {
    const allowed = allowedTypes.value
@@ -441,12 +453,25 @@ function openNewFolder() {
    newFolderOpen.value = true
 }
 
-function createFolder() {
+const creatingFolder = ref(false)
+
+async function createFolder() {
    const name = newFolderSlug.value
-   if (!name) return
-   registerFolder(name)
-   folder.value = name
-   newFolderOpen.value = false
+   if (!name || creatingFolder.value) return
+   creatingFolder.value = true
+   try {
+      await registerFolder(name)
+      folder.value = name
+      newFolderOpen.value = false
+   } catch (err) {
+      toast.add({
+         title: 'Could not create the folder',
+         description: errorMessage(err),
+         color: 'error',
+      })
+   } finally {
+      creatingFolder.value = false
+   }
 }
 
 const editing = ref<MediaItem | null>(null)

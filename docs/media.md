@@ -146,6 +146,23 @@ through the Nitro server. From the admin panel:
 This all happens through the panel's internal, authenticated same-origin API — there is nothing to
 call yourself.
 
+## Folders (`'s3'` mode)
+
+The library groups the files by folder, and in `'s3'` mode the folders are real: **New folder**
+creates one, and the cross on a folder chip deletes it.
+
+- A folder is created as an empty object `<folder>/.keep` in the bucket, plus one `cms_media` row.
+  The marker keeps an empty folder alive between sessions, and it never shows up in the gallery.
+- A folder name is slugified and holds at most 4 levels (`Foto Estate/2026` gives
+  `foto-estate/2026`).
+- Uploads into a folder get the key `<folder>/<uuid>-<name>`, so the folder is part of the object
+  key.
+- Deleting a folder deletes every object under it, its marker included, and the matching rows. The
+  panel asks for confirmation and says how many files go with it.
+
+In `'local'` mode the folders are the sub-directories of `publicBaseUrl` and cannot be changed from
+the panel: create or delete them in your repository.
+
 ## Allowed file types
 
 Uploads are restricted by content type:
