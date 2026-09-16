@@ -23,8 +23,8 @@ fields of that path, and its title carries a breadcrumb back to each ancestor pa
 Pages cannot be deleted from the admin.
 
 A `blocks` field is edited as a grid of tiles, not as a stack of forms. Each tile previews the
-first media of the block (or its first text), and a click opens that block alone with its fields, a
-duplicate and a remove action. The last cell of the grid adds a block. A block with a `boolean`
+first media of the block (or its first text) and names it by that file, falling back to the label of
+the block type. A click opens that block alone with its fields, a duplicate and a remove action. The last cell of the grid adds a block. A block with a `boolean`
 field named `hidden` set to true is dimmed in the grid.
 
 A `media` field is a tile of the same shape, with the preview, the file name, replace and remove.

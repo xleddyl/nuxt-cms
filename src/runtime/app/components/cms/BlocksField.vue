@@ -54,7 +54,7 @@
                >
                   <CmsIcon name="bars-2" class="size-4" />
                </button>
-               <span class="cms-block-bar-name" :title="labelOf(item)">{{ labelOf(item) }}</span>
+               <span class="cms-block-bar-name" :title="barTitle(item)">{{ barLabel(item) }}</span>
                <div class="cms-block-bar-actions">
                   <CmsButton
                      icon="trash"
@@ -144,6 +144,7 @@
 import type { FieldConfig } from '#nuxt-cms'
 import {
    isTranslatableMediaField,
+   mediaFilename,
    mediaIconFor,
    mediaPublicUrl,
    mediaTypeForKey,
@@ -179,6 +180,15 @@ function blockOf(item: Record<string, unknown>) {
 
 function labelOf(item: Record<string, unknown>) {
    return blockOf(item)?.label ?? String(item.type)
+}
+
+function barLabel(item: Record<string, unknown>) {
+   const key = mediaKeyOf(item)
+   return key ? mediaFilename(key) : labelOf(item)
+}
+
+function barTitle(item: Record<string, unknown>) {
+   return mediaKeyOf(item) ?? labelOf(item)
 }
 
 function mediaKeyOf(item: Record<string, unknown>) {
