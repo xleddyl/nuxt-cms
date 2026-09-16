@@ -1,6 +1,18 @@
 # Changelog
 
 
+## v0.1.43
+
+[compare changes](https://github.com/xleddyl/nuxt-cms/compare/v0.1.42...v0.1.43)
+
+### 🚀 Enhancements
+
+- Add the page entry kind with one row per route, a typed useCmsPage and a pages section in the admin ([2fd323e](https://github.com/xleddyl/nuxt-cms/commit/2fd323e))
+
+### ❤️ Contributors
+
+- Edoardo Alberti <edoalberti99@gmail.com>
+
 ## v0.1.42
 
 [compare changes](https://github.com/xleddyl/nuxt-cms/compare/v0.1.41...v0.1.42)
