@@ -1,6 +1,18 @@
 # Changelog
 
 
+## v0.1.42
+
+[compare changes](https://github.com/xleddyl/nuxt-cms/compare/v0.1.41...v0.1.42)
+
+### 🚀 Enhancements
+
+- Add typed useCmsSingle and useCmsCollection, generate types and queries also when the cms is disabled ([428b8d1](https://github.com/xleddyl/nuxt-cms/commit/428b8d1))
+
+### ❤️ Contributors
+
+- Edoardo Alberti <edoalberti99@gmail.com>
+
 ## v0.1.41
 
 [compare changes](https://github.com/xleddyl/nuxt-cms/compare/v0.1.40...v0.1.41)
