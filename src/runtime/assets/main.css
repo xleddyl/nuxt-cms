@@ -1439,11 +1439,38 @@ textarea.cms-field {
    filter: drop-shadow(0 1px 2px rgb(0 0 0 / 0.6));
 }
 
+.cms-block-tile.is-dragging {
+   opacity: 0.4;
+}
+
+.cms-block-tile.is-drop-target {
+   outline: 2px solid var(--cms-fern);
+   outline-offset: 2px;
+}
+
 .cms-block-bar {
    display: flex;
    align-items: center;
    gap: 0.25rem;
-   padding: 0.375rem 0.375rem 0.375rem 0.625rem;
+   padding: 0.375rem 0.375rem 0.375rem 0.375rem;
+}
+
+.cms-block-grip {
+   display: flex;
+   align-items: center;
+   justify-content: center;
+   padding: 0.25rem;
+   color: var(--ui-text-dimmed);
+   cursor: grab;
+   transition: color var(--cms-duration) var(--cms-ease);
+}
+
+.cms-block-grip:hover {
+   color: var(--ui-text-muted);
+}
+
+.cms-block-tile.is-dragging .cms-block-grip {
+   cursor: grabbing;
 }
 
 .cms-block-bar-name {

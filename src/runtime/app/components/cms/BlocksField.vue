@@ -5,7 +5,17 @@
             v-for="(item, index) in items"
             :key="uidFor(item)"
             class="cms-card cms-block-tile"
-            :class="{ 'is-muted': isHidden(item) }"
+            :class="{
+               'is-muted': isHidden(item),
+               'is-dragging': dragIndex === index,
+               'is-drop-target': dropIndex === index && dragIndex !== index,
+            }"
+            draggable="true"
+            @dragstart="onDragStart(index, $event)"
+            @dragover.prevent="dropIndex = index"
+            @dragleave="onDragLeave(index)"
+            @drop.prevent="onDrop(index)"
+            @dragend="onDragEnd"
          >
             <button
                type="button"
@@ -35,26 +45,17 @@
             </button>
 
             <div class="cms-block-bar">
+               <button
+                  type="button"
+                  class="cms-block-grip"
+                  :aria-label="`Reorder ${labelOf(item)}, use the arrow keys`"
+                  @keydown.left.prevent="index > 0 && move(index, -1)"
+                  @keydown.right.prevent="index < items.length - 1 && move(index, 1)"
+               >
+                  <CmsIcon name="bars-2" class="size-4" />
+               </button>
                <span class="cms-block-bar-name" :title="labelOf(item)">{{ labelOf(item) }}</span>
                <div class="cms-block-bar-actions">
-                  <CmsButton
-                     icon="chevron-left"
-                     size="xs"
-                     variant="ghost"
-                     color="neutral"
-                     aria-label="Move earlier"
-                     :disabled="index === 0"
-                     @click="move(index, -1)"
-                  />
-                  <CmsButton
-                     icon="chevron-right"
-                     size="xs"
-                     variant="ghost"
-                     color="neutral"
-                     aria-label="Move later"
-                     :disabled="index === items.length - 1"
-                     @click="move(index, 1)"
-                  />
                   <CmsButton
                      icon="trash"
                      size="xs"
@@ -97,13 +98,31 @@
                </CmsFormField>
 
                <div class="cms-actions justify-between">
-                  <CmsButton
-                     label="Duplicate"
-                     icon="document-duplicate"
-                     variant="soft"
-                     color="neutral"
-                     @click="duplicateCurrent"
-                  />
+                  <div class="cms-actions">
+                     <CmsButton
+                        icon="chevron-left"
+                        variant="soft"
+                        color="neutral"
+                        aria-label="Move earlier"
+                        :disabled="editorIndex === 0"
+                        @click="moveCurrent(-1)"
+                     />
+                     <CmsButton
+                        icon="chevron-right"
+                        variant="soft"
+                        color="neutral"
+                        aria-label="Move later"
+                        :disabled="editorIndex === items.length - 1"
+                        @click="moveCurrent(1)"
+                     />
+                     <CmsButton
+                        label="Duplicate"
+                        icon="document-duplicate"
+                        variant="soft"
+                        color="neutral"
+                        @click="duplicateCurrent"
+                     />
+                  </div>
                   <div class="cms-actions">
                      <CmsButton
                         label="Remove"
@@ -242,10 +261,40 @@ function duplicate(index: number) {
 }
 
 function move(index: number, delta: number) {
+   moveTo(index, index + delta)
+}
+
+function moveTo(from: number, to: number) {
+   if (from === to || to < 0 || to >= items.value.length) return
    const next = [...items.value]
-   const [item] = next.splice(index, 1)
-   next.splice(index + delta, 0, item!)
+   const [item] = next.splice(from, 1)
+   next.splice(to, 0, item!)
    model.value = next
+}
+
+const dragIndex = ref<number | null>(null)
+const dropIndex = ref<number | null>(null)
+
+function onDragStart(index: number, event: DragEvent) {
+   dragIndex.value = index
+   if (event.dataTransfer) {
+      event.dataTransfer.effectAllowed = 'move'
+      event.dataTransfer.setData('text/plain', String(index))
+   }
+}
+
+function onDragLeave(index: number) {
+   if (dropIndex.value === index) dropIndex.value = null
+}
+
+function onDrop(index: number) {
+   if (dragIndex.value !== null) moveTo(dragIndex.value, index)
+   onDragEnd()
+}
+
+function onDragEnd() {
+   dragIndex.value = null
+   dropIndex.value = null
 }
 
 const addItems = computed(() =>
@@ -285,6 +334,13 @@ function removeCurrent() {
    if (editorIndex.value === null) return
    remove(editorIndex.value)
    editorIndex.value = null
+}
+
+function moveCurrent(delta: number) {
+   if (editorIndex.value === null) return
+   const next = editorIndex.value + delta
+   move(editorIndex.value, delta)
+   editorIndex.value = next
 }
 
 function duplicateCurrent() {

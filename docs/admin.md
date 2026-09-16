@@ -22,8 +22,12 @@ pages cannot be deleted from the admin.
 
 A `blocks` field is edited as a grid of tiles, not as a stack of forms. Each tile previews the
 first media of the block (or its first text), and a click opens that block alone with its fields, a
-duplicate and a remove action. The tile carries the reorder arrows, and the last cell of the grid
-adds a block. A block with a `boolean` field named `hidden` set to true is dimmed in the grid.
+duplicate and a remove action. The last cell of the grid adds a block. A block with a `boolean`
+field named `hidden` set to true is dimmed in the grid.
+
+**Order.** Drag a tile onto another one to move it there. The target tile is outlined while you
+drag. For a keyboard, focus the grip at the bottom left of a tile and press the left or right arrow
+key; the block editor also carries two move buttons, which is the way on a touch screen.
 
 All pages except `/cms/login` require an authenticated admin session (enforced by the `cms-auth`
 route middleware). The admin UI ships in English and Italian.
