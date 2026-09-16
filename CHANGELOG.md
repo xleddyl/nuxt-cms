@@ -1,6 +1,18 @@
 # Changelog
 
 
+## v0.1.49
+
+[compare changes](https://github.com/xleddyl/nuxt-cms/compare/v0.1.48...v0.1.49)
+
+### 🚀 Enhancements
+
+- Media fields as compact tiles, last save date in the page tree, branch arrow mirrored ([be723e7](https://github.com/xleddyl/nuxt-cms/commit/be723e7))
+
+### ❤️ Contributors
+
+- Edoardo Alberti <edoalberti99@gmail.com>
+
 ## v0.1.48
 
 [compare changes](https://github.com/xleddyl/nuxt-cms/compare/v0.1.47...v0.1.48)
