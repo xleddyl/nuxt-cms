@@ -1,6 +1,18 @@
 # Changelog
 
 
+## v0.1.47
+
+[compare changes](https://github.com/xleddyl/nuxt-cms/compare/v0.1.46...v0.1.47)
+
+### 🚀 Enhancements
+
+- Pages as a tree with a breadcrumb, blocks edited as a grid, real media folders in s3 mode ([1ce15be](https://github.com/xleddyl/nuxt-cms/commit/1ce15be))
+
+### ❤️ Contributors
+
+- Edoardo Alberti <edoalberti99@gmail.com>
+
 ## v0.1.46
 
 [compare changes](https://github.com/xleddyl/nuxt-cms/compare/v0.1.45...v0.1.46)
