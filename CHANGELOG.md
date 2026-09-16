@@ -1,6 +1,18 @@
 # Changelog
 
 
+## v0.1.45
+
+[compare changes](https://github.com/xleddyl/nuxt-cms/compare/v0.1.44...v0.1.45)
+
+### 🚀 Enhancements
+
+- Expose resolveCmsPages so scripts can read the page routes of a config ([d539a2f](https://github.com/xleddyl/nuxt-cms/commit/d539a2f))
+
+### ❤️ Contributors
+
+- Edoardo Alberti <edoalberti99@gmail.com>
+
 ## v0.1.44
 
 [compare changes](https://github.com/xleddyl/nuxt-cms/compare/v0.1.43...v0.1.44)
