@@ -1,6 +1,18 @@
 # Changelog
 
 
+## v0.1.41
+
+[compare changes](https://github.com/xleddyl/nuxt-cms/compare/v0.1.40...v0.1.41)
+
+### 🚀 Enhancements
+
+- Query blocks through a generated interface and pass async data options to useCms ([0f532f8](https://github.com/xleddyl/nuxt-cms/commit/0f532f8))
+
+### ❤️ Contributors
+
+- Edoardo Alberti <edoalberti99@gmail.com>
+
 ## v0.1.40
 
 [compare changes](https://github.com/xleddyl/nuxt-cms/compare/v0.1.39...v0.1.40)
