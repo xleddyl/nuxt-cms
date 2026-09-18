@@ -1,5 +1,6 @@
 import { mkdirSync } from 'node:fs'
 import { dirname, isAbsolute, resolve } from 'node:path'
+import { migrationsDirFor } from './shared/migrations-dir'
 import { resolvePageRoutes, routePathsFromDir } from './shared/page-routes'
 import type { CmsConfig, CmsPageRoute } from './shared/index'
 import { customId, ID_LENGTH } from './server/utils/custom-id'
@@ -54,7 +55,7 @@ export async function createCmsSeeder(opts: CmsSeederOptions = {}) {
       opts.driver ?? (process.env.NUXT_CMS_DATABASE_DRIVER as SeedDriver) ?? inferDriver(url)
    const dbPath = opts.dbPath ?? process.env.NUXT_CMS_DATABASE_PATH ?? 'data/cms.db'
    const resolvedDbPath = isAbsolute(dbPath) ? dbPath : resolve(root, dbPath)
-   const migrationsFolder = opts.migrationsDir ?? resolve(root, `server/db/migrations/${driver}`)
+   const migrationsFolder = opts.migrationsDir ?? migrationsDirFor(root, driver)
 
    if (driver === 'libsql') {
       const { migrate } = await import('drizzle-orm/libsql/migrator')

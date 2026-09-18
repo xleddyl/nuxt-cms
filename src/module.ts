@@ -25,6 +25,7 @@ import { buildSchema, introspectionFromSchema } from 'graphql'
 import { minifyIntrospection, outputIntrospectionFile } from 'gql.tada/internal'
 import { createJiti } from 'jiti'
 import { renderGraphqlSdl } from './runtime/shared/graphql-sdl'
+import { migrationsDirFor } from './runtime/shared/migrations-dir'
 import type { CmsConfig, CmsPageRoute, MediaStorageMode } from './runtime/shared/index'
 import { DEFAULT_MEDIA_MAX_FILE_SIZE } from './runtime/shared/index'
 import {
@@ -524,7 +525,7 @@ export default defineNuxtModule<ModuleOptions>({
       const dialect =
          driver === 'postgres' ? 'postgresql' : driver === 'libsql' ? 'turso' : 'sqlite'
       const resolvedDbPath = isAbsolute(dbPath) ? dbPath : resolve(nuxt.options.rootDir, dbPath)
-      const migrationsDir = resolve(nuxt.options.rootDir, `server/db/migrations/${driver}`)
+      const migrationsDir = migrationsDirFor(nuxt.options.rootDir, driver)
       const relativeSchemaPath = relative(nuxt.options.rootDir, schemaTemplate.dst)
       const relativeMigrationsDir = relative(nuxt.options.rootDir, migrationsDir)
 
