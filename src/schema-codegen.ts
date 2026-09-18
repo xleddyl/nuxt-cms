@@ -124,6 +124,26 @@ export function validateConfig(config: CmsConfig, i18n?: CmsI18n): string[] {
       }
       if (entry.drafts && entry.kind !== 'collection')
          errors.push(`${at}: drafts are only supported on collections`)
+      const tabIds = new Set<string>()
+      for (const tab of entry.tabs ?? []) {
+         if (!tab.id) errors.push(`${at}: every tab needs an id`)
+         else if (tabIds.has(tab.id)) errors.push(`${at}: tab '${tab.id}' is declared twice`)
+         else tabIds.add(tab.id)
+         if (!tab.label) errors.push(`${at}: tab '${tab.id}' needs a label`)
+      }
+      const tabbedFields = [
+         ...Object.entries(entry.fields ?? {}),
+         ...Object.values(entry.overrides ?? {}).flatMap((override) =>
+            Object.entries(override).filter(([, field]) => field)
+         ),
+      ] as [string, FieldConfig][]
+      for (const [key, field] of tabbedFields) {
+         if (!field.tab) continue
+         if (!tabIds.size)
+            errors.push(`${at}: field '${key}' has a tab but the entry declares none`)
+         else if (!tabIds.has(field.tab))
+            errors.push(`${at}: field '${key}' points at the unknown tab '${field.tab}'`)
+      }
       if (!entry.fields || !Object.keys(entry.fields).length)
          errors.push(`${at}: fields must not be empty`)
       if (entry.kind === 'collection' && !entry.titleField) {

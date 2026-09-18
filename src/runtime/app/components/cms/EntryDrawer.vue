@@ -10,6 +10,7 @@
          v-else
          v-model="formState"
          :fields="config.fields"
+         :tabs="config.tabs"
          :drafts="drafts"
          :form-id="FORM_ID"
          :loading="saving"

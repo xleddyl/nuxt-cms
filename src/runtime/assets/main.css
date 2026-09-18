@@ -911,6 +911,38 @@ body:has(.cms-scope) {
    gap: 1.25rem;
 }
 
+.cms-tabs {
+   display: flex;
+   align-items: center;
+   gap: 0.25rem;
+   border-bottom: 1px solid var(--ui-border);
+   margin-bottom: 0.25rem;
+   overflow-x: auto;
+}
+
+.cms-tab {
+   padding: 0.5rem 0.875rem;
+   border-bottom: 2px solid transparent;
+   margin-bottom: -1px;
+   white-space: nowrap;
+   font-size: 0.875rem;
+   font-weight: 500;
+   color: var(--ui-text-toned);
+   cursor: pointer;
+   transition:
+      color var(--cms-duration) var(--cms-ease),
+      border-color var(--cms-duration) var(--cms-ease);
+}
+
+.cms-tab:hover {
+   color: var(--ui-text-highlighted);
+}
+
+.cms-tab.is-active {
+   border-bottom-color: var(--cms-fern);
+   color: var(--cms-fern);
+}
+
 .cms-form-field {
    display: flex;
    flex-direction: column;

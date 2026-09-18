@@ -8,9 +8,13 @@ export default defineCmsConfig({
       exclude: ['/cms'],
       labels: { '/': 'Home' },
       order: ['/', '/about'],
+      tabs: [
+         { id: 'texts', label: 'Texts' },
+         { id: 'images', label: 'Images' },
+      ],
       fields: {
          title: { label: 'Title', type: 'text', translatable: true },
-         cover: { label: 'Cover', type: 'media', mediaType: ['image', 'video'] },
+         cover: { label: 'Cover', type: 'media', mediaType: ['image', 'video'], tab: 'images' },
       },
       overrides: {
          '/about': { intro: { label: 'Intro', type: 'text', textarea: true } },

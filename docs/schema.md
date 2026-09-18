@@ -205,6 +205,40 @@ either — the field still resolves to a single `String` (or `CmsMedia`) for the
 In the admin panel the locale switcher appears next to the `blocks` field label and applies to every
 translatable sub-field of every block at once, so a whole list can be translated in one pass.
 
+## Tabs
+
+An entry with many fields can split its admin form into horizontal tabs. Declare `tabs` on the
+entry, then send each field to one with `tab`.
+
+```ts
+pages: {
+   id: 'pages',
+   label: 'Pages',
+   kind: 'page',
+   tabs: [
+      { id: 'texts', label: 'Texts' },
+      { id: 'images', label: 'Images' },
+      { id: 'seo', label: 'SEO' },
+   ],
+   fields: {
+      title: { label: 'Title', type: 'text' },
+      hero: { label: 'Hero', type: 'media', tab: 'images' },
+      metaTitle: { label: 'Meta title', type: 'text', tab: 'seo' },
+   },
+}
+```
+
+- **Only the admin editor is affected.** The database, the GraphQL schema and the query shape are
+  unchanged.
+- A field with no `tab`, like `title` above, goes to the **first** tab.
+- An entry with no `tabs`, or with one tab, renders as a single form with no tab strip.
+- A field that points at a tab the entry does not declare fails the build, and so does a duplicate
+  tab id or a tab with no label.
+- On a page entry, a field added by `overrides` takes `tab` the same way.
+- `tab` is not supported inside `blocks`: a block's own fields always render together.
+- When a save fails validation, the form opens the tab that holds the first invalid field, so the
+  error is never hidden behind another tab.
+
 ## Conditional fields
 
 `showIf` hides a field in the admin editor until another field of the same entry has a given value —
@@ -353,6 +387,7 @@ export default defineCmsConfig({
 - Multi-select (`select` with `multiple: true`) is not allowed inside `blocks` and is excluded from filters and sorting.
 - `translatable` is only valid on `text`, `richtext` and `media`, at the top level or inside a block, and requires `cms.i18n.locales`. The `blocks` field itself cannot be translatable.
 - `showIf` must reference another declared field of a comparable type, cannot be used on the `titleField` or inside `blocks`, and needs exactly one of `eq` / `in`.
+- `tab` must name a tab declared by the same entry; tab ids must be unique and every tab needs a label.
 - `slug.from` must point to a non-translatable `text` field.
 - `private` is not allowed inside `blocks`.
 - A relation `to` must reference an existing collection.

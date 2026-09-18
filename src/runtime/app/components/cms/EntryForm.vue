@@ -1,11 +1,19 @@
 <template>
-   <CmsForm
-      :id="formId"
-      :state="state"
-      :schema="schema"
-      @submit="emit('submit')"
-      @error="emit('error')"
-   >
+   <CmsForm :id="formId" :state="state" :schema="schema" @submit="emit('submit')" @error="onError">
+      <div v-if="tabList.length > 1" class="cms-tabs" role="tablist">
+         <button
+            v-for="tab in tabList"
+            :key="tab.id"
+            type="button"
+            role="tab"
+            class="cms-tab"
+            :class="{ 'is-active': tab.id === activeTab }"
+            :aria-selected="tab.id === activeTab"
+            @click="activeTab = tab.id"
+         >
+            {{ tab.label }}
+         </button>
+      </div>
       <CmsFormField
          v-for="(field, key) in visibleFields"
          :key="key"
@@ -43,15 +51,21 @@
 </template>
 
 <script setup lang="ts">
-import type { CmsEntry, FieldConfig } from '#nuxt-cms'
-import { hasTranslatableBlockFields, isFieldVisible, isTranslatableField } from '#nuxt-cms'
-import { computed, ref } from '#imports'
+import type { CmsEntry, CmsTab, FieldConfig } from '#nuxt-cms'
+import {
+   fieldTab,
+   hasTranslatableBlockFields,
+   isFieldVisible,
+   isTranslatableField,
+} from '#nuxt-cms'
+import { computed, ref, watch } from '#imports'
 import { buildEntrySchema } from '../../../shared/validation'
 import { useCmsRuntime } from '../../composables/cms-runtime'
 
 const props = withDefaults(
    defineProps<{
       fields: CmsEntry['fields']
+      tabs?: CmsTab[]
       drafts?: boolean
       loading?: boolean
       formId?: string
@@ -68,11 +82,34 @@ const { i18n } = useCmsRuntime()
 
 const activeLocale = ref<Record<string, string>>({})
 
+const tabList = computed(() => props.tabs ?? [])
+
+const activeTab = ref(tabList.value[0]?.id ?? '')
+
+watch(tabList, (tabs) => {
+   if (!tabs.some((tab) => tab.id === activeTab.value)) activeTab.value = tabs[0]?.id ?? ''
+})
+
 const visibleFields = computed(() =>
    Object.fromEntries(
-      Object.entries(props.fields).filter(([, field]) => isFieldVisible(field, state.value))
+      Object.entries(props.fields).filter(
+         ([, field]) =>
+            isFieldVisible(field, state.value) &&
+            (!tabList.value.length || fieldTab(field, tabList.value) === activeTab.value)
+      )
    )
 )
+
+function onError() {
+   const issue = schema.value.safeParse(state.value).error?.issues[0]
+   const key = issue ? String(issue.path[0] ?? '') : ''
+   const field = key ? props.fields[key] : undefined
+   if (field && tabList.value.length) {
+      const tab = fieldTab(field, tabList.value)
+      if (tab) activeTab.value = tab
+   }
+   emit('error')
+}
 
 function hasLocaleSwitch(field: FieldConfig) {
    return isTranslatableField(field) || hasTranslatableBlockFields(field)

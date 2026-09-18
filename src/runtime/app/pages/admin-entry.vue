@@ -22,6 +22,7 @@
          <CmsEntryForm
             v-model="formState"
             :fields="fields"
+            :tabs="config.tabs"
             :drafts="drafts"
             :form-id="FORM_ID"
             :loading="saving"

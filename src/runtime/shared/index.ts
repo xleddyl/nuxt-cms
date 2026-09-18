@@ -168,9 +168,15 @@ export interface FieldCondition {
    in?: ConditionValue[]
 }
 
+export interface CmsTab {
+   id: string
+   label: string
+}
+
 export interface FieldConfig {
    label: string
    type: FieldType
+   tab?: string
    required?: boolean
    private?: boolean
    textarea?: boolean
@@ -382,7 +388,33 @@ export interface CmsEntry {
    labels?: Record<string, string>
    overrides?: Record<string, Record<string, FieldConfig | null>>
    pages?: CmsPageRoute[]
+   tabs?: CmsTab[]
    table?: CmsTable
+}
+
+export function entryTabs(entry: Pick<CmsEntry, 'tabs'>): CmsTab[] {
+   return entry.tabs?.length ? entry.tabs : []
+}
+
+export function fieldTab(field: FieldConfig, tabs: CmsTab[]): string | undefined {
+   const fallback = tabs[0]?.id
+   if (!fallback) return undefined
+   return tabs.some((tab) => tab.id === field.tab) ? field.tab : fallback
+}
+
+export function fieldsByTab(
+   fields: Record<string, FieldConfig>,
+   tabs: CmsTab[]
+): Record<string, Record<string, FieldConfig>> {
+   const grouped: Record<string, Record<string, FieldConfig>> = {}
+   for (const tab of tabs) grouped[tab.id] = {}
+   for (const [key, field] of Object.entries(fields)) {
+      const id = fieldTab(field, tabs)
+      if (!id) continue
+      const bucket = grouped[id]
+      if (bucket) bucket[key] = field
+   }
+   return grouped
 }
 
 export type CmsConfig = Record<string, CmsEntry>
@@ -477,6 +509,7 @@ interface FieldInputBase {
    label: string
    required?: boolean
    private?: boolean
+   tab?: string
    showIf?: FieldCondition | FieldCondition[]
 }
 
@@ -537,7 +570,7 @@ export interface RelationFieldInput extends FieldInputBase {
    onDelete?: 'set null' | 'cascade' | 'restrict'
 }
 
-type BlockField<T> = Omit<T, 'private' | 'showIf'>
+type BlockField<T> = Omit<T, 'private' | 'showIf' | 'tab'>
 
 export type BlockFieldInput =
    | BlockField<TextFieldInput>
@@ -578,6 +611,7 @@ interface CmsEntryInputBase {
    id: string
    label: string
    drafts?: boolean
+   tabs?: CmsTab[]
    fields: Record<string, CmsFieldInput>
 }
 
