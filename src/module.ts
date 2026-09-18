@@ -259,7 +259,7 @@ async function loadCmsConfig(
                `const pageRoutes = ${JSON.stringify(routesByEntry, null, 3)}`,
                ``,
                `for (const [name, routes] of Object.entries(pageRoutes)) {`,
-               `   const entry = (config as Record<string, { pages?: unknown }>)[name]`,
+               `   const entry = Object(config)[name]`,
                `   if (entry) entry.pages = routes`,
                `}`,
                ``,
