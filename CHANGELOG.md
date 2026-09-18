@@ -1,6 +1,18 @@
 # Changelog
 
 
+## v0.1.53
+
+[compare changes](https://github.com/xleddyl/nuxt-cms/compare/v0.1.52...v0.1.53)
+
+### 🩹 Fixes
+
+- Let the libsql and d1 drivers read the sqlite migrations folder ([ccc87af](https://github.com/xleddyl/nuxt-cms/commit/ccc87af))
+
+### ❤️ Contributors
+
+- Edoardo Alberti <edoalberti99@gmail.com>
+
 ## v0.1.52
 
 [compare changes](https://github.com/xleddyl/nuxt-cms/compare/v0.1.51...v0.1.52)
