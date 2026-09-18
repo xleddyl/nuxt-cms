@@ -1,6 +1,18 @@
 # Changelog
 
 
+## v0.1.52
+
+[compare changes](https://github.com/xleddyl/nuxt-cms/compare/v0.1.51...v0.1.52)
+
+### 🩹 Fixes
+
+- Emit the cms config wrapper as plain javascript so nitro can bundle it ([053d767](https://github.com/xleddyl/nuxt-cms/commit/053d767))
+
+### ❤️ Contributors
+
+- Edoardo Alberti <edoalberti99@gmail.com>
+
 ## v0.1.51
 
 [compare changes](https://github.com/xleddyl/nuxt-cms/compare/v0.1.50...v0.1.51)
