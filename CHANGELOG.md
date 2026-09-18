@@ -1,6 +1,18 @@
 # Changelog
 
 
+## v0.1.54
+
+[compare changes](https://github.com/xleddyl/nuxt-cms/compare/v0.1.53...v0.1.54)
+
+### 🚀 Enhancements
+
+- Split the admin form into tabs ([6192251](https://github.com/xleddyl/nuxt-cms/commit/6192251))
+
+### ❤️ Contributors
+
+- Edoardo Alberti <edoalberti99@gmail.com>
+
 ## v0.1.53
 
 [compare changes](https://github.com/xleddyl/nuxt-cms/compare/v0.1.52...v0.1.53)
