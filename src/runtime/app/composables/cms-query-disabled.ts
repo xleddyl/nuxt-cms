@@ -1,17 +1,11 @@
-import type { AsyncData, AsyncDataOptions } from 'nuxt/app'
+import type { AsyncData } from 'nuxt/app'
+import type { CmsAsyncDataOptions } from './cms-query'
 import { useAsyncData } from '#imports'
 
 type CmsDisabledResult = Record<string, any>
 type CmsDisabledVariables = Record<string, any>
 
-export interface CmsAsyncDataOptions<ResT, DefaultT>
-   extends Pick<
-      AsyncDataOptions<ResT>,
-      'server' | 'lazy' | 'immediate' | 'deep' | 'dedupe' | 'watch'
-   > {
-   key?: string
-   default?: () => DefaultT
-}
+export type { CmsAsyncDataOptions }
 
 export function cmsQueryKey(query: string, variables?: unknown) {
    return `cms-gql:${query}:${JSON.stringify(variables ?? {})}`
