@@ -1,6 +1,18 @@
 # Changelog
 
 
+## v0.1.56
+
+[compare changes](https://github.com/xleddyl/nuxt-cms/compare/v0.1.55...v0.1.56)
+
+### 🩹 Fixes
+
+- Share one async data option type with the disabled stub ([54c746c](https://github.com/xleddyl/nuxt-cms/commit/54c746c))
+
+### ❤️ Contributors
+
+- Edoardo Alberti <edoalberti99@gmail.com>
+
 ## v0.1.55
 
 [compare changes](https://github.com/xleddyl/nuxt-cms/compare/v0.1.54...v0.1.55)
