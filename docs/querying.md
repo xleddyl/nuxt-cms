@@ -24,8 +24,10 @@ if the response contains GraphQL errors.
 
 A third argument forwards options to `useAsyncData`. `key` replaces the generated cache key.
 `default` gives the value that `data` holds before the query resolves and after it fails, which
-keeps a failed query out of the rendering path. `server`, `lazy`, `immediate`, `deep`, `dedupe` and
-`watch` are passed through unchanged.
+keeps a failed query out of the rendering path. `server`, `lazy`, `immediate`, `deep`, `dedupe`,
+`watch` and `getCachedData` are passed through unchanged. `getCachedData` is the one to reach for
+when a client navigation must not refetch a page the app already holds: return
+`nuxtApp.payload.data[key] ?? nuxtApp.static.data[key]` and the query runs once per key.
 
 ```ts
 const { data } = await useCms(query, { locale }, {

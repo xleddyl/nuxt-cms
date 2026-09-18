@@ -10,7 +10,7 @@ interface GraphqlResponse<T> {
 export interface CmsAsyncDataOptions<ResT, DefaultT>
    extends Pick<
       AsyncDataOptions<ResT>,
-      'server' | 'lazy' | 'immediate' | 'deep' | 'dedupe' | 'watch'
+      'server' | 'lazy' | 'immediate' | 'deep' | 'dedupe' | 'watch' | 'getCachedData'
    > {
    key?: string
    default?: () => DefaultT
