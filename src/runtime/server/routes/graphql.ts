@@ -3,6 +3,7 @@ import { defineEventHandler } from 'h3'
 import { useRuntimeConfig } from '#imports'
 import { buildCmsSchema, createGraphqlContext } from '../utils/graphql'
 import { createBreadthRule, createDepthRule, createIntrospectionRule } from '../utils/graphql-depth'
+import { CMS_GRAPHQL_BATCH_LIMIT } from '../../shared/index'
 
 function buildYoga(options: { graphiql: boolean; maxDepth: number }) {
    return createYoga({
@@ -11,6 +12,7 @@ function buildYoga(options: { graphiql: boolean; maxDepth: number }) {
       landingPage: false,
       graphiql: options.graphiql,
       cors: false,
+      batching: { limit: CMS_GRAPHQL_BATCH_LIMIT },
       context: () => createGraphqlContext(),
       plugins: [
          {

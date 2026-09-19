@@ -156,6 +156,8 @@ generated cache key), `default` (the value `data` holds before the query resolve
 fails), plus `server`, `lazy`, `immediate`, `deep`, `dedupe` and `watch`. The entry helpers take the
 same options next to their own.
 
+Queries started in the same tick (by any of these composables or `$cmsQuery`) go out as one batched HTTP request, and identical queries in flight share one request; keys and results are unchanged.
+
 ### Generated queries
 
 For each **collection** `events` (GraphQL type name = PascalCase of key):

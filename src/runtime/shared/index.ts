@@ -366,6 +366,8 @@ export function localizeBlocks(
    return value.map((item) => localizeBlock(field, item, locale, defaultLocale))
 }
 
+export const CMS_GRAPHQL_BATCH_LIMIT = 20
+
 export type CmsEntryKind = 'collection' | 'single' | 'page'
 
 export type CmsPageStorage = 'columns' | 'rows'

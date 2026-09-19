@@ -198,3 +198,8 @@ const { data } = useCms(`query ($cat: String!) {
   const { data } = await useCms(`{ ... }`)
   ```
 - In development a GraphiQL explorer is served at `/api/cms/graphql`.
+- **Batching:** `$cmsQuery` and every composable built on it (`useCms`, `useCmsSingle`,
+  `useCmsCollection`, `useCmsPage`) send the queries started in the same tick as one HTTP request
+  (a JSON array, up to 20 queries per request), and a query identical to one already in flight
+  shares its request. A single query is sent as before. The `useAsyncData` keys, and so the SSR
+  payload keys, do not change.
