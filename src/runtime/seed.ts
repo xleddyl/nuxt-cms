@@ -4,6 +4,7 @@ import { migrationsDirFor } from './shared/migrations-dir'
 import { resolvePageRoutes, routePathsFromDir } from './shared/page-routes'
 import type { CmsConfig, CmsPageRoute } from './shared/index'
 import { customId, ID_LENGTH } from './server/utils/custom-id'
+import { applyLibsqlMigrations } from './server/utils/libsql-migrations'
 
 export { customId, ID_LENGTH }
 export type { CmsPageRoute }
@@ -58,7 +59,7 @@ export async function createCmsSeeder(opts: CmsSeederOptions = {}) {
    const migrationsFolder = opts.migrationsDir ?? migrationsDirFor(root, driver)
 
    if (driver === 'libsql') {
-      const { migrate } = await import('drizzle-orm/libsql/migrator')
+      const { readMigrationFiles } = await import('drizzle-orm/migrator')
       const dbUrl = url || `file:${resolvedDbPath}`
       let db
       if (dbUrl.startsWith('file:')) {
@@ -71,7 +72,13 @@ export async function createCmsSeeder(opts: CmsSeederOptions = {}) {
          const { drizzle } = await import('drizzle-orm/libsql/web')
          db = drizzle(createClient({ url: dbUrl, authToken: authToken || undefined }))
       }
-      return { db, migrate: () => migrate(db, { migrationsFolder }) }
+      const client = db.$client
+      return {
+         db,
+         migrate: async () => {
+            await applyLibsqlMigrations(client, readMigrationFiles({ migrationsFolder }))
+         },
+      }
    }
 
    if (driver === 'postgres') {

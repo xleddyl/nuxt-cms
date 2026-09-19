@@ -1,6 +1,7 @@
 import cmsConfig from '#cms-config'
 import { migrations as bundledMigrations } from '#cms-migrations'
 import { useRuntimeConfig } from '#imports'
+import { applyLibsqlMigrations, type LibsqlMigrationClient } from './libsql-migrations'
 
 export interface CmsMigration {
    sql: string[]
@@ -66,6 +67,14 @@ export async function runCmsMigrations(db: unknown): Promise<void> {
 
    const { dialect, session } = db as MigratableDb
    await dialect.migrate(migrations, session, {})
+}
+
+export async function runLibsqlMigrations(db: unknown): Promise<void> {
+   const migrations = await pendingMigrations()
+   if (!migrations.length) return
+
+   const { $client } = db as { $client: LibsqlMigrationClient }
+   await applyLibsqlMigrations($client, migrations)
 }
 
 export async function runD1Migrations(binding: unknown): Promise<void> {
