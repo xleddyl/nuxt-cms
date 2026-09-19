@@ -40,8 +40,8 @@ The GraphQL type name is the PascalCase of the entry key (`blog_posts` → `Blog
 
 ## Pages
 
-A `page` entry holds the content of the pages of the app: one row per route, in one table, with one
-section in the admin. Use it for the images and the texts that belong to a page, instead of one
+A `page` entry holds the content of the pages of the app: one row per route, with one section in
+the admin. Use it for the images and the texts that belong to a page, instead of one
 `single` per page.
 
 ```ts
@@ -79,8 +79,8 @@ overrides: {
 ```
 
 An override may not redeclare a shared field, and two paths that declare the same field name must
-declare the same type, because the column is shared. A removed field keeps its column, so the other
-pages are untouched. The admin form of a path shows exactly the fields of that path.
+declare the same type. A removed field keeps its stored values, so the other pages are untouched.
+The admin form of a path shows exactly the fields of that path.
 
 **Identity.** `path` is a reserved field name and is unique. Each row has an `id` built from the
 path (`/asolo-e-dintorni/venezia` gives `asoloEDintorniVenezia`, `/` gives `home`), which is the
@@ -99,18 +99,17 @@ config.pages.pages // [{ path: '/about', key: 'about', label: 'About' }, ...]
 **Limits.** One page entry per config. `titleField` and `drafts` do not apply. Rows are created
 when a page is saved for the first time, and they cannot be deleted from the admin.
 
-### Storage: columns or rows
+### Storage
 
-By default (`storage: 'columns'`) every field of every page is a column of one table, so a site
-with many pages and many page-specific fields gets a wide table that is mostly `NULL`.
-`storage: 'rows'` keeps one row per page and moves the values into two child tables:
+A page entry keeps one row per page and stores the field values as rows of two child tables, so
+pages with many page-specific fields do not produce a wide table that is mostly `NULL`.
+`columns` lists the fields that stay columns of the page table (none by default):
 
 ```ts
 pages: {
    id: 'pages',
    label: 'Pages',
    kind: 'page',
-   storage: 'rows',
    columns: ['metaTitle', 'metaDescription', 'ogImage'],
    fields: { ... },
    overrides: { ... },
@@ -128,8 +127,8 @@ pages_media   (page_id -> pages.id on delete cascade, key, position default 0, m
 ```
 
 - `columns` lists the fields that stay columns of the page table. Each one must be declared in
-  `fields` (for every page) and must not be removed by an override. It is only valid with
-  `storage: 'rows'`.
+  `fields` (for every page) and must not be removed by an override. Without `columns` the page
+  table holds only `id`, `path` and `updated_at`.
 - A scalar field is one row in `<entry>_fields` at `position` 0. Plain strings (`text`,
   `richtext`, `email`, `date`, single `select`) are stored as they are; every other value
   (numbers, booleans, multi-select, `json`, translatable text) is stored as JSON text, so a
@@ -141,10 +140,10 @@ pages_media   (page_id -> pages.id on delete cascade, key, position default 0, m
   in `<entry>_media`, the others in `<entry>_fields`).
 - An empty value (`null`) has no row. An empty list of blocks reads back as `null`.
 - `relation` and `slug` fields must be listed in `columns` (they need their foreign key and their
-  unique index), and many-to-many relations are not supported with `rows`.
+  unique index), and many-to-many relations are not supported on pages.
 
-Everything else stays the same: the GraphQL schema, the generated types and queries, the admin
-API and the panel see the same flat object as with `columns`. Reading a page (or all pages) is one
+The storage does not show outside the database: the GraphQL schema, the generated types and
+queries, the admin API and the panel see one flat object per page, with every field. Reading a page (or all pages) is one
 query on every driver, with two correlated subqueries (`json_group_array` on SQLite, libSQL and
 D1, `json_agg` on Postgres). Saving a page is one transaction on SQLite and Postgres and one batch
 (a single round trip) on libSQL and D1.
@@ -157,10 +156,12 @@ module checks media keys when a page is saved instead: the admin API rejects (40
 a media field or in a block, that is not in the media library (the folder or manifest in local
 mode, `cms_media` in `'s3'` mode), and the panel flags a saved media that is no longer there.
 
-**Switching an existing entry.** Changing `storage` (or `columns`) makes `drizzle-kit generate`
-create the two tables and drop the columns that moved, in one migration. The data is not copied
-for you: edit that migration and put the copy between the `CREATE TABLE` statements and the
-`DROP COLUMN` ones, for example on SQLite:
+**Upgrading from 0.1.56 or earlier (breaking).** Earlier versions stored every page field as a
+column of the page table. After the upgrade, `drizzle-kit generate` (run by the dev server) writes
+one migration that creates `<entry>_fields` and `<entry>_media` and then drops every page column
+that is not listed in `columns`. The data is not copied for you: before deploying, edit that
+migration and put the copy between the `CREATE TABLE` statements and the first `DROP COLUMN`,
+each statement followed by `--> statement-breakpoint`. For example on SQLite, libSQL and D1:
 
 ```sql
 INSERT INTO pages_fields (page_id, key, position, value)
@@ -174,10 +175,14 @@ SELECT pages.id, 'gallery._type', block.key, json_extract(block.value, '$.type')
 FROM pages, json_each(pages.gallery) AS block WHERE pages.gallery IS NOT NULL;
 ```
 
-Write one statement per field (and per block subfield, reading it with
-`json_extract(block.value, '$.<subfield>')` and skipping `NULL`s; a translatable subfield needs
-`json(...)` of the object, a boolean `'true'`/`'false'`). Compare the GraphQL output of every page
-before and after the migration.
+Write one statement per moved field. Column values copy as they are: plain strings, the JSON text of
+a translatable field and media keys are already in the stored format; a boolean column becomes
+`'true'` or `'false'` and a number its text. For a `blocks` field write one statement per subfield
+as well, reading it with `json_extract(block.value, '$.<subfield>')` and skipping `NULL`s
+(`json_type(block.value, '$.<subfield>')` tells `'null'`, `'true'` and `'false'` apart, and a
+translatable subfield comes out as its JSON text); media subfields go to `<entry>_media`. On
+Postgres use `jsonb_array_elements ... WITH ORDINALITY` (position is the ordinality minus one). Compare
+the GraphQL output of every page before and after the migration.
 
 ## Field types
 
@@ -471,7 +476,8 @@ export default defineCmsConfig({
 - `slug.from` must point to a non-translatable `text` field.
 - `private` is not allowed inside `blocks`.
 - A relation `to` must reference an existing collection.
-- `storage` and `columns` are only valid on the page entry; `columns` needs `storage: 'rows'` and
-  may only list fields that every page has.
+- `columns` is only valid on the page entry and may only list fields that every page has;
+  `relation` and `slug` fields of a page must be listed there, and pages cannot have many-to-many
+  relations or a custom table.
 
 After changing the schema, restart the dev server so migrations and types are regenerated.

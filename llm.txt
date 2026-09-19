@@ -66,7 +66,7 @@ Notes:
 
 ### Pages
 
-`kind: 'page'` holds the content of the pages of the app: one row per route, one table, one admin section.
+`kind: 'page'` holds the content of the pages of the app: one row per route, one admin section.
 
 ```ts
 pages: {
@@ -83,7 +83,7 @@ pages: {
 - An override adds fields to one path; `null` removes a shared field from that path (`overrides: { '/': { gallery: null } }`). It may not redeclare a shared field, and two paths declaring the same field name must use the same type.
 - `path` is reserved and unique; the row id comes from the path (`/a-b/c` gives `aBC`, `/` gives `home`).
 - One page entry per config; no `titleField`, no `drafts`, no delete from the admin.
-- `storage: 'rows'` (default `'columns'`) keeps one row per page and stores the values in `<entry>_fields` (`page_id`, `key`, `position`, `value`) and `<entry>_media` (`page_id`, `key`, `position`, `media_key`); `columns: ['metaTitle', ...]` lists the fields that stay columns (must exist on every page). Block values are rows keyed `<field>.<subfield>` per `position`, plus `<field>._type`. Relations and slugs must be in `columns`; many-to-many is not supported. GraphQL, types, queries and admin are unchanged. Switching an existing entry needs a hand-written data copy inside the generated migration.
+- Storage: the page table holds `id`, `path`, `updated_at` and the fields listed in `columns: ['metaTitle', ...]` (optional, each must exist on every page); every other value is a row of `<entry>_fields` (`page_id`, `key`, `position`, `value`) or `<entry>_media` (`page_id`, `key`, `position`, `media_key`). Block values are rows keyed `<field>.<subfield>` per `position`, plus `<field>._type`. Relations and slugs must be in `columns`; many-to-many is not supported. GraphQL, types, queries and admin see one flat object per page. Upgrading from 0.1.56 or earlier is breaking: the generated migration drops the old page columns, so add a hand-written data copy between its CREATE TABLEs and DROPs (see docs/schema.md).
 - Saving a page rejects (400) media keys that are not in the media library.
 - In the admin the pages are a tree that follows the routes, and the editor title is a breadcrumb.
 - Queries: `<entry>(locale)` for the list, `<entry>ByPath(path, locale)` for one page.

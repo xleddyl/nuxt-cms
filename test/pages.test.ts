@@ -111,9 +111,10 @@ describe('page field removal', () => {
       expect(Object.keys(pageFields(entry, '/'))).toEqual(['title', 'cover'])
    })
 
-   it('keeps the column for the other pages', () => {
+   it('keeps the page fields out of the page table', () => {
       const schema = renderSchemaFile({ pages: entry }, 'sqlite', () => 'drizzle-orm')
-      expect(schema).toContain("cover: text('cover')")
+      expect(schema).not.toContain("cover: text('cover')")
+      expect(schema).toContain("export const pages_media = sqliteTable('pages_media'")
    })
 
    it('leaves the removed field out of the query of that path', () => {
@@ -193,11 +194,13 @@ describe('page codegen', () => {
    const config = pageConfig()
    const sdl = renderGraphqlSdl(config)
 
-   it('puts every field of every page in one table', () => {
+   it('stores the page fields as rows of two child tables', () => {
       const schema = renderSchemaFile(config, 'sqlite', () => 'drizzle-orm')
       expect(schema).toContain("export const pages = sqliteTable('pages', {")
       expect(schema).toContain("path: text('path').notNull().unique()")
-      expect(schema).toContain("intro: text('intro')")
+      expect(schema).not.toContain("intro: text('intro')")
+      expect(schema).toContain("export const pages_fields = sqliteTable('pages_fields', {")
+      expect(schema).toContain("export const pages_media = sqliteTable('pages_media', {")
    })
 
    it('exposes the list and the path query', () => {

@@ -2,15 +2,10 @@ import type { SQL } from 'drizzle-orm'
 import { asc, eq } from 'drizzle-orm'
 import type { SQLiteTable } from 'drizzle-orm/sqlite-core'
 import { createError } from 'h3'
-import { cmsDialect, runBatch, useDb, withTransaction } from '#cms-db'
+import { cmsDialect, runBatch, useDb } from '#cms-db'
 import * as cmsTables from '#cms-tables'
 import type { CmsEntry, CmsPageRoute } from '../../shared/index'
-import {
-   PAGE_PATH_FIELD,
-   isRowsStorage,
-   pageFieldsTableName,
-   pageMediaTableName,
-} from '../../shared/index'
+import { PAGE_PATH_FIELD, pageFieldsTableName, pageMediaTableName } from '../../shared/index'
 import type { PageDb, PageTables } from './page-rows'
 import { decodePageRows, pageWriteStatements, selectPages } from './page-rows'
 import { idColumn, tableColumns } from './registry'
@@ -52,14 +47,12 @@ export async function readPages(
    const db = useDb()
    const where = pageFilter(table, options)
    const single = options.id !== undefined || options.path !== undefined
-   const rows = isRowsStorage(entry)
-      ? selectPages(db as unknown as PageDb, cmsDialect, pageTables(name, table))
-      : db.select().from(table).$dynamic()
+   const rows = selectPages(db as unknown as PageDb, cmsDialect, pageTables(name, table))
    if (where) rows.where(where)
    if (options.orderByPath) rows.orderBy(asc(tableColumns(table)[PAGE_PATH_FIELD]!))
    if (single) rows.limit(1)
    const result = (await rows) as Row[]
-   return isRowsStorage(entry) ? decodePageRows(entry, result) : result
+   return decodePageRows(entry, result)
 }
 
 export async function writePage(
@@ -69,16 +62,6 @@ export async function writePage(
    route: Pick<CmsPageRoute, 'key' | 'path'>,
    set: Row
 ): Promise<Row> {
-   if (!isRowsStorage(entry)) {
-      return withTransaction(async (db) => {
-         const [row] = await db
-            .insert(table)
-            .values({ id: route.key, path: route.path, ...set } as Row)
-            .onConflictDoUpdate({ target: idColumn(table), set })
-            .returning()
-         return row as Row
-      })
-   }
    const tables = pageTables(name, table)
    const results = await runBatch((db) =>
       pageWriteStatements(db as unknown as PageDb, cmsDialect, tables, entry, route, set)

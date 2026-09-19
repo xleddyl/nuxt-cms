@@ -370,8 +370,6 @@ export const CMS_GRAPHQL_BATCH_LIMIT = 20
 
 export type CmsEntryKind = 'collection' | 'single' | 'page'
 
-export type CmsPageStorage = 'columns' | 'rows'
-
 export interface CmsPageRoute {
    path: string
    key: string
@@ -392,7 +390,6 @@ export interface CmsEntry {
    labels?: Record<string, string>
    overrides?: Record<string, Record<string, FieldConfig | null>>
    pages?: CmsPageRoute[]
-   storage?: CmsPageStorage
    columns?: string[]
    tabs?: CmsTab[]
    table?: CmsTable
@@ -492,12 +489,7 @@ export function pageAllFields(entry: CmsEntry): Record<string, FieldConfig> {
    return fields
 }
 
-export function isRowsStorage(entry: Pick<CmsEntry, 'kind' | 'storage'>): boolean {
-   return entry.kind === 'page' && entry.storage === 'rows'
-}
-
 export function pageColumnFields(entry: CmsEntry): Record<string, FieldConfig> {
-   if (!isRowsStorage(entry)) return pageAllFields(entry)
    const fields: Record<string, FieldConfig> = {}
    for (const key of entry.columns ?? []) {
       const field = entry.fields[key]
@@ -507,7 +499,6 @@ export function pageColumnFields(entry: CmsEntry): Record<string, FieldConfig> {
 }
 
 export function pageRowFields(entry: CmsEntry): Record<string, FieldConfig> {
-   if (!isRowsStorage(entry)) return {}
    const columns = new Set(entry.columns ?? [])
    return Object.fromEntries(
       Object.entries(pageAllFields(entry)).filter(([key]) => !columns.has(key))
@@ -671,7 +662,6 @@ export interface CmsPageInput extends CmsEntryInputBase {
    order?: string[]
    labels?: Record<string, string>
    overrides?: Record<string, Record<string, CmsFieldInput | null>>
-   storage?: CmsPageStorage
    columns?: string[]
 }
 

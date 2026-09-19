@@ -6,7 +6,6 @@ import {
    isMultiSelect,
    isRequiredField,
    isTranslatableField,
-   isRowsStorage,
    isTranslatableMediaField,
    pageAllFields,
    pageColumnFields,
@@ -123,12 +122,11 @@ export function validateConfig(config: CmsConfig, i18n?: CmsI18n): string[] {
                declared.set(key, field.type)
             }
          }
-         errors.push(...pageStorageErrors(at, entry))
+         errors.push(...pageColumnsErrors(at, entry))
       } else if (entry.overrides || entry.routes || entry.include || entry.exclude) {
          errors.push(`${at}: routes, include, exclude and overrides need kind 'page'`)
       }
-      if (entry.kind !== 'page' && (entry.storage || entry.columns))
-         errors.push(`${at}: storage and columns need kind 'page'`)
+      if (entry.kind !== 'page' && entry.columns) errors.push(`${at}: columns need kind 'page'`)
       if (entry.drafts && entry.kind !== 'collection')
          errors.push(`${at}: drafts are only supported on collections`)
       const tabIds = new Set<string>()
@@ -338,7 +336,7 @@ export function validateConfig(config: CmsConfig, i18n?: CmsI18n): string[] {
          }
       }
       registerTable(name, `entry '${name}'`)
-      if (isRowsStorage(entry)) {
+      if (entry.kind === 'page') {
          registerTable(pageFieldsTableName(name), `the field rows table of '${name}'`)
          registerTable(pageMediaTableName(name), `the media rows table of '${name}'`)
       }
@@ -351,18 +349,9 @@ export function validateConfig(config: CmsConfig, i18n?: CmsI18n): string[] {
    return errors
 }
 
-function pageStorageErrors(at: string, entry: CmsEntry): string[] {
+function pageColumnsErrors(at: string, entry: CmsEntry): string[] {
    const errors: string[] = []
-   const storage = entry.storage ?? 'columns'
-   if (storage !== 'columns' && storage !== 'rows') {
-      errors.push(`${at}: storage must be 'columns' or 'rows'`)
-      return errors
-   }
-   if (storage === 'columns') {
-      if (entry.columns) errors.push(`${at}: columns needs storage 'rows'`)
-      return errors
-   }
-   if (entry.table) errors.push(`${at}: storage 'rows' is not available on custom-table entries`)
+   if (entry.table) errors.push(`${at}: page entries cannot use a custom table`)
    const columns = new Set<string>()
    for (const key of entry.columns ?? []) {
       const cat = `${at}, column '${key}'`
@@ -380,14 +369,12 @@ function pageStorageErrors(at: string, entry: CmsEntry): string[] {
    for (const [key, field] of Object.entries(pageAllFields(entry))) {
       const fat = `${at}, field '${key}'`
       if (isManyToMany(field)) {
-         errors.push(`${fat}: many-to-many relations are not supported with storage 'rows'`)
+         errors.push(`${fat}: many-to-many relations are not supported on pages`)
          continue
       }
       if (columns.has(key)) continue
       if (field.type === 'relation' || field.type === 'slug')
-         errors.push(
-            `${fat}: ${field.type} fields need to be listed in columns with storage 'rows'`
-         )
+         errors.push(`${fat}: ${field.type} fields on pages need to be listed in columns`)
    }
    return errors
 }
@@ -541,9 +528,9 @@ export function renderSchemaFile(
    const derived = Object.entries(config).filter(([, entry]) => !entry.table)
 
    const fields = derived.flatMap(([, entry]) =>
-      Object.values(isRowsStorage(entry) ? pageColumnFields(entry) : entry.fields)
+      Object.values(entry.kind === 'page' ? pageColumnFields(entry) : entry.fields)
    )
-   const rowsEntries = derived.filter(([, entry]) => isRowsStorage(entry))
+   const rowsEntries = derived.filter(([, entry]) => entry.kind === 'page')
    const pg = dialect === 'postgres'
 
    const core = new Set(['integer', 'text', pg ? 'pgTable' : 'sqliteTable'])

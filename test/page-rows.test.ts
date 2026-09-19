@@ -8,7 +8,11 @@ import type { SQLiteTable } from 'drizzle-orm/sqlite-core'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { renderGraphqlSdl } from '../src/runtime/shared/graphql-sdl'
 import type { CmsConfig, CmsEntry, CmsI18n } from '../src/runtime/shared/index'
-import { encodeEntryTranslatableMedia, pageFields } from '../src/runtime/shared/index'
+import {
+   encodeEntryTranslatableMedia,
+   pageAllFields,
+   pageFields,
+} from '../src/runtime/shared/index'
 import { resolvePageRoutes } from '../src/runtime/shared/page-routes'
 import { buildEntrySchema } from '../src/runtime/shared/validation'
 import type { PageDb, PageTables } from '../src/runtime/server/utils/page-rows'
@@ -26,12 +30,11 @@ const I18N: CmsI18n = { locales: ['en', 'it'], defaultLocale: 'en' }
 const ROUTES = ['/', '/about', '/contact']
 const TMP = join(__dirname, '.tmp')
 
-function pageEntry(storage?: CmsEntry['storage'], columns?: string[]): CmsEntry {
+function pageEntry(columns?: string[]): CmsEntry {
    const entry: CmsEntry = {
       id: 'pages',
       label: 'Pages',
       kind: 'page',
-      ...(storage ? { storage } : {}),
       ...(columns ? { columns } : {}),
       fields: {
          metaTitle: { label: 'Meta title', type: 'text', translatable: true },
@@ -82,11 +85,7 @@ function pageEntry(storage?: CmsEntry['storage'], columns?: string[]): CmsEntry 
 const ROWS_COLUMNS = ['metaTitle', 'ogImage']
 
 function rowsConfig(): CmsConfig {
-   return { pages: pageEntry('rows', ROWS_COLUMNS) }
-}
-
-function columnsConfig(): CmsConfig {
-   return { pages: pageEntry() }
+   return { pages: pageEntry(ROWS_COLUMNS) }
 }
 
 const VALUES: Record<string, Record<string, unknown>> = {
@@ -181,7 +180,7 @@ afterAll(() => {
    rmSync(TMP, { recursive: true, force: true })
 })
 
-describe('rows storage schema codegen', () => {
+describe('page rows schema codegen', () => {
    it('keeps the listed columns on the page table and adds the child tables in sqlite', () => {
       const out = renderSchemaFile(rowsConfig(), 'sqlite')
       const page = out.match(/export const pages = sqliteTable\('pages', \{[\s\S]*?\n\}\)/)![0]
@@ -218,80 +217,72 @@ describe('rows storage schema codegen', () => {
       expect(out).not.toContain("boolean('featured')")
    })
 
-   it('leaves the graphql schema, the types and the queries untouched', () => {
-      const rows = rowsConfig()
-      const columns = columnsConfig()
-      expect(renderGraphqlSdl(rows)).toBe(renderGraphqlSdl(columns))
-      expect(renderTypesFile(rows)).toBe(renderTypesFile(columns))
-      expect(renderQueriesFile(rows)).toBe(renderQueriesFile(columns))
+   it('leaves the graphql schema, the types and the queries independent of columns', () => {
+      const listed = rowsConfig()
+      const none: CmsConfig = { pages: pageEntry() }
+      expect(renderGraphqlSdl(listed)).toBe(renderGraphqlSdl(none))
+      expect(renderTypesFile(listed)).toBe(renderTypesFile(none))
+      expect(renderQueriesFile(listed)).toBe(renderQueriesFile(none))
    })
 
-   it('renders the same schema with storage columns as without storage', () => {
-      const explicit: CmsConfig = { pages: pageEntry('columns') }
-      for (const dialect of ['sqlite', 'postgres'] as const) {
-         expect(renderSchemaFile(explicit, dialect)).toBe(
-            renderSchemaFile(columnsConfig(), dialect)
-         )
-      }
+   it('keeps only id, path and updated_at on the page table without columns', () => {
+      const out = renderSchemaFile({ pages: pageEntry() }, 'sqlite')
+      expect(out).toContain(
+         [
+            "export const pages = sqliteTable('pages', {",
+            "  id: text('id').primaryKey(),",
+            "  path: text('path').notNull().unique(),",
+            "  updatedAt: text('updated_at').notNull().default(sql`(datetime('now'))`),",
+            '})',
+         ].join('\n')
+      )
    })
 })
 
-describe('rows storage validation', () => {
+describe('page rows validation', () => {
    const errorsOf = (config: CmsConfig) => validateConfig(config, I18N).join('\n')
 
    it('accepts a rows entry', () => {
       expect(validateConfig(rowsConfig(), I18N)).toEqual([])
    })
 
-   it('accepts rows without columns', () => {
-      expect(validateConfig({ pages: pageEntry('rows') }, I18N)).toEqual([])
-   })
-
-   it('rejects an unknown storage', () => {
-      expect(errorsOf({ pages: pageEntry('cells' as never) })).toContain(
-         "storage must be 'columns' or 'rows'"
-      )
-   })
-
-   it('rejects columns without storage rows', () => {
-      expect(errorsOf({ pages: pageEntry(undefined, ['title']) })).toContain(
-         "columns needs storage 'rows'"
-      )
+   it('accepts a page entry without columns', () => {
+      expect(validateConfig({ pages: pageEntry() }, I18N)).toEqual([])
    })
 
    it('rejects a column that only some pages declare', () => {
-      expect(errorsOf({ pages: pageEntry('rows', ['intro']) })).toContain(
+      expect(errorsOf({ pages: pageEntry(['intro']) })).toContain(
          "column 'intro': not a field declared for every page"
       )
    })
 
    it('rejects a column that an override removes', () => {
-      expect(errorsOf({ pages: pageEntry('rows', ['subtitle']) })).toContain(
+      expect(errorsOf({ pages: pageEntry(['subtitle']) })).toContain(
          "column 'subtitle': removed from '/contact'"
       )
    })
 
    it('rejects an unknown column and a duplicate one', () => {
-      const errors = errorsOf({ pages: pageEntry('rows', ['nope', 'title', 'title']) })
+      const errors = errorsOf({ pages: pageEntry(['nope', 'title', 'title']) })
       expect(errors).toContain("column 'nope': not a field declared for every page")
       expect(errors).toContain("column 'title': listed more than once")
    })
 
-   it('rejects storage on other kinds', () => {
+   it('rejects columns on other kinds', () => {
       const config: CmsConfig = {
          home: {
             id: 'home',
             label: 'Home',
             kind: 'single',
-            storage: 'rows',
+            columns: ['title'],
             fields: { title: { label: 'Title', type: 'text' } },
          },
       }
-      expect(errorsOf(config)).toContain("storage and columns need kind 'page'")
+      expect(errorsOf(config)).toContain("columns need kind 'page'")
    })
 
    it('asks for relations and slugs to stay columns', () => {
-      const entry = pageEntry('rows')
+      const entry = pageEntry()
       entry.fields.handle = { label: 'Handle', type: 'slug', from: 'subtitle' }
       entry.fields.owner = { label: 'Owner', type: 'relation', to: 'people' }
       const config: CmsConfig = {
@@ -305,14 +296,16 @@ describe('rows storage validation', () => {
          },
       }
       const errors = errorsOf(config)
-      expect(errors).toContain("field 'handle': slug fields need to be listed in columns")
-      expect(errors).toContain("field 'owner': relation fields need to be listed in columns")
+      expect(errors).toContain("field 'handle': slug fields on pages need to be listed in columns")
+      expect(errors).toContain(
+         "field 'owner': relation fields on pages need to be listed in columns"
+      )
       entry.columns = ['handle', 'owner']
       expect(validateConfig(config, I18N)).toEqual([])
    })
 
    it('rejects many-to-many relations', () => {
-      const entry = pageEntry('rows')
+      const entry = pageEntry()
       entry.fields.people = {
          label: 'People',
          type: 'relation',
@@ -347,7 +340,7 @@ describe('rows storage validation', () => {
    })
 })
 
-describe('rows storage encoding', () => {
+describe('page rows encoding', () => {
    it('writes one row per scalar, per block subfield and per block type', () => {
       const entry = rowsConfig().pages!
       const encoded = encodePageRows(entry, 'about', {
@@ -381,28 +374,22 @@ describe('rows storage encoding', () => {
    })
 })
 
-describe('rows storage on sqlite', () => {
+describe('page rows on sqlite', () => {
    let rows: Awaited<ReturnType<typeof createDb>>
-   let columns: Awaited<ReturnType<typeof createDb>>
    let rowsTables: PageTables
-   let columnsTable: SQLiteTable
 
    beforeAll(async () => {
       const rowsSchema = await loadSchema('rows-schema', rowsConfig())
-      const columnsSchema = await loadSchema('columns-schema', columnsConfig())
       rows = await createDb(rowsSchema)
-      columns = await createDb(columnsSchema)
       rowsTables = {
          page: rowsSchema.pages as SQLiteTable,
          fields: rowsSchema.pages_fields as SQLiteTable,
          media: rowsSchema.pages_media as SQLiteTable,
       }
-      columnsTable = columnsSchema.pages as SQLiteTable
    })
 
    afterAll(() => {
       rows?.sqlite.close()
-      columns?.sqlite.close()
    })
 
    async function saveRows(path: string, key: string) {
@@ -426,16 +413,13 @@ describe('rows storage on sqlite', () => {
       return { statements: statements.length, saved: results.at(-1) as Record<string, unknown>[] }
    }
 
-   async function saveColumns(path: string, key: string) {
-      const entry = columnsConfig().pages!
-      const set = {
-         ...encodeEntryTranslatableMedia(entry, validated(entry, path)),
-         updatedAt: '2026-09-19 10:00:00',
-      }
-      await columns.db
-         .insert(columnsTable)
-         .values({ id: key, path, ...set })
-         .onConflictDoUpdate({ target: (columnsTable as never as { id: never }).id, set })
+   function expectedPage(path: string, key: string) {
+      const entry = rowsConfig().pages!
+      const values = encodeEntryTranslatableMedia(entry, validated(entry, path))
+      const page: Record<string, unknown> = { id: key, path }
+      for (const field of Object.keys(pageAllFields(entry))) page[field] = values[field] ?? null
+      page.updatedAt = '2026-09-19 10:00:00'
+      return page
    }
 
    async function readRows(path?: string) {
@@ -445,24 +429,16 @@ describe('rows storage on sqlite', () => {
       return decodePageRows(entry, (await query) as Record<string, unknown>[])
    }
 
-   async function readColumns(path?: string) {
-      const query = columns.db.select().from(columnsTable).$dynamic()
-      if (path) query.where(eq((columnsTable as never as { path: never }).path, path)).limit(1)
-      return (await query) as Record<string, unknown>[]
-   }
-
-   it('round trips every page to the same flat object as the columns storage', async () => {
-      for (const route of rowsConfig().pages!.pages!) {
-         await saveRows(route.path, route.key)
-         await saveColumns(route.path, route.key)
+   it('round trips every page to the flat object the admin and graphql expect', async () => {
+      const routes = rowsConfig().pages!.pages!
+      for (const route of routes) await saveRows(route.path, route.key)
+      for (const route of routes) {
+         const [page] = await readRows(route.path)
+         const expected = expectedPage(route.path, route.key)
+         expect(page).toEqual(expected)
+         expect(Object.keys(page!)).toEqual(Object.keys(expected))
       }
-      for (const route of rowsConfig().pages!.pages!) {
-         const [fromRows] = await readRows(route.path)
-         const [fromColumns] = await readColumns(route.path)
-         expect(fromRows).toEqual(fromColumns)
-         expect(Object.keys(fromRows!)).toEqual(Object.keys(fromColumns!))
-      }
-      expect(await readRows()).toEqual(await readColumns())
+      expect(await readRows()).toHaveLength(routes.length)
    })
 
    it('reads back the values it wrote', async () => {
@@ -593,7 +569,7 @@ describe('rows storage on sqlite', () => {
    })
 })
 
-describe('rows storage on libsql', () => {
+describe('page rows on libsql', () => {
    it('writes and reads back a page in one batch', async () => {
       const { createClient } = await import('@libsql/client')
       const { drizzle: drizzleLibsql } = await import('drizzle-orm/libsql')
@@ -636,7 +612,7 @@ describe('rows storage on libsql', () => {
    })
 })
 
-describe('rows storage on postgres', () => {
+describe('page rows on postgres', () => {
    it('reads one page with a single statement using json_agg', async () => {
       const file = join(TMP, 'pg-schema.ts')
       writeFileSync(file, renderSchemaFile(rowsConfig(), 'postgres'))
