@@ -83,6 +83,7 @@ pages: {
 - An override adds fields to one path; `null` removes a shared field from that path (`overrides: { '/': { gallery: null } }`). It may not redeclare a shared field, and two paths declaring the same field name must use the same type.
 - `path` is reserved and unique; the row id comes from the path (`/a-b/c` gives `aBC`, `/` gives `home`).
 - One page entry per config; no `titleField`, no `drafts`, no delete from the admin.
+- `storage: 'rows'` (default `'columns'`) keeps one row per page and stores the values in `<entry>_fields` (`page_id`, `key`, `position`, `value`) and `<entry>_media` (`page_id`, `key`, `position`, `media_key`); `columns: ['metaTitle', ...]` lists the fields that stay columns (must exist on every page). Block values are rows keyed `<field>.<subfield>` per `position`, plus `<field>._type`. Relations and slugs must be in `columns`; many-to-many is not supported. GraphQL, types, queries and admin are unchanged. Switching an existing entry needs a hand-written data copy inside the generated migration.
 - In the admin the pages are a tree that follows the routes, and the editor title is a breadcrumb.
 - Queries: `<entry>(locale)` for the list, `<entry>ByPath(path, locale)` for one page.
 - A script that loads `cms.config.ts` by itself gets no routes: fill them with `resolveCmsPages(config, { root?, pagesDir? })` from `@xleddyl/nuxt-cms/seed`.

@@ -99,6 +99,86 @@ config.pages.pages // [{ path: '/about', key: 'about', label: 'About' }, ...]
 **Limits.** One page entry per config. `titleField` and `drafts` do not apply. Rows are created
 when a page is saved for the first time, and they cannot be deleted from the admin.
 
+### Storage: columns or rows
+
+By default (`storage: 'columns'`) every field of every page is a column of one table, so a site
+with many pages and many page-specific fields gets a wide table that is mostly `NULL`.
+`storage: 'rows'` keeps one row per page and moves the values into two child tables:
+
+```ts
+pages: {
+   id: 'pages',
+   label: 'Pages',
+   kind: 'page',
+   storage: 'rows',
+   columns: ['metaTitle', 'metaDescription', 'ogImage'],
+   fields: { ... },
+   overrides: { ... },
+}
+```
+
+For an entry called `pages` the schema is:
+
+```
+pages         (id, path unique, <fields listed in columns>, updated_at)
+pages_fields  (page_id -> pages.id on delete cascade, key, position default 0, value)
+              primary key (page_id, key, position)
+pages_media   (page_id -> pages.id on delete cascade, key, position default 0, media_key)
+              primary key (page_id, key, position)
+```
+
+- `columns` lists the fields that stay columns of the page table. Each one must be declared in
+  `fields` (for every page) and must not be removed by an override. It is only valid with
+  `storage: 'rows'`.
+- A scalar field is one row in `<entry>_fields` at `position` 0. Plain strings (`text`,
+  `richtext`, `email`, `date`, single `select`) are stored as they are; every other value
+  (numbers, booleans, multi-select, `json`, translatable text) is stored as JSON text, so a
+  translatable field keeps the same `{"en": "...", "it": "..."}` it has in a column.
+- A media field is one row in `<entry>_media` at `position` 0; `media_key` holds the same value a
+  column would (the key, or the JSON of a translatable media).
+- A `blocks` field stores each block at its own `position`: the block type is a row with
+  `key = <field>._type`, each subfield is a row with `key = <field>.<subfield>` (media subfields
+  in `<entry>_media`, the others in `<entry>_fields`).
+- An empty value (`null`) has no row. An empty list of blocks reads back as `null`.
+- `relation` and `slug` fields must be listed in `columns` (they need their foreign key and their
+  unique index), and many-to-many relations are not supported with `rows`.
+
+Everything else stays the same: the GraphQL schema, the generated types and queries, the admin
+API and the panel see the same flat object as with `columns`. Reading a page (or all pages) is one
+query on every driver, with two correlated subqueries (`json_group_array` on SQLite, libSQL and
+D1, `json_agg` on Postgres). Saving a page is one transaction on SQLite and Postgres and one batch
+(a single round trip) on libSQL and D1.
+
+**No foreign key to `cms_media`.** `media_key` is not a foreign key to `cms_media.key`. With
+`storage: 'local'` the files come from the folder (or the build manifest) and `cms_media` only holds
+the alt texts, so it can be empty while pages use many media; with `'s3'` deleting a file from the
+library removes its `cms_media` row, and a foreign key would either block that or wipe content. The
+module checks media keys when a page is saved instead: the admin API rejects (400) a media key, in
+a media field or in a block, that is not in the media library (the folder or manifest in local
+mode, `cms_media` in `'s3'` mode), and the panel flags a saved media that is no longer there.
+
+**Switching an existing entry.** Changing `storage` (or `columns`) makes `drizzle-kit generate`
+create the two tables and drop the columns that moved, in one migration. The data is not copied
+for you: edit that migration and put the copy between the `CREATE TABLE` statements and the
+`DROP COLUMN` ones, for example on SQLite:
+
+```sql
+INSERT INTO pages_fields (page_id, key, position, value)
+SELECT id, 'title', 0, title FROM pages WHERE title IS NOT NULL;
+--> statement-breakpoint
+INSERT INTO pages_media (page_id, key, position, media_key)
+SELECT id, 'cover', 0, cover FROM pages WHERE cover IS NOT NULL;
+--> statement-breakpoint
+INSERT INTO pages_fields (page_id, key, position, value)
+SELECT pages.id, 'gallery._type', block.key, json_extract(block.value, '$.type')
+FROM pages, json_each(pages.gallery) AS block WHERE pages.gallery IS NOT NULL;
+```
+
+Write one statement per field (and per block subfield, reading it with
+`json_extract(block.value, '$.<subfield>')` and skipping `NULL`s; a translatable subfield needs
+`json(...)` of the object, a boolean `'true'`/`'false'`). Compare the GraphQL output of every page
+before and after the migration.
+
 ## Field types
 
 Every field has `label: string` and optional `required?: boolean` and `private?: boolean` (see
@@ -391,5 +471,7 @@ export default defineCmsConfig({
 - `slug.from` must point to a non-translatable `text` field.
 - `private` is not allowed inside `blocks`.
 - A relation `to` must reference an existing collection.
+- `storage` and `columns` are only valid on the page entry; `columns` needs `storage: 'rows'` and
+  may only list fields that every page has.
 
 After changing the schema, restart the dev server so migrations and types are regenerated.

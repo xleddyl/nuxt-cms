@@ -8,6 +8,7 @@ import {
    parseId,
    requirePageRoute,
 } from '../utils/registry'
+import { readPages } from '../utils/page-storage'
 import { attachManyToMany } from '../utils/relations'
 import { requireAdmin } from '../utils/require-admin'
 
@@ -19,18 +20,20 @@ export default defineEventHandler(async (event) => {
    }
 
    const id = parseId(event)
+
+   if (entry.kind === 'page') {
+      const route = requirePageRoute(entry, id)
+      const [page] = await readPages(name, entry, table, { id })
+      if (!page) return { id: route.key, path: route.path }
+      return decodeRows(entry, [page])[0]
+   }
+
    const db = useDb()
    const rows = await db
       .select()
       .from(table)
       .where(eq(idColumn(table), id))
       .limit(1)
-
-   if (entry.kind === 'page') {
-      const route = requirePageRoute(entry, id)
-      if (!rows[0]) return { id: route.key, path: route.path }
-      return decodeRows(entry, [rows[0] as Record<string, unknown>])[0]
-   }
 
    if (!rows[0]) throw createError({ statusCode: 404, statusMessage: 'Row not found' })
 

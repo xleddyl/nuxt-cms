@@ -42,6 +42,7 @@ import {
    typeName,
 } from '../../shared/graphql-sdl'
 import { useMediaIndex } from './media-index'
+import { readPages } from './page-storage'
 import { getContentI18n, resolveTable, tableColumns } from './registry'
 
 const MAX_LIMIT = 100
@@ -403,12 +404,8 @@ export function buildCmsSchema() {
       if (entry.kind === 'page') {
          queryResolvers[name] = async (_: unknown, args: { locale?: string }) => {
             const locale = resolveLocaleArg(args.locale)
-            const table = tableFor(name)
-            const rows = await useDb()
-               .select()
-               .from(table)
-               .orderBy(asc(tableColumns(table).path!))
-            return (rows as Record<string, unknown>[]).map((row) => localizeRow(entry, row, locale))
+            const rows = await readPages(name, entry, tableFor(name), { orderByPath: true })
+            return rows.map((row) => localizeRow(entry, row, locale))
          }
 
          queryResolvers[`${name}ByPath`] = async (
@@ -416,13 +413,8 @@ export function buildCmsSchema() {
             args: { path: string; locale?: string }
          ) => {
             const locale = resolveLocaleArg(args.locale)
-            const table = tableFor(name)
-            const [row] = await useDb()
-               .select()
-               .from(table)
-               .where(eq(tableColumns(table).path!, args.path))
-               .limit(1)
-            return row ? localizeRow(entry, row as Record<string, unknown>, locale) : null
+            const [row] = await readPages(name, entry, tableFor(name), { path: args.path })
+            return row ? localizeRow(entry, row, locale) : null
          }
          continue
       }

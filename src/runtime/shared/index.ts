@@ -368,6 +368,8 @@ export function localizeBlocks(
 
 export type CmsEntryKind = 'collection' | 'single' | 'page'
 
+export type CmsPageStorage = 'columns' | 'rows'
+
 export interface CmsPageRoute {
    path: string
    key: string
@@ -388,6 +390,8 @@ export interface CmsEntry {
    labels?: Record<string, string>
    overrides?: Record<string, Record<string, FieldConfig | null>>
    pages?: CmsPageRoute[]
+   storage?: CmsPageStorage
+   columns?: string[]
    tabs?: CmsTab[]
    table?: CmsTable
 }
@@ -484,6 +488,36 @@ export function pageAllFields(entry: CmsEntry): Record<string, FieldConfig> {
       }
    }
    return fields
+}
+
+export function isRowsStorage(entry: Pick<CmsEntry, 'kind' | 'storage'>): boolean {
+   return entry.kind === 'page' && entry.storage === 'rows'
+}
+
+export function pageColumnFields(entry: CmsEntry): Record<string, FieldConfig> {
+   if (!isRowsStorage(entry)) return pageAllFields(entry)
+   const fields: Record<string, FieldConfig> = {}
+   for (const key of entry.columns ?? []) {
+      const field = entry.fields[key]
+      if (field) fields[key] = field
+   }
+   return fields
+}
+
+export function pageRowFields(entry: CmsEntry): Record<string, FieldConfig> {
+   if (!isRowsStorage(entry)) return {}
+   const columns = new Set(entry.columns ?? [])
+   return Object.fromEntries(
+      Object.entries(pageAllFields(entry)).filter(([key]) => !columns.has(key))
+   )
+}
+
+export function pageFieldsTableName(name: string) {
+   return `${name}_fields`
+}
+
+export function pageMediaTableName(name: string) {
+   return `${name}_media`
 }
 
 type EntryLike = Pick<CmsEntry, 'fields'> & Partial<Pick<CmsEntry, 'kind' | 'overrides'>>
@@ -635,6 +669,8 @@ export interface CmsPageInput extends CmsEntryInputBase {
    order?: string[]
    labels?: Record<string, string>
    overrides?: Record<string, Record<string, CmsFieldInput | null>>
+   storage?: CmsPageStorage
+   columns?: string[]
 }
 
 export type CmsEntryInput = CmsCollectionInput | CmsSingleInput | CmsPageInput

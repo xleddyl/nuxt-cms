@@ -11,6 +11,7 @@ import {
    requirePageRoute,
    withUpdatedAt,
 } from '../utils/registry'
+import { writePage } from '../utils/page-storage'
 import {
    assertRelationTargets,
    attachManyToMany,
@@ -37,15 +38,8 @@ export default defineEventHandler(async (event) => {
       const body = await readValidatedBody(event, buildValidator(entry, route.path).parse)
       const values = encodeColumnValues(entry, body as Record<string, unknown>)
       const set = withUpdatedAt(table, values)
-      return mapConstraintErrors(() =>
-         withTransaction(async (db) => {
-            const [row] = await db
-               .insert(table)
-               .values({ id: route.key, path: route.path, ...set } as Record<string, unknown>)
-               .onConflictDoUpdate({ target: idColumn(table), set })
-               .returning()
-            return decodeRows(entry, [row as Record<string, unknown>])[0]
-         })
+      return mapConstraintErrors(
+         async () => decodeRows(entry, [await writePage(name, entry, table, route, set)])[0]
       )
    }
 

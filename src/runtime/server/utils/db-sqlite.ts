@@ -21,6 +21,8 @@ export function useDb() {
 
 export type CmsDb = ReturnType<typeof useDb>
 
+export const cmsDialect: 'sqlite' | 'postgres' = 'sqlite'
+
 let txQueue: Promise<unknown> = Promise.resolve()
 
 export function withTransaction<T>(fn: (db: CmsDb) => Promise<T>): Promise<T> {
@@ -38,4 +40,12 @@ export function withTransaction<T>(fn: (db: CmsDb) => Promise<T>): Promise<T> {
    })
    txQueue = run.catch(() => {})
    return run
+}
+
+export function runBatch(build: (db: CmsDb) => PromiseLike<unknown>[]): Promise<unknown[]> {
+   return withTransaction(async (db) => {
+      const results: unknown[] = []
+      for (const statement of build(db)) results.push(await statement)
+      return results
+   })
 }

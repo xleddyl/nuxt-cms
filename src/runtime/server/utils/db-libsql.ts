@@ -34,6 +34,15 @@ type Db = ReturnType<typeof useDb>
 
 export type CmsDb = Db | Parameters<Parameters<Db['transaction']>[0]>[0]
 
+export const cmsDialect: 'sqlite' | 'postgres' = 'sqlite'
+
 export function withTransaction<T>(fn: (db: CmsDb) => Promise<T>): Promise<T> {
    return useDb().transaction((tx) => fn(tx))
+}
+
+export function runBatch(build: (db: CmsDb) => PromiseLike<unknown>[]): Promise<unknown[]> {
+   const db = useDb()
+   return db.batch(build(db) as unknown as Parameters<Db['batch']>[0]) as unknown as Promise<
+      unknown[]
+   >
 }

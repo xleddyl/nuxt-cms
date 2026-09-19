@@ -5,6 +5,7 @@ import { z } from 'zod'
 import { useDb } from '#cms-db'
 import { pageRoutes } from '../../shared/index'
 import { decodeRows, getRegistryEntry, idColumn, tableColumns } from '../utils/registry'
+import { readPages } from '../utils/page-storage'
 import { attachManyToMany, relationTitles } from '../utils/relations'
 import { requireAdmin } from '../utils/require-admin'
 
@@ -38,7 +39,7 @@ export default defineEventHandler(async (event) => {
    )
 
    if (entry.kind === 'page') {
-      const rows = (await db.select().from(table)) as Record<string, unknown>[]
+      const rows = await readPages(name, entry, table)
       decodeRows(entry, rows)
       const saved = new Map(rows.map((row) => [row.id as string, row]))
       const items = pageRoutes(entry).map((route) => {

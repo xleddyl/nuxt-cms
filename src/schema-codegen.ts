@@ -6,8 +6,12 @@ import {
    isMultiSelect,
    isRequiredField,
    isTranslatableField,
+   isRowsStorage,
    isTranslatableMediaField,
    pageAllFields,
+   pageColumnFields,
+   pageFieldsTableName,
+   pageMediaTableName,
    pageRoutes,
 } from './runtime/shared/index'
 
@@ -119,9 +123,12 @@ export function validateConfig(config: CmsConfig, i18n?: CmsI18n): string[] {
                declared.set(key, field.type)
             }
          }
+         errors.push(...pageStorageErrors(at, entry))
       } else if (entry.overrides || entry.routes || entry.include || entry.exclude) {
          errors.push(`${at}: routes, include, exclude and overrides need kind 'page'`)
       }
+      if (entry.kind !== 'page' && (entry.storage || entry.columns))
+         errors.push(`${at}: storage and columns need kind 'page'`)
       if (entry.drafts && entry.kind !== 'collection')
          errors.push(`${at}: drafts are only supported on collections`)
       const tabIds = new Set<string>()
@@ -331,12 +338,57 @@ export function validateConfig(config: CmsConfig, i18n?: CmsI18n): string[] {
          }
       }
       registerTable(name, `entry '${name}'`)
+      if (isRowsStorage(entry)) {
+         registerTable(pageFieldsTableName(name), `the field rows table of '${name}'`)
+         registerTable(pageMediaTableName(name), `the media rows table of '${name}'`)
+      }
       for (const [key, field] of Object.entries(entry.fields ?? {})) {
          if (isManyToMany(field))
             registerTable(`${name}_${snakeCase(key)}`, `the join table of '${name}.${key}'`)
       }
    }
 
+   return errors
+}
+
+function pageStorageErrors(at: string, entry: CmsEntry): string[] {
+   const errors: string[] = []
+   const storage = entry.storage ?? 'columns'
+   if (storage !== 'columns' && storage !== 'rows') {
+      errors.push(`${at}: storage must be 'columns' or 'rows'`)
+      return errors
+   }
+   if (storage === 'columns') {
+      if (entry.columns) errors.push(`${at}: columns needs storage 'rows'`)
+      return errors
+   }
+   if (entry.table) errors.push(`${at}: storage 'rows' is not available on custom-table entries`)
+   const columns = new Set<string>()
+   for (const key of entry.columns ?? []) {
+      const cat = `${at}, column '${key}'`
+      if (columns.has(key)) errors.push(`${cat}: listed more than once`)
+      columns.add(key)
+      if (!Object.hasOwn(entry.fields ?? {}, key)) {
+         errors.push(`${cat}: not a field declared for every page in fields`)
+         continue
+      }
+      for (const [path, override] of Object.entries(entry.overrides ?? {})) {
+         if (Object.hasOwn(override, key) && !override[key])
+            errors.push(`${cat}: removed from '${path}', a column must exist on every page`)
+      }
+   }
+   for (const [key, field] of Object.entries(pageAllFields(entry))) {
+      const fat = `${at}, field '${key}'`
+      if (isManyToMany(field)) {
+         errors.push(`${fat}: many-to-many relations are not supported with storage 'rows'`)
+         continue
+      }
+      if (columns.has(key)) continue
+      if (field.type === 'relation' || field.type === 'slug')
+         errors.push(
+            `${fat}: ${field.type} fields need to be listed in columns with storage 'rows'`
+         )
+   }
    return errors
 }
 
@@ -420,7 +472,7 @@ function tableExpr(name: string, entry: CmsEntry, dialect: Dialect): string {
    if (entry.kind === 'page') lines.push(`  path: text('path').notNull().unique(),`)
 
    for (const [key, field] of Object.entries(
-      entry.kind === 'page' ? pageAllFields(entry) : entry.fields
+      entry.kind === 'page' ? pageColumnFields(entry) : entry.fields
    )) {
       if (isManyToMany(field)) continue
       lines.push(columnExpr(key, field, dialect))
@@ -448,6 +500,21 @@ function joinTableExpr(name: string, key: string, field: FieldConfig, dialect: D
    )
 }
 
+function pageRowsTableExprs(name: string, dialect: Dialect): string[] {
+   const tableFn = dialect === 'postgres' ? 'pgTable' : 'sqliteTable'
+   const rowsTable = (table: string, valueLine: string) =>
+      `export const ${table} = ${tableFn}('${table}', {\n` +
+      `  pageId: text('page_id').notNull().references(() => ${name}.id, { onDelete: 'cascade' }),\n` +
+      `  key: text('key').notNull(),\n` +
+      `  position: integer('position').notNull().default(0),\n` +
+      `  ${valueLine},\n` +
+      `}, table => [primaryKey({ columns: [table.pageId, table.key, table.position] })])`
+   return [
+      rowsTable(pageFieldsTableName(name), `value: text('value').notNull()`),
+      rowsTable(pageMediaTableName(name), `mediaKey: text('media_key').notNull()`),
+   ]
+}
+
 function mediaTableExpr(dialect: Dialect): string {
    const pg = dialect === 'postgres'
    const tableFn = pg ? 'pgTable' : 'sqliteTable'
@@ -473,7 +540,10 @@ export function renderSchemaFile(
 ): string {
    const derived = Object.entries(config).filter(([, entry]) => !entry.table)
 
-   const fields = derived.flatMap(([, entry]) => Object.values(entry.fields))
+   const fields = derived.flatMap(([, entry]) =>
+      Object.values(isRowsStorage(entry) ? pageColumnFields(entry) : entry.fields)
+   )
+   const rowsEntries = derived.filter(([, entry]) => isRowsStorage(entry))
    const pg = dialect === 'postgres'
 
    const core = new Set(['integer', 'text', pg ? 'pgTable' : 'sqliteTable'])
@@ -493,7 +563,7 @@ export function renderSchemaFile(
    )
       core.add('jsonb')
    if (pg) core.add('timestamp')
-   if (fields.some(isManyToMany)) core.add('primaryKey')
+   if (fields.some(isManyToMany) || rowsEntries.length) core.add('primaryKey')
 
    const imports = [
       ...(pg ? [] : [`import { sql } from '${resolveImport('drizzle-orm')}'`]),
@@ -509,7 +579,9 @@ export function renderSchemaFile(
          .map(([key, field]) => joinTableExpr(name, key, field, dialect))
    )
 
-   return `${imports.join('\n')}\n\n${[mediaTableExpr(dialect), ...tables, ...joins].join(
+   const rows = rowsEntries.flatMap(([name]) => pageRowsTableExprs(name, dialect))
+
+   return `${imports.join('\n')}\n\n${[mediaTableExpr(dialect), ...tables, ...joins, ...rows].join(
       '\n\n'
    )}\n`
 }
