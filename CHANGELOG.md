@@ -1,6 +1,25 @@
 # Changelog
 
 
+## v0.1.57
+
+[compare changes](https://github.com/xleddyl/nuxt-cms/compare/v0.1.56...v0.1.57)
+
+### 🚀 Enhancements
+
+- Optional row storage for page entries ([f276517](https://github.com/xleddyl/nuxt-cms/commit/f276517))
+- Reject page media that is not in the media library and flag it in the admin ([17c641a](https://github.com/xleddyl/nuxt-cms/commit/17c641a))
+- Send the graphql queries of one tick in one request ([8b37653](https://github.com/xleddyl/nuxt-cms/commit/8b37653))
+- ⚠️  Store every page entry as rows and drop the storage option ([70ab771](https://github.com/xleddyl/nuxt-cms/commit/70ab771))
+
+#### ⚠️ Breaking Changes
+
+- ⚠️  Store every page entry as rows and drop the storage option ([70ab771](https://github.com/xleddyl/nuxt-cms/commit/70ab771))
+
+### ❤️ Contributors
+
+- Edoardo Alberti <edoalberti99@gmail.com>
+
 ## v0.1.56
 
 [compare changes](https://github.com/xleddyl/nuxt-cms/compare/v0.1.55...v0.1.56)
