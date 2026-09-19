@@ -205,6 +205,12 @@ The database stores only the **`key`** (the object path in your bucket). In quer
 - When `publicBaseUrl` is empty, `url` is `null`; construct it yourself from `key`.
 - **`type`** is the enum `CmsMediaType`, derived from the mime type (`image` / `video` / `file`). In `#cms-types` the field is narrowed to the declared `mediaType`, for example `CmsMedia<'image' | 'video'>`.
 
+**Missing files on pages.** Saving a page from the admin fails with a 400 when a media field, or a
+media field inside a block, points at a key that is not in the library (the folder or the build
+manifest in local mode, `cms_media` in `'s3'` mode; the check is skipped in local mode when no
+folder was found). The admin form marks a saved media whose file is no longer in the library, so it
+can be replaced before saving. Collections and singles are not checked.
+
 ## One file per locale
 
 A media field marked `translatable: true` stores a different key per locale and still resolves to a

@@ -11,6 +11,8 @@ import {
    requirePageRoute,
    withUpdatedAt,
 } from '../utils/registry'
+import { pageFields } from '../../shared/index'
+import { assertMediaExists } from '../utils/media-check'
 import { writePage } from '../utils/page-storage'
 import {
    assertRelationTargets,
@@ -36,6 +38,7 @@ export default defineEventHandler(async (event) => {
    if (entry.kind === 'page') {
       const route = requirePageRoute(entry, id)
       const body = await readValidatedBody(event, buildValidator(entry, route.path).parse)
+      await assertMediaExists(pageFields(entry, route.path), body as Record<string, unknown>)
       const values = encodeColumnValues(entry, body as Record<string, unknown>)
       const set = withUpdatedAt(table, values)
       return mapConstraintErrors(

@@ -1,5 +1,9 @@
 <template>
-   <div v-if="model" class="cms-card cms-block-tile cms-media-single">
+   <div
+      v-if="model"
+      class="cms-card cms-block-tile cms-media-single"
+      :class="{ 'is-missing': missing }"
+   >
       <button
          type="button"
          class="cms-block-preview"
@@ -44,6 +48,11 @@
       <span>Choose</span>
    </button>
 
+   <p v-if="missing" class="cms-media-missing">
+      <CmsIcon name="exclamation-triangle" class="size-4" />
+      <span>Not found in the media library</span>
+   </p>
+
    <CmsModal v-model:open="galleryOpen" title="Media" size="lg">
       <template #body>
          <CmsMediaGallery selectable :media-type="mediaType" :accept="accept" @select="onSelect" />
@@ -55,6 +64,7 @@
 import type { MediaType } from '#nuxt-cms'
 import { computed, ref } from '#imports'
 import { mediaFilename, mediaIconFor, mediaPublicUrl, mediaTypeForKey } from '#nuxt-cms'
+import { useCmsMediaKeys } from '../../composables/cms-media-keys'
 import { useCmsRuntime } from '../../composables/cms-runtime'
 
 defineProps<{
@@ -65,10 +75,12 @@ defineProps<{
 const model = defineModel<string | null>({ required: true })
 
 const { mediaBaseUrl } = useCmsRuntime()
+const mediaKeys = useCmsMediaKeys()
 
 const galleryOpen = ref(false)
 
 function onSelect(item: { key: string }) {
+   mediaKeys.remember(item.key)
    model.value = item.key
    galleryOpen.value = false
 }
@@ -81,6 +93,7 @@ function clear() {
    model.value = null
 }
 
+const missing = computed(() => mediaKeys.isMissing(model.value))
 const url = computed(() => (model.value ? mediaPublicUrl(mediaBaseUrl, model.value) : null))
 const kind = computed(() => (model.value ? mediaTypeForKey(model.value) : 'file'))
 const icon = computed(() => mediaIconFor(kind.value))

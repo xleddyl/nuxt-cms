@@ -1544,7 +1544,6 @@ textarea.cms-field {
    color: var(--ui-text-highlighted);
 }
 
-
 .cms-media-grid {
    display: grid;
    gap: 1rem;
@@ -1664,6 +1663,23 @@ textarea.cms-field {
 .cms-media-single {
    width: 100%;
    max-width: 15rem;
+}
+
+.cms-block-tile.is-missing {
+   border-color: color-mix(in oklab, var(--ui-warning) 55%, transparent);
+}
+
+.cms-media-missing {
+   display: flex;
+   align-items: center;
+   gap: 0.375rem;
+   font-size: 0.75rem;
+   color: var(--ui-warning);
+}
+
+.cms-media-missing-icon {
+   display: flex;
+   color: var(--ui-warning);
 }
 
 .cms-media-thumb {

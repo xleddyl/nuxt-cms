@@ -9,6 +9,7 @@
                'is-muted': isHidden(item),
                'is-dragging': dragIndex === index,
                'is-drop-target': dropIndex === index && dragIndex !== index,
+               'is-missing': hasMissingMedia(item),
             }"
             draggable="true"
             @dragstart="onDragStart(index, $event)"
@@ -55,6 +56,13 @@
                   <CmsIcon name="bars-2" class="size-4" />
                </button>
                <span class="cms-block-bar-name" :title="barTitle(item)">{{ barLabel(item) }}</span>
+               <span
+                  v-if="hasMissingMedia(item)"
+                  class="cms-media-missing-icon"
+                  title="Not found in the media library"
+               >
+                  <CmsIcon name="exclamation-triangle" class="size-4" />
+               </span>
                <div class="cms-block-bar-actions">
                   <CmsButton
                      icon="trash"
@@ -151,6 +159,7 @@ import {
    pickTranslatedMedia,
 } from '#nuxt-cms'
 import { computed, ref } from '#imports'
+import { useCmsMediaKeys } from '../../composables/cms-media-keys'
 import { useCmsRuntime } from '../../composables/cms-runtime'
 
 const props = defineProps<{ field: FieldConfig; locale?: string }>()
@@ -158,6 +167,7 @@ const props = defineProps<{ field: FieldConfig; locale?: string }>()
 const model = defineModel<Record<string, unknown>[] | null>({ required: true })
 
 const { mediaBaseUrl, i18n } = useCmsRuntime()
+const mediaKeys = useCmsMediaKeys()
 
 const blocks = computed(() => props.field.blocks ?? {})
 const items = computed(() => (Array.isArray(model.value) ? model.value : []))
@@ -202,6 +212,15 @@ function mediaKeyOf(item: Record<string, unknown>) {
       if (typeof value === 'string' && value) return value
    }
    return null
+}
+
+function hasMissingMedia(item: Record<string, unknown>) {
+   return Object.entries(blockOf(item)?.fields ?? {}).some(([key, field]) => {
+      if (field.type !== 'media') return false
+      const raw = item[key]
+      const values = raw && typeof raw === 'object' ? Object.values(raw) : [raw]
+      return values.some((value) => mediaKeys.isMissing(value))
+   })
 }
 
 function previewOf(item: Record<string, unknown>) {
