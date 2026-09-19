@@ -1,6 +1,18 @@
 # Changelog
 
 
+## v0.1.58
+
+[compare changes](https://github.com/xleddyl/nuxt-cms/compare/v0.1.57...v0.1.58)
+
+### 🩹 Fixes
+
+- Apply libsql migrations in one atomic batch instead of an interactive transaction ([a9481a7](https://github.com/xleddyl/nuxt-cms/commit/a9481a7))
+
+### ❤️ Contributors
+
+- Edoardo Alberti <edoalberti99@gmail.com>
+
 ## v0.1.57
 
 [compare changes](https://github.com/xleddyl/nuxt-cms/compare/v0.1.56...v0.1.57)
