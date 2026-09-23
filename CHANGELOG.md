@@ -1,6 +1,18 @@
 # Changelog
 
 
+## v0.1.59
+
+[compare changes](https://github.com/xleddyl/nuxt-cms/compare/v0.1.58...v0.1.59)
+
+### 🚀 Enhancements
+
+- Add filesystem media storage served by the module ([c1417c3](https://github.com/xleddyl/nuxt-cms/commit/c1417c3))
+
+### ❤️ Contributors
+
+- Edoardo Alberti <edoalberti99@gmail.com>
+
 ## v0.1.58
 
 [compare changes](https://github.com/xleddyl/nuxt-cms/compare/v0.1.57...v0.1.58)
