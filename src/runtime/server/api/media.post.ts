@@ -1,10 +1,12 @@
-import { defineEventHandler, readValidatedBody } from 'h3'
+import { existsSync } from 'node:fs'
+import { createError, defineEventHandler, readValidatedBody } from 'h3'
 import { z } from 'zod'
 import { useDb } from '#cms-db'
 import { cms_media } from '#cms-tables'
 import type { MediaItem } from '../../shared/index'
 import { normalizeMediaFolder } from '../../shared/index'
 import { objectKeySchema } from '../../shared/validation'
+import { requireMediaFilePath } from '../utils/media-fs'
 import {
    assertMediaWritable,
    assertUploadContentType,
@@ -29,6 +31,9 @@ export default defineEventHandler(async (event): Promise<MediaItem> => {
    assertMediaWritable(media)
    const body = await readValidatedBody(event, bodySchema.parse)
    if (body.mime) assertUploadContentType(body.mime)
+   if (media.storage === 'filesystem' && !existsSync(requireMediaFilePath(media.dir!, body.key))) {
+      throw createError({ statusCode: 400, statusMessage: 'The uploaded file was not found' })
+   }
 
    const values = {
       key: body.key,

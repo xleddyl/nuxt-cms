@@ -4,7 +4,7 @@ import { z } from 'zod'
 import { useDb } from '#cms-db'
 import { cms_media } from '#cms-tables'
 import { isMediaFolderMarker, normalizeMediaFolder } from '../../shared/index'
-import { encodeKey, useMediaStorage } from '../utils/media'
+import { useMediaStorage } from '../utils/media'
 import { requireAdmin } from '../utils/require-admin'
 
 const querySchema = z.object({
@@ -14,7 +14,7 @@ const querySchema = z.object({
 
 export default defineEventHandler(async (event) => {
    await requireAdmin(event)
-   const { client, bucketUrl } = useMediaStorage(event)
+   const { store } = useMediaStorage(event)
    const { name, recursive } = await getValidatedQuery(event, querySchema.parse)
 
    const folder = normalizeMediaFolder(name)
@@ -37,13 +37,7 @@ export default defineEventHandler(async (event) => {
    }
 
    for (const row of rows) {
-      const res = await client.fetch(`${bucketUrl}/${encodeKey(row.key)}`, { method: 'DELETE' })
-      if (!res.ok && res.status !== 404) {
-         throw createError({
-            statusCode: 502,
-            statusMessage: `Bucket delete failed (${res.status})`,
-         })
-      }
+      await store.remove(row.key)
    }
 
    if (rows.length) {

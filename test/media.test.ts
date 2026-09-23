@@ -88,6 +88,33 @@ describe('assertMediaConfigured', () => {
    })
 })
 
+describe('assertMediaConfigured with filesystem storage', () => {
+   it('throws 501 without a directory', () => {
+      expect(() => assertMediaConfigured(s3Media({ storage: 'filesystem', dir: '' }))).toThrow(
+         expect.objectContaining({ statusCode: 501 })
+      )
+   })
+
+   it('does not need any s3 field when a directory is set', () => {
+      expect(() =>
+         assertMediaConfigured(
+            s3Media({
+               storage: 'filesystem',
+               dir: '/data/media',
+               endpoint: '',
+               bucket: '',
+               accessKeyId: '',
+               secretAccessKey: '',
+            })
+         )
+      ).not.toThrow()
+   })
+
+   it('is writable', () => {
+      expect(() => assertMediaWritable(s3Media({ storage: 'filesystem' }))).not.toThrow()
+   })
+})
+
 describe('assertMediaWritable', () => {
    it('throws 501 for local storage', () => {
       expect(() => assertMediaWritable(s3Media({ storage: 'local' }))).toThrow(

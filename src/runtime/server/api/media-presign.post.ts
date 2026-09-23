@@ -32,7 +32,7 @@ function slugifyFilename(filename: string) {
 
 export default defineEventHandler(async (event) => {
    await requireAdmin(event)
-   const { media, client, bucketUrl, publicUrl } = useMediaStorage(event)
+   const { media, store, publicUrl } = useMediaStorage(event)
 
    const { filename, contentType, size, folder } = await readValidatedBody(event, bodySchema.parse)
    assertUploadContentType(contentType)
@@ -45,22 +45,14 @@ export default defineEventHandler(async (event) => {
       `${now.getUTCFullYear()}/${String(now.getUTCMonth() + 1).padStart(2, '0')}`
    const key = `${prefix}/${randomUUID()}-${slugifyFilename(filename)}`
 
-   const url = new URL(`${bucketUrl}/${key}`)
-   url.searchParams.set('X-Amz-Expires', String(media.presignExpiry))
-   const signed = await client.sign(
-      new Request(url, {
-         method: 'PUT',
-         headers: { 'content-type': contentType, 'content-length': String(size) },
-      }),
-      { aws: { signQuery: true, allHeaders: true } }
-   )
+   const target = await store.uploadTarget(key, contentType, size)
 
    return {
       key,
       folder: normalizedFolder,
-      uploadUrl: signed.url,
+      uploadUrl: target.url,
       method: 'PUT',
-      headers: { 'content-type': contentType },
+      headers: target.headers,
       publicUrl: publicUrl(key),
       expiresIn: media.presignExpiry,
    }

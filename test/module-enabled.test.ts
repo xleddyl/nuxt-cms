@@ -342,3 +342,63 @@ describe('module setup when enabled', () => {
       ).rejects.toThrow(/maxFileSize must be a positive integer/)
    })
 })
+
+describe('module setup with filesystem media storage', () => {
+   function filesystemMedia(overrides: AnyRecord = {}) {
+      return { ...moduleDefinition.defaults.media, storage: 'filesystem', ...overrides }
+   }
+
+   function handlerRoutes() {
+      return kit.addServerHandler.mock.calls.map((call) => {
+         const handler = call[0] as { route: string; method?: string }
+         return `${handler.method ?? 'all'} ${handler.route}`
+      })
+   }
+
+   it('defaults to data/media served under /media', async () => {
+      const nuxt = createNuxt()
+      await moduleDefinition.setup(options({ media: filesystemMedia() }), nuxt)
+
+      expect(nuxt.options.runtimeConfig.cms.media).toMatchObject({
+         storage: 'filesystem',
+         dir: resolve('/virtual/root', 'data/media'),
+      })
+      expect(nuxt.options.runtimeConfig.public.cms).toMatchObject({
+         mediaBaseUrl: '/media',
+         mediaStorage: 'filesystem',
+      })
+   })
+
+   it('registers the upload endpoint and the file route', async () => {
+      const nuxt = createNuxt()
+      await moduleDefinition.setup(
+         options({ media: filesystemMedia({ dir: '/data/media', publicBaseUrl: '/uploads/' }) }),
+         nuxt
+      )
+
+      expect(nuxt.options.runtimeConfig.cms.media.dir).toBe('/data/media')
+      expect(handlerRoutes()).toEqual(
+         expect.arrayContaining(['put /api/cms/admin/media/upload', 'all /uploads/**'])
+      )
+   })
+
+   it('registers neither route with s3 storage', async () => {
+      const nuxt = createNuxt()
+      await moduleDefinition.setup(options(), nuxt)
+
+      expect(handlerRoutes()).not.toContain('put /api/cms/admin/media/upload')
+      expect(handlerRoutes().some((route) => route.endsWith('/**'))).toBe(false)
+   })
+
+   it.each(['https://cdn.example.com', '/', '/api/files'])(
+      'refuses to serve the files from %s',
+      async (publicBaseUrl) => {
+         await expect(
+            moduleDefinition.setup(
+               options({ media: filesystemMedia({ publicBaseUrl }) }),
+               createNuxt()
+            )
+         ).rejects.toThrow(/publicBaseUrl/)
+      }
+   )
+})

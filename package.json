@@ -67,6 +67,7 @@
       "dev:prepare": "nuxt-module-build build --stub && nuxt-module-build prepare && nuxt prepare playground",
       "db:studio": "drizzle-kit studio --config=playground/.nuxt/cms/drizzle.config.ts",
       "test": "vitest run",
+      "test:docker": "vitest run --config test/docker/vitest.config.ts",
       "test:types": "vue-tsc --noEmit && cd playground && vue-tsc --noEmit",
       "format": "prettier --write \"**/*.{ts,tsx,js,jsx,md,html,json,sql,vue}\" --log-level error",
       "release": "sh -c 'changelogen --release --no-github ${1:+--$1} && git push origin main --follow-tags' --"

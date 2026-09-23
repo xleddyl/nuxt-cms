@@ -8,7 +8,7 @@ nuxt-cms is a Nuxt module that leverages the Nitro server to ship a lightweight 
 
 - **Zero extra infrastructure**: the CMS runs inside your app's Nitro server; you deploy one thing.
 - **Content types in code**: a `cms.config.ts` with `defineCmsConfig()` declares collections, single documents, relations, blocks and translatable fields; database schema, migrations and TypeScript types are generated from it.
-- **Admin panel at `/cms`**: entry editing with validation, drafts, media library (S3-compatible storage, or a local mode backed directly by your `public/` folder), single-admin auth from env credentials.
+- **Admin panel at `/cms`**: entry editing with validation, drafts, media library (S3-compatible storage, a directory on the server's disk, or a local mode backed directly by your `public/` folder), single-admin auth from env credentials.
 - **Public GraphQL API**: read-only, typed end-to-end via gql.tada, with filtering, sorting and pagination; fields marked `private` stay out of it.
 - **SQLite, Postgres, libSQL/Turso or Cloudflare D1**: a local file database by default, one config line to switch (including remote SQLite over the network).
 - **Runs on serverless too**: migrations are baked into the server bundle, uploads are presigned straight to your bucket, sessions are sealed cookies. Nothing on the request path needs a local disk or sticky instances.
@@ -89,6 +89,7 @@ Every secret maps to runtime config, so it can be set as an env var instead of i
 | `NUXT_CMS_MEDIA_ACCESS_KEY_ID` | for media | S3 access key id |
 | `NUXT_CMS_MEDIA_SECRET_ACCESS_KEY` | for media | S3 secret access key |
 | `NUXT_PUBLIC_CMS_MEDIA_BASE_URL` | for media | public base URL for uploaded files |
+| `NUXT_CMS_MEDIA_DIR` | for filesystem media | directory for uploaded files (default `data/media`) |
 
 ## Documentation
 
@@ -100,7 +101,7 @@ Full documentation lives in [`docs/`](docs/README.md):
 - [Schema](docs/schema.md) — `defineCmsConfig`, entries, pages, field types, relations, blocks, i18n.
 - [Querying content](docs/querying.md) — GraphQL API, `useCmsSingle` / `useCmsCollection` / `useCmsPage` / `useCms` / `$cmsQuery`, filters, sorting, pagination.
 - [Admin panel & security](docs/admin.md) — pages, authentication, sessions, admin REST API.
-- [Media](docs/media.md) — S3-compatible storage or local mode backed by your `public/` folder, upload flow, allowed file types.
+- [Media](docs/media.md) — S3-compatible storage, filesystem storage on the server's disk, or local mode backed by your `public/` folder, upload flow, allowed file types.
 - [Deployment](docs/deployment.md) — host/driver matrix, migrations on serverless, horizontal scaling, Cloudflare Workers.
 
 ## LLM guide

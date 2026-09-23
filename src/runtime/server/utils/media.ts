@@ -4,6 +4,7 @@ import { createError } from 'h3'
 import { useRuntimeConfig } from '#imports'
 import type { MediaItem, MediaStorageMode } from '../../shared/index'
 import { formatFileSize, mediaPublicUrl, mediaTypeFor } from '../../shared/index'
+import { removeMediaFile, writeMediaFile } from './media-fs'
 
 interface MediaConfig {
    storage: MediaStorageMode
@@ -14,6 +15,18 @@ interface MediaConfig {
    maxFileSize: number
    accessKeyId: string
    secretAccessKey: string
+   dir?: string
+}
+
+export interface MediaUploadTarget {
+   url: string
+   headers: Record<string, string>
+}
+
+export interface MediaStore {
+   uploadTarget: (key: string, contentType: string, size: number) => Promise<MediaUploadTarget>
+   write: (key: string, body: Uint8Array<ArrayBuffer>, contentType: string) => Promise<void>
+   remove: (key: string) => Promise<void>
 }
 
 const UPLOAD_TYPE_PREFIXES = ['image/', 'video/', 'audio/', 'font/']
@@ -34,12 +47,16 @@ const UPLOAD_TYPES = new Set([
    'application/vnd.openxmlformats-officedocument.presentationml.presentation',
 ])
 
-export function assertUploadContentType(contentType: string) {
+export function isAllowedUploadType(contentType: string) {
    const type = contentType.toLowerCase()
-   const allowed =
+   return (
       !UPLOAD_TYPE_BLOCKLIST.has(type) &&
       (UPLOAD_TYPES.has(type) || UPLOAD_TYPE_PREFIXES.some((prefix) => type.startsWith(prefix)))
-   if (!allowed) {
+   )
+}
+
+export function assertUploadContentType(contentType: string) {
+   if (!isAllowedUploadType(contentType)) {
       throw createError({
          statusCode: 415,
          statusMessage: `Unsupported content type: ${contentType}`,
@@ -61,6 +78,15 @@ export function encodeKey(key: string) {
 }
 
 export function assertMediaConfigured(media: MediaConfig) {
+   if (media.storage === 'filesystem') {
+      if (!media.dir) {
+         throw createError({
+            statusCode: 501,
+            statusMessage: 'Media storage is not configured (cms.media.dir in nuxt.config)',
+         })
+      }
+      return
+   }
    if (media.storage !== 's3') return
    if (!media.endpoint || !media.bucket || !media.accessKeyId || !media.secretAccessKey) {
       throw createError({
@@ -88,20 +114,73 @@ export function useMediaConfig(event: H3Event) {
    return { media, publicUrl }
 }
 
-export function useMediaStorage(event: H3Event) {
-   const { media, publicUrl } = useMediaConfig(event)
-   assertMediaWritable(media)
+export function mediaUploadPath(key: string) {
+   return `/api/cms/admin/media/upload?key=${encodeURIComponent(key)}`
+}
 
+function filesystemStore(dir: string): MediaStore {
+   return {
+      uploadTarget: async (key, contentType) => ({
+         url: mediaUploadPath(key),
+         headers: { 'content-type': contentType },
+      }),
+      write: (key, body) => writeMediaFile(dir, key, body, Math.max(body.byteLength, 1)),
+      remove: (key) => removeMediaFile(dir, key),
+   }
+}
+
+function s3Store(media: MediaConfig): MediaStore {
    const client = new AwsClient({
       accessKeyId: media.accessKeyId,
       secretAccessKey: media.secretAccessKey,
       region: media.region,
       service: 's3',
    })
-
    const bucketUrl = `${media.endpoint.replace(/\/+$/, '')}/${media.bucket}`
 
-   return { media, client, bucketUrl, publicUrl }
+   return {
+      async uploadTarget(key, contentType, size) {
+         const url = new URL(`${bucketUrl}/${key}`)
+         url.searchParams.set('X-Amz-Expires', String(media.presignExpiry))
+         const signed = await client.sign(
+            new Request(url, {
+               method: 'PUT',
+               headers: { 'content-type': contentType, 'content-length': String(size) },
+            }),
+            { aws: { signQuery: true, allHeaders: true } }
+         )
+         return { url: signed.url, headers: { 'content-type': contentType } }
+      },
+      async write(key, body, contentType) {
+         const res = await client.fetch(`${bucketUrl}/${encodeKey(key)}`, {
+            method: 'PUT',
+            body,
+            headers: { 'content-type': contentType, 'content-length': String(body.byteLength) },
+         })
+         if (!res.ok) {
+            throw createError({
+               statusCode: 502,
+               statusMessage: `Bucket write failed (${res.status})`,
+            })
+         }
+      },
+      async remove(key) {
+         const res = await client.fetch(`${bucketUrl}/${encodeKey(key)}`, { method: 'DELETE' })
+         if (!res.ok && res.status !== 404) {
+            throw createError({
+               statusCode: 502,
+               statusMessage: `Bucket delete failed (${res.status})`,
+            })
+         }
+      },
+   }
+}
+
+export function useMediaStorage(event: H3Event) {
+   const { media, publicUrl } = useMediaConfig(event)
+   assertMediaWritable(media)
+   const store = media.storage === 'filesystem' ? filesystemStore(media.dir!) : s3Store(media)
+   return { media, store, publicUrl }
 }
 
 export function toMediaItem(

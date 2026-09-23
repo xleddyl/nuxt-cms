@@ -17,9 +17,9 @@ export default defineNuxtConfig({
          locales: ['en', 'it'],
          defaultLocale: 'en',
       },
-      media: {
-         storage: 'local',
-         publicBaseUrl: '/images',
-      },
+      media:
+         process.env.PLAYGROUND_MEDIA_STORAGE === 'filesystem'
+            ? { storage: 'filesystem' }
+            : { storage: 'local', publicBaseUrl: '/images' },
    },
 })

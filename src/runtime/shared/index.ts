@@ -22,7 +22,7 @@ export interface CmsI18n {
    defaultLocale: string
 }
 
-export type MediaStorageMode = 's3' | 'local'
+export type MediaStorageMode = 's3' | 'local' | 'filesystem'
 
 export const MEDIA_TYPES = ['image', 'video', 'file'] as const
 

@@ -65,6 +65,7 @@ export type ModuleOptionsMedia =
         maxFileSize?: number
      }
    | { storage: 'local'; publicBaseUrl: string }
+   | { storage: 'filesystem'; dir?: string; publicBaseUrl?: string; maxFileSize?: number }
 
 export interface ModuleOptions {
    enabled?: boolean
@@ -109,6 +110,7 @@ interface ResolvedModuleOptions {
       maxFileSize: number
       accessKeyId: string
       secretAccessKey: string
+      dir: string
    }
    i18n: {
       locales: string[]
@@ -152,6 +154,9 @@ function resolveDatabaseOptions(
    return { ...shared, driver: 'sqlite', path: database?.path ?? 'data/cms.db' }
 }
 
+const DEFAULT_FILESYSTEM_MEDIA_DIR = 'data/media'
+const DEFAULT_FILESYSTEM_MEDIA_BASE_URL = '/media'
+
 function resolveMediaOptions(media: ModuleOptions['media']): ResolvedModuleOptions['media'] {
    if (media?.storage === 'local') {
       return {
@@ -164,6 +169,21 @@ function resolveMediaOptions(media: ModuleOptions['media']): ResolvedModuleOptio
          presignExpiry: 600,
          maxFileSize: DEFAULT_MEDIA_MAX_FILE_SIZE,
          publicBaseUrl: media.publicBaseUrl,
+         dir: '',
+      }
+   }
+   if (media?.storage === 'filesystem') {
+      return {
+         storage: 'filesystem',
+         endpoint: '',
+         region: 'auto',
+         bucket: '',
+         accessKeyId: '',
+         secretAccessKey: '',
+         presignExpiry: 600,
+         maxFileSize: media.maxFileSize ?? DEFAULT_MEDIA_MAX_FILE_SIZE,
+         publicBaseUrl: media.publicBaseUrl || DEFAULT_FILESYSTEM_MEDIA_BASE_URL,
+         dir: media.dir || DEFAULT_FILESYSTEM_MEDIA_DIR,
       }
    }
    return {
@@ -176,6 +196,7 @@ function resolveMediaOptions(media: ModuleOptions['media']): ResolvedModuleOptio
       presignExpiry: media?.presignExpiry ?? 600,
       maxFileSize: media?.maxFileSize ?? DEFAULT_MEDIA_MAX_FILE_SIZE,
       publicBaseUrl: media?.publicBaseUrl ?? '',
+      dir: '',
    }
 }
 
@@ -658,6 +679,32 @@ export default defineNuxtModule<ModuleOptions>({
          })
       }
 
+      const mediaFilesystemBase =
+         resolved.media.storage === 'filesystem'
+            ? `/${resolved.media.publicBaseUrl.split('/').filter(Boolean).join('/')}`
+            : ''
+      if (
+         resolved.media.storage === 'filesystem' &&
+         !resolved.media.publicBaseUrl.startsWith('/')
+      ) {
+         throw new Error(
+            `[nuxt-cms] media.storage is 'filesystem' but media.publicBaseUrl (${
+               resolved.media.publicBaseUrl || 'empty'
+            }) is not a root-relative path. Set it to something like '/media': the module serves the uploaded files there.`
+         )
+      }
+      if (mediaFilesystemBase === '/' || mediaFilesystemBase.startsWith('/api/')) {
+         throw new Error(
+            `[nuxt-cms] media.publicBaseUrl (${resolved.media.publicBaseUrl}) cannot serve the uploaded files: pick a dedicated path such as '/media'.`
+         )
+      }
+      const mediaDir =
+         resolved.media.storage === 'filesystem'
+            ? isAbsolute(resolved.media.dir)
+               ? resolved.media.dir
+               : resolve(nuxt.options.rootDir, resolved.media.dir)
+            : ''
+
       const existingConfig = (nuxt.options.runtimeConfig.cms ?? {}) as Record<string, unknown>
       nuxt.options.runtimeConfig.cms = {
          adminEmail: resolved.admin.email,
@@ -685,6 +732,7 @@ export default defineNuxtModule<ModuleOptions>({
             accessKeyId: resolved.media.accessKeyId,
             secretAccessKey: resolved.media.secretAccessKey,
             localRoot: mediaLocalRoot,
+            dir: mediaDir,
             ...((existingConfig.media as Record<string, unknown>) ?? {}),
          },
       }
@@ -824,6 +872,18 @@ export default defineNuxtModule<ModuleOptions>({
          method: 'delete',
          handler: resolver.resolve('./runtime/server/api/media-folder.delete'),
       })
+
+      if (mediaFilesystemBase) {
+         addServerHandler({
+            route: '/api/cms/admin/media/upload',
+            method: 'put',
+            handler: resolver.resolve('./runtime/server/api/media-upload.put'),
+         })
+         addServerHandler({
+            route: `${mediaFilesystemBase}/**`,
+            handler: resolver.resolve('./runtime/server/routes/media-file'),
+         })
+      }
 
       const api = '/api/cms/admin/:collection'
       addServerHandler({

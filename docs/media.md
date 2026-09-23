@@ -1,6 +1,6 @@
 # Media
 
-Media (images, video, documents) can be stored two ways, selected with `cms.media.storage`
+Media (images, video, documents) can be stored three ways, selected with `cms.media.storage`
 (default `'s3'`):
 
 - **`'s3'`** — **S3-compatible object storage**: AWS S3, Cloudflare R2, MinIO, Backblaze B2, and
@@ -14,13 +14,16 @@ Media (images, video, documents) can be stored two ways, selected with `cms.medi
   deployment actually ships. Use
   this when you manage files outside the CMS (deploy-time assets, a separate pipeline, …) but still
   want to pick them from the media field picker.
+- **`'filesystem'`**: uploads are written to a directory on the server's disk (default
+  `data/media`) and the module serves them itself under `publicBaseUrl` (default `/media`). No
+  bucket and no credentials. Use this on a server or a container with a persistent volume.
 
 ## Configuration
 
 ```ts
 cms: {
    media: {
-      storage: 's3',                // 's3' | 'local' (default 's3')
+      storage: 's3',                // 's3' | 'local' | 'filesystem' (default 's3')
       endpoint: 'https://<account>.r2.cloudflarestorage.com',
       region: 'auto',
       bucket: 'my-bucket',
@@ -131,6 +134,41 @@ Consequences worth knowing:
   view is exactly the bug described above.
 - If `publicBaseUrl` is an absolute `http(s)` URL, no folder can be resolved and the library is
   empty. The build warns about it.
+
+## Filesystem mode (files on the server's disk)
+
+With `storage: 'filesystem'` the admin panel uploads work like in `'s3'` mode, but the files go to
+a directory on the server:
+
+```ts
+cms: {
+   media: {
+      storage: 'filesystem',
+      dir: 'data/media',       // default, relative to rootDir or absolute
+      publicBaseUrl: '/media', // default, must be a root-relative path
+      maxFileSize: 10485760,
+   },
+}
+```
+
+- **`dir`** (`NUXT_CMS_MEDIA_DIR`): the directory that holds the files. A relative path is resolved
+  against the app's `rootDir`. Set the env var at runtime to point at a mounted volume, for example
+  `NUXT_CMS_MEDIA_DIR=/data/media`.
+- **`publicBaseUrl`**: the path where the module serves the files, with `GET` and `HEAD`, byte
+  ranges, an `ETag` and an immutable cache header. It must be root-relative. `/` and paths under
+  `/api/` are refused at build time. The route is registered at build time, so change it in
+  `nuxt.config` and not with an env var.
+- The browser sends the file with an authenticated `PUT` to `/api/cms/admin/media/upload`. The
+  server streams it to a temporary file, stops at `maxFileSize` with `413`, and then renames it
+  into place. An existing key answers `409`.
+- Folders are real directories. A folder marker `.keep` keeps an empty folder, and the file route
+  never serves it. Deleting the last file of a folder removes the empty directories.
+- Keys that leave the directory (`..`, absolute paths, backslashes) are rejected. A file with a
+  content type that is not allowed for upload is served as an attachment with
+  `x-content-type-options: nosniff`.
+
+The directory must survive restarts and deploys. Mount a persistent volume in a container, and do
+not use this mode on serverless hosts, where the function's disk is temporary.
 
 ## Upload flow (`'s3'` mode)
 
