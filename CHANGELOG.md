@@ -1,6 +1,18 @@
 # Changelog
 
 
+## v0.1.60
+
+[compare changes](https://github.com/xleddyl/nuxt-cms/compare/v0.1.59...v0.1.60)
+
+### 🚀 Enhancements
+
+- Add a mobile variant option to media fields ([318a808](https://github.com/xleddyl/nuxt-cms/commit/318a808))
+
+### ❤️ Contributors
+
+- Edoardo Alberti <edoalberti99@gmail.com>
+
 ## v0.1.59
 
 [compare changes](https://github.com/xleddyl/nuxt-cms/compare/v0.1.58...v0.1.59)
