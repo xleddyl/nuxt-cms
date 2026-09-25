@@ -27,7 +27,7 @@ import { createJiti } from 'jiti'
 import { renderGraphqlSdl } from './runtime/shared/graphql-sdl'
 import { migrationsDirFor } from './runtime/shared/migrations-dir'
 import type { CmsConfig, CmsPageRoute, MediaStorageMode } from './runtime/shared/index'
-import { DEFAULT_MEDIA_MAX_FILE_SIZE } from './runtime/shared/index'
+import { DEFAULT_MEDIA_MAX_FILE_SIZE, expandMobileMedia } from './runtime/shared/index'
 import {
    collectMediaManifest,
    renderMediaManifestFile,
@@ -247,7 +247,7 @@ async function loadCmsConfig(
          moduleCache: false,
          alias: { '#nuxt-cms': resolver.resolve('./runtime/shared/index') },
       })
-      cmsConfig = (await jiti.import(configPath, { default: true })) as CmsConfig
+      cmsConfig = expandMobileMedia((await jiti.import(configPath, { default: true })) as CmsConfig)
    } else {
       logger.warn(
          `[nuxt-cms] Config file not found: ${configPath}. Using an empty registry — create a ${configPathOption}.ts with defineCmsConfig().`
@@ -267,30 +267,31 @@ async function loadCmsConfig(
       routesByEntry[name] = entry.pages
    }
 
-   if (Object.keys(routesByEntry).length) {
-      const source = (nuxt.options.alias['#cms-config'] ?? '')
-         .replace(/\\/g, '/')
-         .replace(/\.[cm]?[jt]s$/, '')
-      const wrapper = addTemplate({
-         filename: 'cms/config.ts',
-         write: true,
-         getContents: () =>
-            [
-               `import config from '${source}'`,
-               ``,
-               `const pageRoutes = ${JSON.stringify(routesByEntry, null, 3)}`,
-               ``,
-               `for (const [name, routes] of Object.entries(pageRoutes)) {`,
-               `   const entry = Object(config)[name]`,
-               `   if (entry) entry.pages = routes`,
-               `}`,
-               ``,
-               `export default config`,
-               ``,
-            ].join('\n'),
-      })
-      nuxt.options.alias['#cms-config'] = wrapper.dst
-   }
+   const source = (nuxt.options.alias['#cms-config'] ?? '')
+      .replace(/\\/g, '/')
+      .replace(/\.[cm]?[jt]s$/, '')
+   const wrapper = addTemplate({
+      filename: 'cms/config.ts',
+      write: true,
+      getContents: () =>
+         [
+            `import { expandMobileMedia } from '#nuxt-cms'`,
+            `import config from '${source}'`,
+            ``,
+            `const pageRoutes = ${JSON.stringify(routesByEntry, null, 3)}`,
+            ``,
+            `expandMobileMedia(config)`,
+            ``,
+            `for (const [name, routes] of Object.entries(pageRoutes)) {`,
+            `   const entry = Object(config)[name]`,
+            `   if (entry) entry.pages = routes`,
+            `}`,
+            ``,
+            `export default config`,
+            ``,
+         ].join('\n'),
+   })
+   nuxt.options.alias['#cms-config'] = wrapper.dst
 
    const configErrors = validateConfig(cmsConfig, i18n)
    if (configErrors.length) {

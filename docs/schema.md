@@ -200,7 +200,7 @@ Every field has `label: string` and optional `required?: boolean` and `private?:
 | `slug`     | `from: '<fieldKey>'` (required; auto-generated from that text field)                | String (unique)     |
 | `select`   | `options: string[]` (required, unique), `multiple?: boolean`                        | String (enum) or `[String!]!` |
 | `json`     | —                                                                                   | JSON                |
-| `media`    | `mediaType?: T \| T[]` where `T` is `'image' \| 'video' \| 'file'`, `accept?: string[]`, `translatable?: boolean` | CmsMedia object     |
+| `media`    | `mediaType?: T \| T[]` where `T` is `'image' \| 'video' \| 'file'`, `accept?: string[]`, `translatable?: boolean`, `mobile?: boolean` | CmsMedia object     |
 | `relation` | see [Relations](#relations)                                                         | related entry / list |
 | `blocks`   | `blocks: Record<name, { label, fields }>` (required)                                | array of typed blocks |
 
@@ -414,6 +414,27 @@ Resolution picks the requested `locale`, then `defaultLocale`, then any locale t
 The column stays a plain `text` column holding a JSON map of locale → object key, so adding
 `translatable: true` to an **existing** media field needs no migration: rows that still hold a plain
 key keep working and are read as the default locale's value.
+
+### Mobile media
+
+`mobile: true` on a top-level `media` field adds a second, optional media field for small screens.
+The CMS names it `<field>Mobile` and puts it right after the main field in the admin, with the label
+`<label> (mobile)` and the same `mediaType`, `accept`, `tab` and `translatable` options.
+
+```ts
+hero: { label: 'Hero', type: 'media', mediaType: ['image', 'video'], mobile: true }
+```
+
+```graphql
+hero { url type }
+heroMobile { url type }
+```
+
+The module only stores and serves the two files. The frontend decides the breakpoint and falls back
+to the main media when `heroMobile` is empty. The mobile field is a normal media field, so it is a
+new column on collections and singles (generate a migration) and a new row key on pages. A declared
+field with the same `<field>Mobile` key is a config error, and `mobile` is not supported inside
+`blocks`.
 
 ## Full example
 

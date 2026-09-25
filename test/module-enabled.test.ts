@@ -111,6 +111,7 @@ describe('module setup when disabled', () => {
 
       const filenames = kit.addTemplate.mock.calls.map((call) => call[0]!.filename)
       expect(filenames).toEqual([
+         'cms/config.ts',
          'cms/schema.graphql',
          'cms/types.ts',
          'cms/queries.ts',

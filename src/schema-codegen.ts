@@ -7,6 +7,7 @@ import {
    isRequiredField,
    isTranslatableField,
    isTranslatableMediaField,
+   mobileMediaKey,
    pageAllFields,
    pageColumnFields,
    pageFieldsTableName,
@@ -187,6 +188,13 @@ export function validateConfig(config: CmsConfig, i18n?: CmsI18n): string[] {
             if (!locales.length)
                errors.push(`${fat}: translatable requires cms.i18n.locales in nuxt.config`)
          }
+         if (field.mobile) {
+            const mobileKey = mobileMediaKey(key)
+            if (field.type !== 'media')
+               errors.push(`${fat}: mobile is only supported on media fields`)
+            else if (allFields[mobileKey] && allFields[mobileKey]!.mobileOf !== key)
+               errors.push(`${fat}: mobile needs the key '${mobileKey}', which is already declared`)
+         }
          if (field.type === 'select') {
             if (!field.options?.length)
                errors.push(`${fat}: select requires a non-empty options array`)
@@ -281,6 +289,8 @@ export function validateConfig(config: CmsConfig, i18n?: CmsI18n): string[] {
                      errors.push(`${bfat}: private fields are not supported inside blocks`)
                   if (blockField.showIf)
                      errors.push(`${bfat}: showIf is not supported inside blocks`)
+                  if ((blockField as FieldConfig).mobile)
+                     errors.push(`${bfat}: mobile is not supported inside blocks`)
                   if (blockField.type === 'select' && !blockField.options?.length) {
                      errors.push(`${bfat}: select requires a non-empty options array`)
                   }

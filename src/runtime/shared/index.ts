@@ -188,6 +188,8 @@ export interface FieldConfig {
    blocks?: Record<string, BlockConfig>
    mediaType?: MediaType | MediaType[]
    accept?: string[]
+   mobile?: boolean
+   mobileOf?: string
    to?: string
    cardinality?: 'many-to-one' | 'one-to-one' | 'many-to-many'
    onDelete?: 'set null' | 'cascade' | 'restrict'
@@ -395,6 +397,66 @@ export interface CmsEntry {
    table?: CmsTable
 }
 
+export const MOBILE_MEDIA_SUFFIX = 'Mobile'
+
+export function mobileMediaKey(key: string): string {
+   return `${key}${MOBILE_MEDIA_SUFFIX}`
+}
+
+function mobileMediaField(key: string, field: FieldConfig): FieldConfig {
+   const { mobile: _mobile, required: _required, ...rest } = field
+   return {
+      ...rest,
+      label: `${field.label} (mobile)`,
+      mobileOf: key,
+   }
+}
+
+function withMobileMedia<T extends FieldConfig | null>(
+   fields: Record<string, T>,
+   removed: (key: string) => boolean = () => false
+): Record<string, T> {
+   const expanded: Record<string, T> = {}
+   for (const [key, field] of Object.entries(fields)) {
+      if (field?.mobileOf && Object.hasOwn(fields, field.mobileOf)) continue
+      expanded[key] = field
+      const mobileKey = mobileMediaKey(key)
+      if (field?.mobile && field.type === 'media' && !Object.hasOwn(fields, mobileKey)) {
+         expanded[mobileKey] = mobileMediaField(key, field) as T
+      } else if (field?.mobile && fields[mobileKey]?.mobileOf === key) {
+         expanded[mobileKey] = fields[mobileKey]
+      } else if (!field && removed(key) && !Object.hasOwn(fields, mobileKey)) {
+         expanded[mobileKey] = null as T
+      }
+   }
+   return expanded
+}
+
+export function expandMobileMedia<T extends Record<string, unknown>>(config: T): T {
+   for (const entry of Object.values(config) as CmsEntry[]) {
+      if (!entry?.fields) continue
+      const shared = entry.fields
+      const hasMobile = (key: string) => !!shared[key]?.mobile && shared[key]?.type === 'media'
+      entry.fields = withMobileMedia(shared)
+      if (entry.overrides) {
+         entry.overrides = Object.fromEntries(
+            Object.entries(entry.overrides).map(([path, override]) => [
+               path,
+               withMobileMedia(override, hasMobile),
+            ])
+         )
+      }
+      if (entry.columns) {
+         entry.columns = [
+            ...new Set(
+               entry.columns.flatMap((key) => (hasMobile(key) ? [key, mobileMediaKey(key)] : [key]))
+            ),
+         ]
+      }
+   }
+   return config
+}
+
 export function entryTabs(entry: Pick<CmsEntry, 'tabs'>): CmsTab[] {
    return entry.tabs?.length ? entry.tabs : []
 }
@@ -588,6 +650,7 @@ export interface MediaFieldInput extends FieldInputBase {
    mediaType?: MediaType | MediaType[]
    accept?: string[]
    translatable?: boolean
+   mobile?: boolean
 }
 
 export interface RelationFieldInput extends FieldInputBase {
@@ -608,7 +671,7 @@ export type BlockFieldInput =
    | BlockField<EmailFieldInput>
    | BlockField<SelectFieldInput>
    | BlockField<JsonFieldInput>
-   | BlockField<MediaFieldInput>
+   | Omit<BlockField<MediaFieldInput>, 'mobile'>
 
 export interface BlockInput {
    label: string
