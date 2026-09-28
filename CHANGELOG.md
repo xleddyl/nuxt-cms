@@ -1,6 +1,18 @@
 # Changelog
 
 
+## v0.1.61
+
+[compare changes](https://github.com/xleddyl/nuxt-cms/compare/v0.1.60...v0.1.61)
+
+### 🚀 Enhancements
+
+- Overhaul the media library with nested folders, search, bulk actions and a detail panel ([595344c](https://github.com/xleddyl/nuxt-cms/commit/595344c))
+
+### ❤️ Contributors
+
+- Edoardo Alberti <edoalberti99@gmail.com>
+
 ## v0.1.60
 
 [compare changes](https://github.com/xleddyl/nuxt-cms/compare/v0.1.59...v0.1.60)
