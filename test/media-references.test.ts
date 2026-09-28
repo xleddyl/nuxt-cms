@@ -2,9 +2,10 @@ import Database from 'better-sqlite3'
 import { drizzle } from 'drizzle-orm/better-sqlite3'
 import { integer, sqliteTable, text } from 'drizzle-orm/sqlite-core'
 import { describe, expect, it, vi } from 'vitest'
-import type { FieldConfig } from '../src/runtime/shared/index'
+import type { CmsEntry, FieldConfig } from '../src/runtime/shared/index'
 import {
    assertKnownMedia,
+   collectMediaUsage,
    mediaKeysInTable,
    mediaReferences,
 } from '../src/runtime/server/utils/media-references'
@@ -129,5 +130,62 @@ describe('mediaKeysInTable', () => {
       expect(found.has('file-1.webp')).toBe(false)
       expect(queries).toBe(2)
       sqlite.close()
+   })
+})
+
+describe('collectMediaUsage', () => {
+   const posts: CmsEntry = {
+      id: 'posts',
+      label: 'Posts',
+      kind: 'collection',
+      titleField: 'title',
+      fields: FIELDS,
+   }
+   const home: CmsEntry = {
+      id: 'home',
+      label: 'Homepage',
+      kind: 'single',
+      fields: { hero: { label: 'Hero', type: 'media' } },
+   }
+
+   it('lists every entry and field that uses each key', () => {
+      const usage = collectMediaUsage(
+         [
+            { name: 'posts', entry: posts, rows: [{ id: 7, ...VALUES, title: { en: 'Spring' } }] },
+            { name: 'home', entry: home, rows: [{ id: 1, hero: 'library/hero.webp' }] },
+         ],
+         ['library/hero.webp', 'files/en.pdf', 'library/unused.webp']
+      )
+
+      expect(usage['library/hero.webp']).toEqual([
+         {
+            collection: 'posts',
+            label: 'Posts',
+            kind: 'collection',
+            id: '7',
+            title: 'Spring',
+            field: 'hero',
+         },
+         {
+            collection: 'home',
+            label: 'Homepage',
+            kind: 'single',
+            id: null,
+            title: null,
+            field: 'hero',
+         },
+      ])
+      expect(usage['files/en.pdf']).toEqual([
+         expect.objectContaining({ collection: 'posts', field: 'brochure' }),
+      ])
+      expect(usage['library/unused.webp']).toEqual([])
+   })
+
+   it('ignores keys that were not asked for', () => {
+      const usage = collectMediaUsage(
+         [{ name: 'home', entry: home, rows: [{ id: 1, hero: 'library/hero.webp' }] }],
+         ['library/other.webp']
+      )
+      expect(usage).toEqual({ 'library/other.webp': [] })
    })
 })

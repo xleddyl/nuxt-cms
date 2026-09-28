@@ -873,6 +873,26 @@ export default defineNuxtModule<ModuleOptions>({
          method: 'delete',
          handler: resolver.resolve('./runtime/server/api/media-folder.delete'),
       })
+      addServerHandler({
+         route: '/api/cms/admin/media/folders',
+         method: 'patch',
+         handler: resolver.resolve('./runtime/server/api/media-folder.patch'),
+      })
+      addServerHandler({
+         route: '/api/cms/admin/media/move',
+         method: 'post',
+         handler: resolver.resolve('./runtime/server/api/media-move.post'),
+      })
+      addServerHandler({
+         route: '/api/cms/admin/media/delete',
+         method: 'post',
+         handler: resolver.resolve('./runtime/server/api/media-delete.post'),
+      })
+      addServerHandler({
+         route: '/api/cms/admin/media/usage',
+         method: 'post',
+         handler: resolver.resolve('./runtime/server/api/media-usage.post'),
+      })
 
       if (mediaFilesystemBase) {
          addServerHandler({

@@ -127,10 +127,53 @@ export function isMediaFolderMarker(key: string) {
    return key.endsWith(`/${MEDIA_FOLDER_MARKER}`)
 }
 
+export function mediaFolderSegments(value: string | null | undefined): string[] {
+   return value ? value.split('/').map(slugify).filter(Boolean) : []
+}
+
 export function normalizeMediaFolder(value: string | null | undefined): string | null {
-   if (!value) return null
-   const segments = value.split('/').map(slugify).filter(Boolean).slice(0, MEDIA_FOLDER_MAX_DEPTH)
+   const segments = mediaFolderSegments(value).slice(0, MEDIA_FOLDER_MAX_DEPTH)
    return segments.length ? segments.join('/') : null
+}
+
+export function mediaFolderDepth(folder: string | null | undefined): number {
+   return folder ? folder.split('/').length : 0
+}
+
+export function mediaFolderParent(folder: string): string | null {
+   const index = folder.lastIndexOf('/')
+   return index === -1 ? null : folder.slice(0, index)
+}
+
+export function mediaFolderName(folder: string): string {
+   return folder.slice(folder.lastIndexOf('/') + 1)
+}
+
+export function mediaFolderAncestors(folder: string): string[] {
+   const segments = folder.split('/')
+   return segments.map((_, index) => segments.slice(0, index + 1).join('/'))
+}
+
+export function isWithinMediaFolder(
+   folder: string | null | undefined,
+   parent: string | null
+): boolean {
+   if (!parent) return true
+   return !!folder && (folder === parent || folder.startsWith(`${parent}/`))
+}
+
+export function rebaseMediaFolder(folder: string, from: string, to: string): string {
+   if (folder === from) return to
+   return folder.startsWith(`${from}/`) ? `${to}${folder.slice(from.length)}` : folder
+}
+
+export function expandMediaFolders(folders: Iterable<string | null | undefined>): string[] {
+   const expanded = new Set<string>()
+   for (const folder of folders) {
+      if (!folder) continue
+      for (const ancestor of mediaFolderAncestors(folder)) expanded.add(ancestor)
+   }
+   return [...expanded].sort()
 }
 
 export interface MediaItem {
@@ -153,6 +196,15 @@ export interface MediaSourceInfo {
    kind: MediaSourceKind
    root: string
    builtAt: string | null
+}
+
+export interface MediaUsage {
+   collection: string
+   label: string
+   kind: CmsEntryKind
+   id: string | null
+   title: string | null
+   field: string
 }
 
 export interface BlockConfig {

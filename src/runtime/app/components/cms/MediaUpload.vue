@@ -7,7 +7,7 @@
       @click="input?.click()"
       @dragover.prevent="dragOver = true"
       @dragleave.prevent="dragOver = false"
-      @drop.prevent="onDrop"
+      @drop.prevent.stop="onDrop"
    >
       <input
          ref="input"
@@ -41,10 +41,9 @@
 
 <script setup lang="ts">
 import type { MediaItem, MediaType } from '#nuxt-cms'
-import { formatFileSize, mediaTypeAccept } from '#nuxt-cms'
+import { mediaTypeAccept } from '#nuxt-cms'
 import { computed, ref } from '#imports'
-import { useCmsRuntime } from '../../composables/cms-runtime'
-import { useCmsToast } from '../../composables/cms-toast'
+import { useCmsMediaUploader } from '../../composables/cms-media-uploader'
 
 const props = withDefaults(
    defineProps<{
@@ -58,137 +57,22 @@ const props = withDefaults(
 
 const emit = defineEmits<{ uploaded: [items: MediaItem[]] }>()
 
-const toast = useCmsToast()
-
-const { mediaMaxFileSize } = useCmsRuntime()
-
-interface PresignResponse {
-   key: string
-   folder: string | null
-   uploadUrl: string
-   headers: Record<string, string>
-   publicUrl: string | null
-}
-
-interface Dimensions {
-   width?: number
-   height?: number
-}
-
-async function imageDimensions(file: File): Promise<Dimensions> {
-   try {
-      const bitmap = await createImageBitmap(file)
-      const dims = { width: bitmap.width, height: bitmap.height }
-      bitmap.close()
-      return dims
-   } catch {
-      return {}
-   }
-}
-
-function videoDimensions(file: File): Promise<Dimensions> {
-   return new Promise((resolve) => {
-      const url = URL.createObjectURL(file)
-      const video = document.createElement('video')
-      const settle = (dims: Dimensions) => {
-         URL.revokeObjectURL(url)
-         resolve(dims)
-      }
-      video.preload = 'metadata'
-      video.muted = true
-      video.onloadedmetadata = () =>
-         settle(
-            video.videoWidth && video.videoHeight
-               ? { width: video.videoWidth, height: video.videoHeight }
-               : {}
-         )
-      video.onerror = () => settle({})
-      video.src = url
-   })
-}
-
-async function mediaDimensions(file: File): Promise<Dimensions> {
-   if (file.type.startsWith('image/')) return imageDimensions(file)
-   if (file.type.startsWith('video/')) return videoDimensions(file)
-   return {}
-}
+const { upload, uploading, done, total } = useCmsMediaUploader()
 
 const input = ref<HTMLInputElement | null>(null)
 const dragOver = ref(false)
-const uploading = ref(false)
-const done = ref(0)
-const total = ref(0)
 
 const acceptAttr = computed(
    () => (props.accept?.length ? props.accept : mediaTypeAccept(props.mediaType))?.join(',')
 )
 
-function matchesAccept(file: File) {
-   if (!acceptAttr.value) return true
-   return acceptAttr.value.split(',').some((raw) => {
-      const pattern = raw.trim().toLowerCase()
-      if (pattern.endsWith('/*')) return file.type.toLowerCase().startsWith(pattern.slice(0, -1))
-      if (pattern.startsWith('.')) return file.name.toLowerCase().endsWith(pattern)
-      return file.type.toLowerCase() === pattern
-   })
-}
-
-async function uploadOne(file: File) {
-   const presign = await $fetch<PresignResponse>('/api/cms/admin/media/presign', {
-      method: 'POST',
-      body: {
-         filename: file.name,
-         contentType: file.type || 'application/octet-stream',
-         size: file.size,
-         folder: props.folder,
-      },
-   })
-   const res = await fetch(presign.uploadUrl, {
-      method: 'PUT',
-      headers: presign.headers,
-      body: file,
-   })
-   if (!res.ok) throw new Error(`Upload failed (${res.status})`)
-   const item = await $fetch<MediaItem>('/api/cms/admin/media', {
-      method: 'POST',
-      body: {
-         key: presign.key,
-         folder: presign.folder,
-         mime: file.type || null,
-         size: file.size,
-         ...(await mediaDimensions(file)),
-      },
-   })
-   done.value++
-   return item
-}
-
 async function handleFiles(list: FileList) {
-   let files = Array.from(list).filter(matchesAccept)
-   const tooLarge = files.filter((file) => file.size > mediaMaxFileSize)
-   for (const file of tooLarge) {
-      toast.add({
-         title: `File too large (max ${formatFileSize(mediaMaxFileSize)}): ${file.name}`,
-         color: 'error',
-      })
-   }
-   files = files.filter((file) => file.size <= mediaMaxFileSize)
-   if (!props.multiple) files = files.slice(0, 1)
-   if (!files.length || uploading.value) return
-
-   uploading.value = true
-   done.value = 0
-   total.value = files.length
-   try {
-      const results = await Promise.allSettled(files.map(uploadOne))
-      const ok = results.filter((r) => r.status === 'fulfilled').map((r) => r.value)
-      const failed = results.length - ok.length
-      if (failed)
-         toast.add({ title: `${failed} upload${failed > 1 ? 's' : ''} failed`, color: 'error' })
-      if (ok.length) emit('uploaded', ok)
-   } finally {
-      uploading.value = false
-   }
+   const items = await upload(list, {
+      folder: props.folder,
+      accept: acceptAttr.value,
+      multiple: props.multiple,
+   })
+   if (items.length) emit('uploaded', items)
 }
 
 function onChange(event: Event) {

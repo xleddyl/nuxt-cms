@@ -55,14 +55,20 @@
 
    <CmsModal v-model:open="galleryOpen" title="Media" size="lg">
       <template #body>
-         <CmsMediaGallery selectable :media-type="mediaType" :accept="accept" @select="onSelect" />
+         <CmsMediaGallery
+            v-model:folder="pickerFolder"
+            selectable
+            :media-type="mediaType"
+            :accept="accept"
+            @select="onSelect"
+         />
       </template>
    </CmsModal>
 </template>
 
 <script setup lang="ts">
 import type { MediaType } from '#nuxt-cms'
-import { computed, ref } from '#imports'
+import { computed, ref, useState } from '#imports'
 import { mediaFilename, mediaIconFor, mediaPublicUrl, mediaTypeForKey } from '#nuxt-cms'
 import { useCmsMediaKeys } from '../../composables/cms-media-keys'
 import { useCmsRuntime } from '../../composables/cms-runtime'
@@ -78,6 +84,7 @@ const { mediaBaseUrl } = useCmsRuntime()
 const mediaKeys = useCmsMediaKeys()
 
 const galleryOpen = ref(false)
+const pickerFolder = useState<string | null>('cms-media-picker-folder', () => null)
 
 function onSelect(item: { key: string }) {
    mediaKeys.remember(item.key)

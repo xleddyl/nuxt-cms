@@ -1,7 +1,8 @@
 import { inArray } from 'drizzle-orm'
 import type { AnySQLiteColumn, BaseSQLiteDatabase, SQLiteTable } from 'drizzle-orm/sqlite-core'
 import { createError } from 'h3'
-import type { FieldConfig } from '../../shared/index'
+import type { CmsEntry, FieldConfig, MediaUsage } from '../../shared/index'
+import { PAGE_PATH_FIELD, pageFields, pageRouteOf } from '../../shared/index'
 
 export interface MediaReference {
    field: string
@@ -43,6 +44,57 @@ export function mediaReferences(
       })
    }
    return references
+}
+
+export interface MediaUsageSource {
+   name: string
+   entry: CmsEntry
+   rows: Record<string, unknown>[]
+}
+
+function titleOf(entry: CmsEntry, row: Record<string, unknown>): string | null {
+   if (entry.kind === 'page') {
+      const path = row[PAGE_PATH_FIELD]
+      return pageRouteOf(entry, String(row.id))?.label ?? (typeof path === 'string' ? path : null)
+   }
+   const value = entry.titleField ? row[entry.titleField] : undefined
+   if (typeof value === 'string') return value || null
+   if (value && typeof value === 'object') {
+      const first = Object.values(value).find(
+         (candidate): candidate is string => typeof candidate === 'string' && candidate !== ''
+      )
+      return first ?? null
+   }
+   return null
+}
+
+function fieldsOf(entry: CmsEntry, row: Record<string, unknown>) {
+   const path = row[PAGE_PATH_FIELD]
+   return entry.kind === 'page' && typeof path === 'string' ? pageFields(entry, path) : entry.fields
+}
+
+export function collectMediaUsage(
+   sources: MediaUsageSource[],
+   keys: string[]
+): Record<string, MediaUsage[]> {
+   const usage: Record<string, MediaUsage[]> = Object.fromEntries(keys.map((key) => [key, []]))
+   for (const { name, entry, rows } of sources) {
+      for (const row of rows) {
+         for (const reference of mediaReferences(fieldsOf(entry, row), row)) {
+            const list = usage[reference.key]
+            if (!list) continue
+            list.push({
+               collection: name,
+               label: entry.label,
+               kind: entry.kind,
+               id: entry.kind === 'single' ? null : String(row.id),
+               title: titleOf(entry, row),
+               field: reference.field,
+            })
+         }
+      }
+   }
+   return usage
 }
 
 export async function assertKnownMedia(references: MediaReference[], lookup: MediaLookup) {

@@ -1,10 +1,8 @@
-import { inArray, like, or } from 'drizzle-orm'
 import { createError, defineEventHandler, getValidatedQuery } from 'h3'
 import { z } from 'zod'
-import { useDb } from '#cms-db'
-import { cms_media } from '#cms-tables'
 import { isMediaFolderMarker, normalizeMediaFolder } from '../../shared/index'
 import { useMediaStorage } from '../utils/media'
+import { deleteMediaRows, mediaRowsInFolder } from '../utils/media-folders'
 import { requireAdmin } from '../utils/require-admin'
 
 const querySchema = z.object({
@@ -22,11 +20,7 @@ export default defineEventHandler(async (event) => {
       throw createError({ statusCode: 400, statusMessage: 'Invalid folder name' })
    }
 
-   const db = useDb()
-   const rows = await db
-      .select({ key: cms_media.key })
-      .from(cms_media)
-      .where(or(like(cms_media.folder, `${folder}/%`), like(cms_media.folder, folder)))
+   const rows = await mediaRowsInFolder(folder)
 
    const files = rows.filter((row) => !isMediaFolderMarker(row.key))
    if (files.length && !recursive) {
@@ -36,18 +30,10 @@ export default defineEventHandler(async (event) => {
       })
    }
 
-   for (const row of rows) {
-      await store.remove(row.key)
-   }
-
-   if (rows.length) {
-      await db.delete(cms_media).where(
-         inArray(
-            cms_media.key,
-            rows.map((row) => row.key)
-         )
-      )
-   }
+   await deleteMediaRows(
+      store,
+      rows.map((row) => row.key)
+   )
 
    return { deleted: rows.length }
 })

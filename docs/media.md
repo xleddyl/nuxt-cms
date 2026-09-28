@@ -184,22 +184,62 @@ through the Nitro server. From the admin panel:
 This all happens through the panel's internal, authenticated same-origin API — there is nothing to
 call yourself.
 
-## Folders (`'s3'` mode)
+## Folders and the media library
 
-The library groups the files by folder, and in `'s3'` mode the folders are real: **New folder**
-creates one, and the cross on a folder chip deletes it.
+The library shows one folder at a time, like a file browser. Folders can hold subfolders, up to 4
+levels. In `'s3'` and `'filesystem'` mode you manage the folders from the panel:
 
-- A folder is created as an empty object `<folder>/.keep` in the bucket, plus one `cms_media` row.
-  The marker keeps an empty folder alive between sessions, and it never shows up in the gallery.
+- Click a folder to open it. The breadcrumb above the grid goes back to a parent folder. The admin
+  page keeps the open folder in the URL (`/cms/media?folder=blog/covers`).
+- **New folder** creates a subfolder in the open folder. **Rename** and **Delete folder** show
+  only when a folder is open, and they apply to that folder.
+- Drag a file onto a folder or onto the breadcrumb to move it. Drag a folder onto another folder
+  to move it with all its contents. Drop files from your computer on the library to upload them to
+  the open folder, or on a folder to upload them there.
+- Select files with the round check on a tile, or with Shift, Ctrl or Cmd and a click. The
+  selection bar moves or deletes all the selected files.
+- Click a file to open its detail panel: preview, facts, alt text, folder, a **Copy URL** button
+  and the list of entries that use the file.
+- The search looks in the open folder and its subfolders. **Search all folders** extends it to the
+  full library. The search matches the file name, the alt text and the folder.
+- Sort by date, name or size, and switch between the grid and the list view. The panel remembers
+  the view in the browser.
+
+The media field picker uses the same browser. It adds a **Recent** row with the latest uploads,
+and it opens in the last folder that you used.
+
+How folders are stored:
+
+- A folder is created as an empty object `<folder>/.keep` (a file in `'filesystem'` mode), plus
+  one `cms_media` row. The marker keeps an empty folder alive between sessions, and it never shows
+  up in the gallery.
 - A folder name is slugified and holds at most 4 levels (`Foto Estate/2026` gives
   `foto-estate/2026`).
-- Uploads into a folder get the key `<folder>/<uuid>-<name>`, so the folder is part of the object
-  key.
-- Deleting a folder deletes every object under it, its marker included, and the matching rows. The
-  panel asks for confirmation and says how many files go with it.
+- Uploads into a folder get the key `<folder>/<uuid>-<name>`.
+- To move a file or to rename a folder changes only the `folder` column. The object key, and so
+  the public URL, stays the same. Entries that use the file keep working.
+- Deleting a folder deletes every file in it and in its subfolders, the markers included, and the
+  matching rows. The confirmation says how many files and subfolders go with it, and how many
+  entries use them.
 
-In `'local'` mode the folders are the sub-directories of `publicBaseUrl` and cannot be changed from
-the panel: create or delete them in your repository.
+In `'local'` mode the folders are the sub-directories of `publicBaseUrl`. You can browse and search
+them, but you cannot change them from the panel: create or delete them in your repository.
+
+### Admin endpoints
+
+The panel uses these authenticated, same-origin endpoints under `/api/cms/admin/media`:
+
+| Method and path | Body or query | Effect |
+| --- | --- | --- |
+| `POST /folders` | `{ name }` | Creates a folder. |
+| `PATCH /folders` | `{ from, to }` | Renames or moves a folder and its subfolders. |
+| `DELETE /folders` | `?name=&recursive=` | Deletes a folder. Without `recursive=true` a folder with files answers `409`. |
+| `POST /move` | `{ keys, folder }` | Moves files to a folder (`null` is the library root). |
+| `POST /delete` | `{ keys }` | Deletes files. |
+| `POST /usage` | `{ keys }` | Returns, for each key, the entries and fields that use it. |
+
+`PATCH /folders` answers `400` when the target is inside the folder itself, or when the result is
+deeper than 4 levels.
 
 ## Allowed file types
 
