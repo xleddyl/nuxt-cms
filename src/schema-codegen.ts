@@ -7,6 +7,8 @@ import {
    isRequiredField,
    isTranslatableField,
    isTranslatableMediaField,
+   layoutErrors,
+   listErrors,
    mobileMediaKey,
    pageAllFields,
    pageColumnFields,
@@ -19,7 +21,17 @@ export type Dialect = 'sqlite' | 'postgres'
 export type Driver = Dialect | 'libsql' | 'd1'
 
 const IDENTIFIER = /^[a-z_]\w*$/i
-const RESERVED_ENTRY_KEYS = ['admin', 'auth', 'login', 'media', 'graphql', 'cms_media']
+const RESERVED_ENTRY_KEYS = [
+   'admin',
+   'auth',
+   'login',
+   'media',
+   'graphql',
+   'settings',
+   'cms_media',
+   'cms_settings',
+   'cms_users',
+]
 const RESERVED_COLUMNS = ['id', 'status', 'created_at', 'updated_at']
 const TITLE_FIELD_TYPES = ['text', 'slug', 'email', 'number', 'date', 'select']
 const TRANSLATABLE_FIELD_TYPES = ['text', 'richtext', 'media']
@@ -168,6 +180,12 @@ export function validateConfig(config: CmsConfig, i18n?: CmsI18n): string[] {
       }
 
       const allFields = entry.kind === 'page' ? pageAllFields(entry) : entry.fields ?? {}
+      errors.push(...layoutErrors(at, allFields, entry.layout))
+      errors.push(...listErrors(at, allFields, entry.list, entry.drafts ? ['status'] : []))
+      if (entry.list && entry.kind !== 'collection')
+         errors.push(`${at}: list needs kind 'collection'`)
+      if (entry.icon !== undefined && (typeof entry.icon !== 'string' || !entry.icon))
+         errors.push(`${at}: icon must be a non-empty string`)
       const columnNames = new Set<string>()
       for (const [key, field] of Object.entries(allFields)) {
          const fat = `${at}, field '${key}'`
@@ -332,7 +350,11 @@ export function validateConfig(config: CmsConfig, i18n?: CmsI18n): string[] {
       }
    }
 
-   const sqlTableNames = new Map<string, string>([['cms_media', 'the built-in media table']])
+   const sqlTableNames = new Map<string, string>([
+      ['cms_media', 'the built-in media table'],
+      ['cms_settings', 'the built-in settings table'],
+      ['cms_users', 'the built-in users table'],
+   ])
    for (const [name, entry] of Object.entries(config)) {
       if (entry.table) continue
       const registerTable = (sqlName: string, source: string) => {
@@ -512,6 +534,40 @@ function pageRowsTableExprs(name: string, dialect: Dialect): string[] {
    ]
 }
 
+function settingsTableExpr(dialect: Dialect): string {
+   const pg = dialect === 'postgres'
+   const tableFn = pg ? 'pgTable' : 'sqliteTable'
+   return (
+      `export const cms_settings = ${tableFn}('cms_settings', {\n` +
+      `  key: text('key').primaryKey(),\n` +
+      `  value: text('value').notNull(),\n` +
+      `  updatedAt: ${nowExpr(pg, 'updated_at')},\n` +
+      `})`
+   )
+}
+
+function usersTableExpr(dialect: Dialect): string {
+   const pg = dialect === 'postgres'
+   const tableFn = pg ? 'pgTable' : 'sqliteTable'
+   return (
+      `export const cms_users = ${tableFn}('cms_users', {\n` +
+      `  id: text('id').primaryKey(),\n` +
+      `  email: text('email').notNull().unique(),\n` +
+      `  name: text('name'),\n` +
+      `  role: text('role').notNull().default('admin'),\n` +
+      `  passwordHash: text('password_hash').notNull(),\n` +
+      `  mustChangePassword: ${
+         pg
+            ? `boolean('must_change_password')`
+            : `integer('must_change_password', { mode: 'boolean' })`
+      }.notNull().default(true),\n` +
+      `  lastLoginAt: text('last_login_at'),\n` +
+      `  createdAt: ${nowExpr(pg, 'created_at')},\n` +
+      `  updatedAt: ${nowExpr(pg, 'updated_at')},\n` +
+      `})`
+   )
+}
+
 function mediaTableExpr(dialect: Dialect): string {
    const pg = dialect === 'postgres'
    const tableFn = pg ? 'pgTable' : 'sqliteTable'
@@ -547,7 +603,7 @@ export function renderSchemaFile(
    if (fields.some((f) => f.type === 'number' && !f.integer))
       core.add(pg ? 'doublePrecision' : 'real')
    if (pg && fields.some((f) => f.type === 'date')) core.add('date')
-   if (pg && fields.some((f) => f.type === 'boolean')) core.add('boolean')
+   if (pg) core.add('boolean')
    if (
       pg &&
       fields.some(
@@ -578,7 +634,12 @@ export function renderSchemaFile(
 
    const rows = rowsEntries.flatMap(([name]) => pageRowsTableExprs(name, dialect))
 
-   return `${imports.join('\n')}\n\n${[mediaTableExpr(dialect), ...tables, ...joins, ...rows].join(
-      '\n\n'
-   )}\n`
+   return `${imports.join('\n')}\n\n${[
+      mediaTableExpr(dialect),
+      settingsTableExpr(dialect),
+      usersTableExpr(dialect),
+      ...tables,
+      ...joins,
+      ...rows,
+   ].join('\n\n')}\n`
 }

@@ -1,5 +1,6 @@
 import type { PgTable } from 'drizzle-orm/pg-core'
 import type { SQLiteTable } from 'drizzle-orm/sqlite-core'
+import type { CmsLayoutBlock, CmsListInput } from './layout'
 
 export type CmsTable = SQLiteTable | PgTable
 
@@ -228,6 +229,8 @@ export interface CmsTab {
 export interface FieldConfig {
    label: string
    type: FieldType
+   description?: string
+   placeholder?: string
    tab?: string
    required?: boolean
    private?: boolean
@@ -447,6 +450,9 @@ export interface CmsEntry {
    columns?: string[]
    tabs?: CmsTab[]
    table?: CmsTable
+   icon?: string
+   layout?: CmsLayoutBlock[]
+   list?: CmsListInput
 }
 
 export const MOBILE_MEDIA_SUFFIX = 'Mobile'
@@ -648,6 +654,8 @@ export function blockTypeName(entryName: string, fieldKey: string, blockName: st
 
 interface FieldInputBase {
    label: string
+   description?: string
+   placeholder?: string
    required?: boolean
    private?: boolean
    tab?: string
@@ -752,6 +760,9 @@ export type CmsFieldInput =
 interface CmsEntryInputBase {
    id: string
    label: string
+   icon?: string
+   layout?: CmsLayoutBlock[]
+   list?: CmsListInput
    drafts?: boolean
    tabs?: CmsTab[]
    fields: Record<string, CmsFieldInput>
@@ -787,3 +798,6 @@ export type CmsConfigInput = Record<string, CmsEntryInput>
 export function defineCmsConfig<T extends CmsConfigInput>(config: T): T {
    return config
 }
+
+export * from './layout'
+export * from './users'

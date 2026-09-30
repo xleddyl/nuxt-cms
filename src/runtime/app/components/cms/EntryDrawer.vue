@@ -11,6 +11,7 @@
          v-model="formState"
          :fields="config.fields"
          :tabs="config.tabs"
+         :entry-name="collection"
          :drafts="drafts"
          :form-id="FORM_ID"
          :loading="saving"

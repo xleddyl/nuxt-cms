@@ -12,16 +12,26 @@
       :locale="locale"
    />
    <CmsRichTextField v-else-if="field.type === 'richtext'" v-model="strOrNull" />
-   <CmsTextarea v-else-if="field.type === 'text' && field.textarea" v-model="str" :rows="8" />
-   <CmsInput v-else-if="field.type === 'text'" v-model="str" />
-   <CmsInput v-else-if="field.type === 'email'" v-model="str" type="email" />
+   <CmsTextarea
+      v-else-if="field.type === 'text' && field.textarea"
+      v-model="str"
+      :rows="8"
+      :placeholder="field.placeholder"
+   />
+   <CmsInput v-else-if="field.type === 'text'" v-model="str" :placeholder="field.placeholder" />
+   <CmsInput
+      v-else-if="field.type === 'email'"
+      v-model="str"
+      type="email"
+      :placeholder="field.placeholder"
+   />
    <CmsSlugField v-else-if="field.type === 'slug'" v-model="strOrNull" :source="slugSource" />
    <CmsSelectMenu
       v-else-if="field.type === 'select'"
       v-model="selValue"
       :multiple="field.multiple"
       :items="selectItems"
-      placeholder="Select…"
+      :placeholder="field.placeholder ?? 'Select…'"
    />
    <CmsSwitch
       v-else-if="field.type === 'boolean'"
@@ -33,7 +43,12 @@
       "
    />
    <CmsJsonField v-else-if="field.type === 'json'" v-model="jsonValue" />
-   <CmsInput v-else-if="field.type === 'number'" v-model.number="num" type="number" />
+   <CmsInput
+      v-else-if="field.type === 'number'"
+      v-model.number="num"
+      type="number"
+      :placeholder="field.placeholder"
+   />
    <CmsInput v-else-if="field.type === 'date'" v-model="str" type="date" />
    <CmsRelationField
       v-else-if="field.type === 'relation'"

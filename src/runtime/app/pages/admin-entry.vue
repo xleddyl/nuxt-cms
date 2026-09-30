@@ -23,6 +23,7 @@
             v-model="formState"
             :fields="fields"
             :tabs="config.tabs"
+            :entry-name="name"
             :drafts="drafts"
             :form-id="FORM_ID"
             :loading="saving"
