@@ -10,19 +10,24 @@
                'is-dragging': dragIndex === index,
                'is-drop-target': dropIndex === index && dragIndex !== index,
                'is-missing': hasMissingMedia(item),
+               'is-media-only': mediaOnly,
             }"
             draggable="true"
+            :tabindex="mediaOnly ? 0 : undefined"
+            :aria-label="mediaOnly ? `${barTitle(item)}, use the arrow keys to reorder` : undefined"
             @dragstart="onDragStart(index, $event)"
             @dragover.prevent="dropIndex = index"
             @dragleave="onDragLeave(index)"
             @drop.prevent="onDrop(index)"
             @dragend="onDragEnd"
+            @keydown.self="onTileKey($event, index)"
          >
-            <button
-               type="button"
+            <component
+               :is="mediaOnly ? 'div' : 'button'"
+               :type="mediaOnly ? undefined : 'button'"
                class="cms-block-preview"
-               :aria-label="`Edit ${labelOf(item)}`"
-               @click="openEditor(index)"
+               :aria-label="mediaOnly ? undefined : `Edit ${labelOf(item)}`"
+               @click="onPreviewClick(index)"
             >
                <img
                   v-if="previewOf(item)?.kind === 'image'"
@@ -43,9 +48,28 @@
                <CmsIcon v-else :name="iconOf(item)" class="size-7" />
 
                <CmsIcon v-if="isHidden(item)" name="eye-slash" class="cms-block-hidden size-4" />
-            </button>
 
-            <div class="cms-block-bar">
+               <template v-if="mediaOnly">
+                  <span
+                     v-if="hasMissingMedia(item)"
+                     class="cms-block-missing"
+                     title="Not found in the media library"
+                  >
+                     <CmsIcon name="exclamation-triangle" class="size-3.5" />
+                  </span>
+                  <button
+                     type="button"
+                     class="cms-block-remove"
+                     :aria-label="`Remove ${barTitle(item)}`"
+                     title="Remove"
+                     @click.stop="remove(index)"
+                  >
+                     <CmsIcon name="x-mark" class="size-3.5" />
+                  </button>
+               </template>
+            </component>
+
+            <div v-if="!mediaOnly" class="cms-block-bar">
                <button
                   type="button"
                   class="cms-block-grip"
@@ -84,9 +108,21 @@
          </CmsDropdownMenu>
          <button v-else type="button" class="cms-block-add" @click="addFirst">
             <CmsIcon name="plus" class="size-5" />
-            <span>Add</span>
+            <span>{{ mediaOnly ? addMediaLabel : 'Add' }}</span>
          </button>
       </div>
+
+      <CmsModal v-if="mediaOnly" v-model:open="pickerOpen" title="Media" size="lg">
+         <template #body>
+            <CmsMediaGallery
+               v-model:folder="pickerFolder"
+               selectable
+               :media-type="mediaOnly.field.mediaType"
+               :accept="mediaOnly.field.accept"
+               @select="addMedia"
+            />
+         </template>
+      </CmsModal>
 
       <CmsModal v-model:open="editorOpen" :title="editorTitle">
          <template #body>
@@ -95,6 +131,7 @@
                   v-for="(blockField, blockKey) in editorFields"
                   :key="blockKey"
                   :label="blockField.label"
+                  :icon="fieldIcon(blockField)"
                   :required="blockField.required"
                >
                   <CmsFieldInput
@@ -158,9 +195,10 @@ import {
    mediaTypeForKey,
    pickTranslatedMedia,
 } from '#nuxt-cms'
-import { computed, ref } from '#imports'
+import { computed, ref, useState } from '#imports'
 import { useCmsMediaKeys } from '../../composables/cms-media-keys'
 import { useCmsRuntime } from '../../composables/cms-runtime'
+import { fieldIcon } from '../../utils/ui'
 
 const props = defineProps<{ field: FieldConfig; locale?: string }>()
 
@@ -171,6 +209,33 @@ const mediaKeys = useCmsMediaKeys()
 
 const blocks = computed(() => props.field.blocks ?? {})
 const items = computed(() => (Array.isArray(model.value) ? model.value : []))
+
+const mediaOnly = computed(() => {
+   const types = Object.entries(blocks.value)
+   if (types.length !== 1) return null
+   const [type, block] = types[0]!
+   const fields = Object.entries(block.fields)
+   if (fields.length !== 1) return null
+   const [key, field] = fields[0]!
+   if (field.type !== 'media' || isTranslatableMediaField(field)) return null
+   return { type, key, field }
+})
+
+const addMediaLabel = computed(() => {
+   const types = [mediaOnly.value?.field.mediaType ?? []].flat()
+   return types.length === 1 && types[0] === 'image' ? 'Add photo' : 'Add media'
+})
+
+const pickerOpen = ref(false)
+const pickerFolder = useState<string | null>('cms-media-picker-folder', () => null)
+
+function addMedia(media: { key: string }) {
+   const target = mediaOnly.value
+   if (!target) return
+   mediaKeys.remember(media.key)
+   model.value = [...items.value, { type: target.type, [target.key]: media.key }]
+   pickerOpen.value = false
+}
 
 let uidCounter = 0
 const uids = new WeakMap<Record<string, unknown>, number>()
@@ -266,11 +331,35 @@ function add(type: string) {
    const block = blocks.value[type]
    if (!block) return
    const empty = Object.fromEntries(Object.keys(block.fields).map((k) => [k, null]))
+   const index = items.value.length
    model.value = [...items.value, { type, ...empty }]
-   openEditor(items.value.length - 1)
+   openEditor(index)
+}
+
+function onTileKey(event: KeyboardEvent, index: number) {
+   if (!mediaOnly.value) return
+   const action =
+      event.key === 'ArrowLeft'
+         ? () => move(index, -1)
+         : event.key === 'ArrowRight'
+           ? () => move(index, 1)
+           : event.key === 'Delete' || event.key === 'Backspace'
+             ? () => remove(index)
+             : null
+   if (!action) return
+   event.preventDefault()
+   action()
+}
+
+function onPreviewClick(index: number) {
+   if (!mediaOnly.value) openEditor(index)
 }
 
 function addFirst() {
+   if (mediaOnly.value) {
+      pickerOpen.value = true
+      return
+   }
    const first = Object.keys(blocks.value)[0]
    if (first) add(first)
 }
