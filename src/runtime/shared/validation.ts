@@ -49,8 +49,12 @@ function scalarSchema(field: FieldConfig, m: ValidationMessages): z.ZodType {
    }
 }
 
-function optionalize(field: FieldConfig, base: z.ZodType): z.ZodType {
-   return field.required ? base : base.nullish().transform((v) => v ?? null)
+function optionalize(field: FieldConfig, base: z.ZodType, m: ValidationMessages): z.ZodType {
+   if (!field.required) return base.nullish().transform((v) => v ?? null)
+   return z
+      .any()
+      .refine((v) => v !== null && v !== undefined, m.required)
+      .pipe(base)
 }
 
 function translatableSchema(field: FieldConfig, i18n: CmsI18n, m: ValidationMessages): z.ZodType {
@@ -70,7 +74,7 @@ function blockFieldSchema(
 ): z.ZodType {
    if (isTranslatableField(blockField) && i18n.locales.length)
       return translatableSchema(blockField, i18n, m)
-   return optionalize(blockField, scalarSchema(blockField, m))
+   return optionalize(blockField, scalarSchema(blockField, m), m)
 }
 
 function blocksSchema(field: FieldConfig, i18n: CmsI18n, m: ValidationMessages) {
@@ -142,7 +146,7 @@ export function buildEntrySchema(
             : json.nullish().transform((v) => v ?? null)
          continue
       }
-      shape[key] = optionalize(field, scalarSchema(field, m))
+      shape[key] = optionalize(field, scalarSchema(field, m), m)
    }
    if (entry.drafts) {
       shape.status = z
