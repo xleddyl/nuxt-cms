@@ -34,12 +34,49 @@ An empty one is a dashed box that opens the media library.
 drag. For a keyboard, focus the grip at the bottom left of a tile and press the left or right arrow
 key; the block editor also carries two move buttons, which is the way on a touch screen.
 
+**Media lists.** A `blocks` field with one block type that has one `media` field (for example a
+photo gallery) is edited as a media list. **+** opens the media library and adds the file you pick.
+The X on a tile removes it, and a drag changes the order. No editor opens.
+
+**Bulk actions.** Every row of a collection table has a checkbox. When rows are selected, the
+toolbar shows **Delete** and, on a collection with `drafts`, **Publish** and **Draft**.
+
+## Settings
+
+The account button at the bottom of the sidebar opens **Settings**:
+
+- **General**: the theme (light, dark or system). The choice is kept in the `cms-theme` cookie of
+  the browser.
+- **Account**: your name and your password. The super admin account comes from the environment
+  variables, so it has no form here.
+- **Users** (super admin only): add accounts, set a new password, delete accounts.
+- **Content**: one item for each entry.
+  - **Table columns** (collections only): show, hide and drag the columns of the table.
+  - **Form layout**: drag a field up or down, or next to another field to put them in the same row.
+    Sections come from the config and fields cannot be added.
+- **Sign out**.
+
+Column and layout changes save automatically in the `cms_settings` table and apply to every admin.
+The [`layout` and `list` options](schema.md#form-layout) of the config are the default, and
+**Reset to default** deletes the saved version. A saved layout follows config changes: a new field
+goes at the end, and a removed field disappears.
+
 All pages except `/cms/login` require an authenticated admin session (enforced by the `cms-auth`
 route middleware). The admin UI ships in English and Italian.
 
 ## Authentication
 
-- Credentials come from `NUXT_CMS_ADMIN_EMAIL` / `NUXT_CMS_ADMIN_PASSWORD` (or `cms.admin.*`).
+- The credentials of `NUXT_CMS_ADMIN_EMAIL` / `NUXT_CMS_ADMIN_PASSWORD` (or `cms.admin.*`) sign
+  in as the **super admin**. This account is not stored in the database and does not show in any
+  list.
+- The super admin creates more accounts in **Settings → Users**: an email, an optional name and a
+  password (generate it and copy it with the buttons of the field). No email is sent. These
+  accounts have the **admin** role: they can do everything in the panel, except manage users. They
+  are stored in the `cms_users` table, with the password hashed by scrypt.
+- On the first sign-in of a new account, a dialog offers to set a new password. The user can keep
+  the shared one. Later, **Settings → Account** changes the name and the password. When the super
+  admin sets a new password for a user, the next sign-in shows the dialog again.
+- A deleted account loses access on its next request.
 - On a successful login at `/cms/login` a session cookie is set via
   [`nuxt-auth-utils`](https://github.com/atinux/nuxt-auth-utils).
 - Email and password are compared with a timing-safe hash comparison.

@@ -324,6 +324,60 @@ pages: {
 - When a save fails validation, the form opens the tab that holds the first invalid field, so the
   error is never hidden behind another tab.
 
+## Form layout
+
+By default the admin form shows one field per row, in the order of `fields`. Use `layout` on an
+entry to change that. It is admin-only: the database, the GraphQL schema and the query shape do not
+change.
+
+```ts
+events: {
+   id: 'events',
+   label: 'Events',
+   kind: 'collection',
+   titleField: 'title',
+   icon: 'calendar-days',
+   fields: { /* ... */ },
+   layout: [
+      ['title', 'slug'],
+      'description',
+      ['seats', 'price', 'date'],
+      ['category', 'featured'],
+      {
+         title: 'Advanced',
+         description: 'Data for integrations.',
+         collapsed: true,
+         rows: ['metadata', 'internalNotes'],
+      },
+   ],
+   list: { columns: ['title', 'date', 'category', 'status'] },
+}
+```
+
+- A string is a row with one field. An array is a row with up to 4 fields side by side. On a narrow
+  screen the fields of a row stack.
+- An object with `title` and `rows` is a section: a titled card. `description` shows under the
+  title, and `collapsed: true` closes it by default.
+- Fields that the layout does not name go at the end of the form, each in its own row. The mobile
+  field of a `mobile: true` media field goes next to its parent, or on the next row when the row is
+  full.
+- Tabs still apply: the form shows the fields of the active tab.
+- A key that is not a field, a key named twice, a row with more than 4 fields or a section with no
+  title fails the build. On a page entry, the layout can name fields from `overrides`.
+
+Other admin-only options:
+
+| Option | On | Effect |
+| --- | --- | --- |
+| `icon` | entry | The icon in the sidebar and the page header. A Heroicons outline name, for example `calendar-days`. |
+| `list.columns` | collection | The default table columns, in order. `status` is available on collections with `drafts`. Without it, the table shows the first 4 fields. |
+| `description` | field | A help text under the input. |
+| `placeholder` | field | The placeholder of text, textarea, email, number and select inputs. |
+
+Admins can change the table columns and the form layout in **Settings** (see
+[Admin panel](admin.md#settings)). The config is the default, and **Reset to default** goes back
+to it.
+
 ## Conditional fields
 
 `showIf` hides a field in the admin editor until another field of the same entry has a given value —
