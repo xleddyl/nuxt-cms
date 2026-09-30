@@ -653,6 +653,8 @@ export default defineNuxtModule<ModuleOptions>({
          )
       )
 
+      addServerPlugin(resolver.resolve('./runtime/server/plugins/session-validate'))
+
       if (!nuxt.options.dev) {
          addServerPlugin(resolver.resolve('./runtime/server/plugins/session-check'))
       }
@@ -753,13 +755,21 @@ export default defineNuxtModule<ModuleOptions>({
                   '',
                   "declare module '#auth-utils' {",
                   '  interface User {',
+                  '    id?: string',
                   '    email: string',
+                  '    name?: string | null',
+                  "    role?: 'superadmin' | 'admin'",
+                  '    firstLogin?: boolean',
+                  '    passwordStamp?: string',
                   '  }',
                   '}',
                   '',
                   "declare module '#imports' {",
                   "  function getUserSession(event: H3Event): Promise<{ user?: import('#auth-utils').User }>",
                   "  function setUserSession(event: H3Event, session: { user: import('#auth-utils').User }): Promise<unknown>",
+                  "  function replaceUserSession(event: H3Event, session: { user: import('#auth-utils').User }): Promise<unknown>",
+                  '  function clearUserSession(event: H3Event): Promise<boolean>',
+                  "  const sessionHooks: { hook(name: 'fetch', fn: (session: { user?: import('#auth-utils').User }, event: H3Event) => void | Promise<void>): () => void }",
                   '  function useStorage(base?: string): {',
                   '    getItem<T>(key: string): Promise<T | null>',
                   '    setItem<T>(key: string, value: T, options?: { ttl?: number }): Promise<void>',
@@ -780,8 +790,8 @@ export default defineNuxtModule<ModuleOptions>({
       // URL (unchanged); CmsIcon opts in explicitly via the `?component` query.
       addVitePlugin(svgLoader({ defaultImport: 'url', svgoConfig: { plugins: ['prefixIds'] } }))
       nuxt.options.css.push(
-         resolveImport('@fontsource-variable/hanken-grotesk/index.css'),
-         resolveImport('@fontsource/fragment-mono/index.css'),
+         resolveImport('@fontsource-variable/geist/index.css'),
+         resolveImport('@fontsource-variable/geist-mono/index.css'),
          resolver.resolve('./runtime/assets/main.css')
       )
 
@@ -905,6 +915,57 @@ export default defineNuxtModule<ModuleOptions>({
             handler: resolver.resolve('./runtime/server/routes/media-file'),
          })
       }
+
+      addServerHandler({
+         route: '/api/cms/users',
+         method: 'get',
+         handler: resolver.resolve('./runtime/server/api/users.get'),
+      })
+      addServerHandler({
+         route: '/api/cms/users',
+         method: 'post',
+         handler: resolver.resolve('./runtime/server/api/users.post'),
+      })
+      addServerHandler({
+         route: '/api/cms/users/:id',
+         method: 'put',
+         handler: resolver.resolve('./runtime/server/api/user.put'),
+      })
+      addServerHandler({
+         route: '/api/cms/users/:id',
+         method: 'delete',
+         handler: resolver.resolve('./runtime/server/api/user.delete'),
+      })
+      addServerHandler({
+         route: '/api/cms/account',
+         method: 'put',
+         handler: resolver.resolve('./runtime/server/api/account.put'),
+      })
+      addServerHandler({
+         route: '/api/cms/account/password',
+         method: 'put',
+         handler: resolver.resolve('./runtime/server/api/account-password.put'),
+      })
+      addServerHandler({
+         route: '/api/cms/account/welcome',
+         method: 'post',
+         handler: resolver.resolve('./runtime/server/api/account-welcome.post'),
+      })
+      addServerHandler({
+         route: '/api/cms/admin/settings',
+         method: 'get',
+         handler: resolver.resolve('./runtime/server/api/settings.get'),
+      })
+      addServerHandler({
+         route: '/api/cms/admin/settings/:key',
+         method: 'put',
+         handler: resolver.resolve('./runtime/server/api/settings.put'),
+      })
+      addServerHandler({
+         route: '/api/cms/admin/settings/:key',
+         method: 'delete',
+         handler: resolver.resolve('./runtime/server/api/settings.delete'),
+      })
 
       const api = '/api/cms/admin/:collection'
       addServerHandler({

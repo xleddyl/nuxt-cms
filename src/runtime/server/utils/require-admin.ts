@@ -1,43 +1,48 @@
 import type { H3Event } from 'h3'
-import { createError, getRequestHeader, getRequestHost } from 'h3'
+import { createError } from 'h3'
 import { getUserSession, useRuntimeConfig } from '#imports'
+import type { CmsSessionUser } from '../../shared/index'
+import { assertSameOrigin } from './same-origin'
+import { findUserById, passwordStamp } from './users'
 
-const ORIGINLESS_SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS'])
+export { assertSameOrigin }
 
-function hostOfUrl(value: string | undefined) {
-   if (!value) return undefined
-   try {
-      const url = new URL(value)
-      return url.protocol === 'http:' || url.protocol === 'https:' ? url.host : undefined
-   } catch {
-      return undefined
-   }
+export function isSuperAdminEmail(event: H3Event, email: string) {
+   const { adminEmail } = useRuntimeConfig(event).cms as { adminEmail: string }
+   return !!adminEmail && email.toLowerCase() === adminEmail.toLowerCase()
 }
 
-function rejectCrossOrigin(): never {
-   throw createError({ statusCode: 403, statusMessage: 'Cross-origin request rejected' })
-}
-
-export function assertSameOrigin(event: H3Event) {
-   const expectedHost = getRequestHost(event)
-   const origin = getRequestHeader(event, 'origin')
-   if (origin) {
-      if (hostOfUrl(origin) !== expectedHost) rejectCrossOrigin()
-      return
-   }
-   if (ORIGINLESS_SAFE_METHODS.has(event.method)) return
-   if (hostOfUrl(getRequestHeader(event, 'referer')) !== expectedHost) rejectCrossOrigin()
-}
-
-export async function requireAdmin(event: H3Event) {
+export async function requireAdmin(event: H3Event): Promise<CmsSessionUser> {
    assertSameOrigin(event)
    const session = await getUserSession(event)
-   const email = session.user?.email
-   if (!email) {
+   const user = session.user
+   if (!user?.email) {
       throw createError({ statusCode: 401, statusMessage: 'Authentication required' })
    }
-   const { adminEmail } = useRuntimeConfig(event).cms as { adminEmail: string }
-   if (!adminEmail || email.toLowerCase() !== adminEmail.toLowerCase()) {
-      throw createError({ statusCode: 403, statusMessage: 'Not authorized' })
+   if (!user.id) {
+      if (!isSuperAdminEmail(event, user.email)) {
+         throw createError({ statusCode: 403, statusMessage: 'Not authorized' })
+      }
+      return { email: user.email.toLowerCase(), name: null, role: 'superadmin' }
    }
+   const row = await findUserById(user.id)
+   if (!row || user.passwordStamp !== passwordStamp(row.passwordHash)) {
+      throw createError({ statusCode: 401, statusMessage: 'Authentication required' })
+   }
+   return {
+      id: row.id,
+      email: row.email,
+      name: row.name ?? null,
+      role: 'admin',
+      firstLogin: !!row.mustChangePassword,
+      passwordStamp: user.passwordStamp,
+   }
+}
+
+export async function requireSuperAdmin(event: H3Event): Promise<CmsSessionUser> {
+   const user = await requireAdmin(event)
+   if (user.role !== 'superadmin') {
+      throw createError({ statusCode: 403, statusMessage: 'Only the super admin can manage users' })
+   }
+   return user
 }

@@ -1,7 +1,7 @@
 import type { H3Event } from 'h3'
 import { createEvent } from 'h3'
 import { describe, expect, it } from 'vitest'
-import { assertSameOrigin } from '../src/runtime/server/utils/require-admin'
+import { assertSameOrigin } from '../src/runtime/server/utils/same-origin'
 
 const HOST = 'cms.example.com'
 
