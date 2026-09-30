@@ -1,8 +1,14 @@
 <template>
-   <div class="cms-scope cms-canvas min-h-screen">
-      <div class="cms-shell">
+   <div class="cms-scope cms-canvas min-h-screen" :data-theme="theme">
+      <div class="cms-shell" :class="{ 'is-nav-open': navOpen }">
          <aside class="cms-sidebar">
-            <div class="cms-sidebar-brand">nuxt<span class="cms-accent">·</span>cms</div>
+            <div class="cms-sidebar-brand">
+               <CmsBrandMark />
+               <div class="cms-brand-text">
+                  <span class="cms-brand-name">nuxt-cms</span>
+                  <span class="cms-brand-meta">Content studio</span>
+               </div>
+            </div>
 
             <nav class="cms-sidebar-nav">
                <div v-for="group in groups" :key="group.title" class="cms-sidebar-group">
@@ -14,35 +20,58 @@
                      :key="link.name"
                      :to="link.to"
                      class="cms-navlink"
-                     :class="{ 'is-active': route.path === link.to }"
+                     :class="{ 'is-active': isActive(link.to) }"
                   >
-                     <CmsIcon :name="group.icon" class="cms-navlink-icon size-4 shrink-0" />
+                     <CmsIcon
+                        :name="link.icon ?? group.icon"
+                        class="cms-navlink-icon size-4 shrink-0"
+                     />
                      <span class="truncate">{{ link.label }}</span>
                   </NuxtLink>
                </div>
             </nav>
 
             <div class="cms-sidebar-footer">
-               <CmsButton
-                  label="Sign out"
-                  icon="arrow-right-on-rectangle"
-                  trailing-icon
-                  block
-                  variant="ghost"
-                  color="neutral"
-                  size="xs"
-                  @click="logout"
-               />
+               <button
+                  type="button"
+                  class="cms-account"
+                  :class="{ 'is-open': settingsOpen }"
+                  aria-label="Open settings"
+                  @click="openSettings"
+               >
+                  <span class="cms-avatar">{{ initial }}</span>
+                  <span class="cms-account-text">
+                     <span class="cms-account-name">{{ displayName }}</span>
+                     <span class="cms-account-email" :title="email">{{ email }}</span>
+                  </span>
+                  <CmsIcon name="ellipsis-horizontal" class="cms-account-more size-4" />
+               </button>
             </div>
          </aside>
 
+         <div class="cms-sidebar-scrim" @click="navOpen = false" />
+
          <main class="cms-main">
+            <header class="cms-topbar">
+               <CmsButton
+                  icon="bars-3"
+                  variant="ghost"
+                  color="neutral"
+                  size="sm"
+                  aria-label="Open navigation"
+                  @click="navOpen = true"
+               />
+               <CmsBrandMark />
+               <span class="cms-brand-name">nuxt-cms</span>
+            </header>
             <div class="cms-main-inner">
                <slot />
             </div>
          </main>
       </div>
 
+      <CmsSettingsModal v-model:open="settingsOpen" v-model:theme="theme" @logout="logout" />
+      <CmsWelcomeModal />
       <CmsToaster />
       <CmsConfirmModal />
    </div>
@@ -50,16 +79,26 @@
 
 <script setup lang="ts">
 import type { CmsConfig } from '#nuxt-cms'
-import { computed, navigateTo, useRoute, useUserSession } from '#imports'
+import { computed, navigateTo, ref, useRoute, useUserSession, watch } from '#imports'
 import cmsConfig from '#cms-config'
+import { useCmsTheme } from '../composables/cms-theme'
+import { useCmsAccount } from '../composables/cms-account'
+import { loadCmsSettings } from '../composables/cms-settings'
 
 const route = useRoute()
 const { clear } = useUserSession()
+const { email, displayName, initial } = useCmsAccount()
+const theme = useCmsTheme()
+const navOpen = ref(false)
+const settingsOpen = ref(false)
+
+await loadCmsSettings()
 
 const links = Object.entries(cmsConfig as CmsConfig).map(([name, entry]) => ({
    name,
    label: entry.label,
    kind: entry.kind,
+   icon: entry.icon,
    to: `/cms/${name}`,
 }))
 
@@ -83,12 +122,31 @@ const groups = computed(() =>
       {
          title: 'Library',
          icon: 'photo',
-         links: [{ name: 'media', label: 'Media', kind: 'media', to: '/cms/media' }],
+         links: [
+            { name: 'media', label: 'Media', kind: 'media', icon: undefined, to: '/cms/media' },
+         ],
       },
    ].filter((g) => g.links.length)
 )
 
+function isActive(to: string) {
+   return route.path === to || route.path.startsWith(`${to}/`)
+}
+
+watch(
+   () => route.fullPath,
+   () => {
+      navOpen.value = false
+   }
+)
+
+function openSettings() {
+   navOpen.value = false
+   settingsOpen.value = true
+}
+
 async function logout() {
+   settingsOpen.value = false
    await clear()
    await navigateTo('/cms/login')
 }

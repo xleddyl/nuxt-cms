@@ -1,8 +1,9 @@
 <template>
-   <div class="cms-scope cms-canvas cms-auth">
+   <div class="cms-scope cms-canvas cms-auth" :data-theme="theme">
       <div class="cms-auth-panel cms-rise">
          <header class="cms-auth-header">
-            <h1 class="cms-title cms-title-lg">Welcome back<span class="cms-accent">.</span></h1>
+            <CmsBrandMark size="lg" />
+            <h1 class="cms-title cms-title-lg">Welcome back</h1>
             <p class="cms-subtitle">Sign in to manage your content.</p>
          </header>
 
@@ -13,6 +14,7 @@
                   <CmsInput
                      v-model="state.email"
                      type="email"
+                     icon="envelope"
                      autocomplete="username"
                      placeholder="you@example.com"
                   />
@@ -21,13 +23,24 @@
                   <CmsInput
                      v-model="state.password"
                      type="password"
+                     icon="key"
                      autocomplete="current-password"
                      placeholder="••••••••"
                   />
                </CmsFormField>
-               <CmsButton type="submit" label="Sign in" block :loading="loading" />
+               <CmsButton
+                  type="submit"
+                  label="Sign in"
+                  icon="arrow-right"
+                  trailing-icon
+                  size="lg"
+                  block
+                  :loading="loading"
+               />
             </CmsForm>
          </div>
+
+         <p class="cms-auth-footer">Powered by nuxt-cms</p>
       </div>
    </div>
 </template>
@@ -35,9 +48,11 @@
 <script setup lang="ts">
 import { definePageMeta, navigateTo, ref, useUserSession } from '#imports'
 import { errorMessage } from '../utils/ui'
+import { useCmsTheme } from '../composables/cms-theme'
 
 definePageMeta({ layout: false })
 
+const theme = useCmsTheme()
 const { loggedIn } = useUserSession()
 if (loggedIn.value) {
    await navigateTo('/cms', { replace: true })

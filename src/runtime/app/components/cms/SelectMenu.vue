@@ -25,11 +25,9 @@
             @input="onInput"
             @focus="onFocus"
          />
-         <CmsIcon
-            v-if="loading"
-            name="arrow-path"
-            class="cms-selectmenu-affix ml-auto size-4 animate-spin"
-         />
+         <span v-if="loading" class="cms-selectmenu-affix ml-auto flex">
+            <CmsIcon name="arrow-path" class="size-4 animate-spin" />
+         </span>
          <button
             v-else
             type="button"

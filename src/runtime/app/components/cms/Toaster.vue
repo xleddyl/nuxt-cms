@@ -5,7 +5,7 @@
             <div
                v-for="toast in toasts"
                :key="toast.id"
-               class="cms-toast cms-rise"
+               class="cms-toast"
                :class="{
                   'is-success': toast.color === 'success',
                   'is-error': toast.color === 'error',

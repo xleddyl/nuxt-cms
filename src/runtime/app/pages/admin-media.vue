@@ -1,6 +1,10 @@
 <template>
    <div class="cms-page">
-      <CmsPageHeader title="Media">
+      <CmsPageHeader
+         title="Media"
+         icon="photo"
+         description="Images, videos and files used across your content."
+      >
          <template #badge>
             <span class="cms-badge is-muted">{{ runtime.mediaStorage }}</span>
          </template>
