@@ -196,6 +196,10 @@ levels. In `'s3'` and `'filesystem'` mode you manage the folders from the panel:
 - Drag a file onto a folder or onto the breadcrumb to move it. Drag a folder onto another folder
   to move it with all its contents. Drop files from your computer on the library to upload them to
   the open folder, or on a folder to upload them there.
+- Drop a folder from your computer, or use **Upload a folder** in the upload dialog, to upload it
+  with all its subfolders. The library creates each folder with the same name (as a slug) in the
+  open folder, empty folders included. Hidden files such as `.DS_Store` are skipped. Files deeper
+  than 4 levels go into the deepest allowed folder.
 - Select files with the round check on a tile, or with Shift, Ctrl or Cmd and a click. The
   selection bar moves or deletes all the selected files.
 - Click a file to open its detail panel: preview, facts, alt text, folder, a **Copy URL** button

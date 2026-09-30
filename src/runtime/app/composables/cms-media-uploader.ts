@@ -1,5 +1,10 @@
 import type { MediaItem } from '../../shared/index'
-import { formatFileSize } from '../../shared/index'
+import {
+   formatFileSize,
+   MEDIA_FOLDER_MAX_DEPTH,
+   mediaFolderSegments,
+   normalizeMediaFolder,
+} from '../../shared/index'
 import { ref } from '#imports'
 import { useCmsRuntime } from './cms-runtime'
 import { useCmsToast } from './cms-toast'
@@ -65,6 +70,119 @@ export function matchesAccept(file: File, accept: string | undefined) {
    })
 }
 
+export interface UploadEntry {
+   file: File
+   directory: string | null
+}
+
+export interface UploadTree {
+   files: UploadEntry[]
+   directories: string[]
+}
+
+const UPLOAD_CONCURRENCY = 4
+
+function isHiddenName(name: string) {
+   return name.startsWith('.')
+}
+
+function joinPath(parent: string | null, name: string) {
+   return parent ? `${parent}/${name}` : name
+}
+
+export function uploadTreeFromFiles(list: FileList | File[]): UploadTree {
+   const files: UploadEntry[] = []
+   const directories = new Set<string>()
+   for (const file of Array.from(list)) {
+      const segments = (file.webkitRelativePath || file.name).split('/').filter(Boolean)
+      if (segments.some(isHiddenName)) continue
+      const directory = segments.slice(0, -1).join('/') || null
+      if (directory) directories.add(directory)
+      files.push({ file, directory })
+   }
+   return { files, directories: [...directories] }
+}
+
+function readDirectory(entry: FileSystemDirectoryEntry): Promise<FileSystemEntry[]> {
+   const reader = entry.createReader()
+   const all: FileSystemEntry[] = []
+   return new Promise((resolve, reject) => {
+      const next = () =>
+         reader.readEntries((batch) => {
+            if (!batch.length) return resolve(all)
+            all.push(...batch)
+            next()
+         }, reject)
+      next()
+   })
+}
+
+function entryFile(entry: FileSystemFileEntry): Promise<File> {
+   return new Promise((resolve, reject) => entry.file(resolve, reject))
+}
+
+async function walkEntry(entry: FileSystemEntry, parent: string | null, tree: UploadTree) {
+   if (isHiddenName(entry.name)) return
+   if (entry.isFile) {
+      tree.files.push({ file: await entryFile(entry as FileSystemFileEntry), directory: parent })
+      return
+   }
+   if (!entry.isDirectory) return
+   const directory = joinPath(parent, entry.name)
+   tree.directories.push(directory)
+   const children = await readDirectory(entry as FileSystemDirectoryEntry)
+   for (const child of children) await walkEntry(child, directory, tree)
+}
+
+export function uploadTreeFromDrop(dataTransfer: DataTransfer): Promise<UploadTree> {
+   const files = Array.from(dataTransfer.files)
+   const entries = Array.from(dataTransfer.items ?? [])
+      .filter((item) => item.kind === 'file')
+      .map((item) => item.webkitGetAsEntry?.() ?? null)
+      .filter((entry): entry is FileSystemEntry => !!entry)
+   if (!entries.some((entry) => entry.isDirectory)) {
+      return Promise.resolve(uploadTreeFromFiles(files))
+   }
+   return (async () => {
+      const tree: UploadTree = { files: [], directories: [] }
+      for (const entry of entries) await walkEntry(entry, null, tree)
+      return tree
+   })()
+}
+
+async function mapWithConcurrency<T, R>(
+   list: T[],
+   limit: number,
+   task: (value: T) => Promise<R>
+): Promise<PromiseSettledResult<R>[]> {
+   const results: PromiseSettledResult<R>[] = new Array(list.length)
+   let cursor = 0
+   const worker = async () => {
+      while (cursor < list.length) {
+         const index = cursor++
+         try {
+            results[index] = { status: 'fulfilled', value: await task(list[index]!) }
+         } catch (reason) {
+            results[index] = { status: 'rejected', reason }
+         }
+      }
+   }
+   await Promise.all(Array.from({ length: Math.min(limit, list.length) }, worker))
+   return results
+}
+
+function targetFolder(base: string | null, directory: string | null) {
+   const joined = [base, directory].filter(Boolean).join('/')
+   return {
+      folder: normalizeMediaFolder(joined),
+      flattened: mediaFolderSegments(joined).length > MEDIA_FOLDER_MAX_DEPTH,
+   }
+}
+
+function isWithinOrAbove(folder: string, other: string) {
+   return other === folder || other.startsWith(`${folder}/`)
+}
+
 export function useCmsMediaUploader() {
    const toast = useCmsToast()
    const { mediaMaxFileSize } = useCmsRuntime()
@@ -103,12 +221,29 @@ export function useCmsMediaUploader() {
       return item
    }
 
+   async function createFolders(folders: string[]) {
+      const results = await mapWithConcurrency(folders, UPLOAD_CONCURRENCY, (name) =>
+         $fetch<{ folder: string }>('/api/cms/admin/media/folders', {
+            method: 'POST',
+            body: { name },
+         })
+      )
+      const failed = results.filter((r) => r.status === 'rejected').length
+      if (failed)
+         toast.add({
+            title: `${failed} folder${failed > 1 ? 's' : ''} could not be created`,
+            color: 'error',
+         })
+   }
+
    async function upload(
-      list: FileList | File[],
+      source: FileList | File[] | UploadTree,
       options: { folder: string | null; accept?: string; multiple?: boolean }
    ): Promise<MediaItem[]> {
-      const all = Array.from(list)
-      let files = all.filter((file) => matchesAccept(file, options.accept))
+      const tree =
+         Array.isArray(source) || source instanceof FileList ? uploadTreeFromFiles(source) : source
+      const all = tree.files
+      let files = all.filter((entry) => matchesAccept(entry.file, options.accept))
       const rejected = all.length - files.length
       if (rejected) {
          toast.add({
@@ -116,22 +251,44 @@ export function useCmsMediaUploader() {
             color: 'error',
          })
       }
-      for (const file of files.filter((file) => file.size > mediaMaxFileSize)) {
+      for (const { file } of files.filter((entry) => entry.file.size > mediaMaxFileSize)) {
          toast.add({
             title: `File too large (max ${formatFileSize(mediaMaxFileSize)}): ${file.name}`,
             color: 'error',
          })
       }
-      files = files.filter((file) => file.size <= mediaMaxFileSize)
-      if (options.multiple === false) files = files.slice(0, 1)
-      if (!files.length || uploading.value) return []
+      files = files.filter((entry) => entry.file.size <= mediaMaxFileSize)
+      const nested = options.multiple !== false
+      if (!nested) files = files.slice(0, 1).map((entry) => ({ ...entry, directory: null }))
+      const directories = nested ? tree.directories : []
+      if ((!files.length && !directories.length) || uploading.value) return []
+
+      const planned = files.map((entry) => ({
+         file: entry.file,
+         ...targetFolder(options.folder, entry.directory),
+      }))
+      const fileFolders = planned.map((entry) => entry.folder).filter((f): f is string => !!f)
+      const emptyFolders = [
+         ...new Set(
+            directories
+               .map((directory) => targetFolder(options.folder, directory).folder)
+               .filter((folder): folder is string => !!folder)
+         ),
+      ].filter((folder) => !fileFolders.some((other) => isWithinOrAbove(folder, other)))
+      if (planned.some((entry) => entry.flattened)) {
+         toast.add({
+            title: `Folders nest up to ${MEDIA_FOLDER_MAX_DEPTH} levels`,
+            description: 'Files in deeper folders were uploaded to the deepest allowed folder.',
+         })
+      }
 
       uploading.value = true
       done.value = 0
-      total.value = files.length
+      total.value = planned.length
       try {
-         const results = await Promise.allSettled(
-            files.map((file) => uploadOne(file, options.folder))
+         if (emptyFolders.length) await createFolders(emptyFolders)
+         const results = await mapWithConcurrency(planned, UPLOAD_CONCURRENCY, (entry) =>
+            uploadOne(entry.file, entry.folder)
          )
          const ok = results.filter((r) => r.status === 'fulfilled').map((r) => r.value)
          const failed = results.length - ok.length

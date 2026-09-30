@@ -435,10 +435,11 @@
                :media-type="mediaType"
                :accept="accept"
                :folder="folder"
+               :directories="!selectable"
                @uploaded="onUploaded"
             />
             <p class="cms-form-hint cms-media-upload-hint">
-               Tip: you can also drop files anywhere on the library, or on a folder.
+               Tip: you can also drop files or folders anywhere on the library, or on a folder.
             </p>
          </template>
       </CmsModal>
@@ -569,7 +570,12 @@ import {
 } from '#nuxt-cms'
 import { useCmsConfirm } from '../../composables/cms-confirm'
 import { useCmsMediaLibrary, usageSummary } from '../../composables/cms-media-library'
-import { useCmsMediaUploader } from '../../composables/cms-media-uploader'
+import type { UploadTree } from '../../composables/cms-media-uploader'
+import {
+   uploadTreeFromDrop,
+   uploadTreeFromFiles,
+   useCmsMediaUploader,
+} from '../../composables/cms-media-uploader'
 import { useCmsRuntime } from '../../composables/cms-runtime'
 import { useCmsToast } from '../../composables/cms-toast'
 
@@ -1061,7 +1067,10 @@ async function moveSelection() {
 const uploadOpen = ref(false)
 
 async function afterUpload(uploaded: MediaItem[]) {
-   if (!uploaded.length) return
+   if (!uploaded.length) {
+      if (!props.selectable) await library.reload({ quiet: true })
+      return
+   }
    if (props.selectable && uploaded[0]) {
       emitSelect(uploaded[0])
       return
@@ -1078,13 +1087,22 @@ function onUploaded(uploaded: MediaItem[]) {
    void afterUpload(uploaded)
 }
 
-async function uploadFiles(files: FileList, target: string | null) {
-   const uploaded = await uploader.upload(files, {
+function droppedTree(event: DragEvent): Promise<UploadTree> | null {
+   const data = event.dataTransfer
+   if (!data?.files.length) return null
+   return props.selectable
+      ? Promise.resolve(uploadTreeFromFiles(data.files))
+      : uploadTreeFromDrop(data)
+}
+
+async function uploadTree(pending: Promise<UploadTree>, target: string | null) {
+   const tree = await pending
+   const uploaded = await uploader.upload(tree, {
       folder: target,
       accept: acceptAttr.value,
       multiple: !props.selectable,
    })
-   await afterUpload(uploaded)
+   if (uploaded.length || tree.directories.length) await afterUpload(uploaded)
 }
 
 const draggingKeys = ref<string[]>([])
@@ -1168,7 +1186,7 @@ async function onTargetDrop(event: DragEvent, target: string | null) {
    event.stopPropagation()
    const keys = [...draggingKeys.value]
    const path = draggingFolder.value
-   const files = event.dataTransfer?.files
+   const tree = hasFiles(event) ? droppedTree(event) : null
    onDragEnd()
    fileDragDepth.value = 0
    if (keys.length) {
@@ -1183,7 +1201,7 @@ async function onTargetDrop(event: DragEvent, target: string | null) {
       }
       return
    }
-   if (files?.length) await uploadFiles(files, target)
+   if (tree) await uploadTree(tree, target)
 }
 
 function onGalleryDragEnter(event: DragEvent) {
@@ -1207,8 +1225,8 @@ async function onGalleryDrop(event: DragEvent) {
    event.preventDefault()
    fileDragDepth.value = 0
    dropTarget.value = null
-   const files = event.dataTransfer?.files
-   if (files?.length) await uploadFiles(files, folder.value)
+   const tree = droppedTree(event)
+   if (tree) await uploadTree(tree, folder.value)
 }
 
 function tileInfo(item: MediaItem) {
