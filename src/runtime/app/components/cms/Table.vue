@@ -4,6 +4,14 @@
          <table class="cms-table">
             <thead>
                <tr>
+                  <th v-if="selectable" class="cms-table-check-cell">
+                     <CmsCheckbox
+                        :checked="allSelected"
+                        :indeterminate="someSelected"
+                        aria-label="Select all rows"
+                        @toggle="toggleAll"
+                     />
+                  </th>
                   <th
                      v-for="column in visibleColumns"
                      :key="columnId(column)"
@@ -38,8 +46,17 @@
                   v-for="(row, index) in data"
                   :key="index"
                   class="__clickable"
+                  :class="{ 'is-selected': isSelected(row) }"
+                  :style="{ '--cms-row-delay': `${Math.min(index, 14) * 24}ms` }"
                   @click="emit('select', $event, { original: row })"
                >
+                  <td v-if="selectable" class="cms-table-check-cell" @click.stop="toggleRow(row)">
+                     <CmsCheckbox
+                        :checked="isSelected(row)"
+                        aria-label="Select row"
+                        @toggle="toggleRow(row)"
+                     />
+                  </td>
                   <td v-for="column in visibleColumns" :key="columnId(column)">
                      <slot :name="`${columnId(column)}-cell`" :row="{ original: row }">
                         {{ cellValue(column, row) }}
@@ -74,7 +91,36 @@ interface TableSort {
 const props = defineProps<{
    data: Row[]
    columns: Column[]
+   selectable?: boolean
+   rowKey?: string
 }>()
+
+const selected = defineModel<string[]>('selected', { default: () => [] })
+
+function keyOf(row: Row) {
+   return String(row[props.rowKey ?? 'id'])
+}
+
+function isSelected(row: Row) {
+   return selected.value.includes(keyOf(row))
+}
+
+function toggleRow(row: Row) {
+   const key = keyOf(row)
+   selected.value = isSelected(row)
+      ? selected.value.filter((k) => k !== key)
+      : [...selected.value, key]
+}
+
+const allSelected = computed(
+   () => props.data.length > 0 && props.data.every((row) => isSelected(row))
+)
+
+const someSelected = computed(() => !allSelected.value && selected.value.length > 0)
+
+function toggleAll() {
+   selected.value = allSelected.value ? [] : props.data.map(keyOf)
+}
 
 const visibility = defineModel<Record<string, boolean>>('columnVisibility', { default: () => ({}) })
 

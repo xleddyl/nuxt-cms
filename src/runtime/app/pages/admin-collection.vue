@@ -1,6 +1,13 @@
 <template>
    <div class="cms-page" :class="{ 'is-fill': config.kind === 'collection' && !error }">
-      <CmsPageHeader :title="config.label">
+      <CmsPageHeader
+         :title="config.label"
+         :icon="kindMeta.icon"
+         :description="kindMeta.description"
+      >
+         <template v-if="config.kind !== 'single' && total" #badge>
+            <span :key="total" class="cms-count">{{ total }}</span>
+         </template>
          <CmsButton
             v-if="config.kind === 'single'"
             type="submit"
@@ -25,6 +32,7 @@
             v-model="formState"
             :fields="config.fields"
             :tabs="config.tabs"
+            :entry-name="name"
             :form-id="FORM_ID"
             :loading="saving"
             @submit="saveSingle"
@@ -42,27 +50,33 @@
             />
          </div>
 
-         <div v-if="pageTree.length" class="cms-card divide-y divide-(--cms-line)">
+         <div v-if="pageTree.length" class="cms-card cms-tree">
             <NuxtLink
-               v-for="node in pageTree"
+               v-for="(node, index) in pageTree"
                :key="String(node.row.id)"
                :to="`/cms/${name}/${node.row.id}`"
                class="cms-tree-row"
-               :style="{ paddingLeft: `${1 + node.depth * 1.5}rem` }"
+               :style="{
+                  paddingLeft: `${1 + node.depth * 1.5}rem`,
+                  '--cms-row-delay': `${Math.min(index, 14) * 24}ms`,
+               }"
             >
                <CmsIcon
                   v-if="node.depth"
                   name="arrow-turn-left-up"
                   class="cms-tree-branch size-3.5"
                />
+               <span class="cms-tree-doc">
+                  <CmsIcon name="document-text" class="size-4" />
+               </span>
                <div class="min-w-0 flex-1">
-                  <div class="truncate font-medium text-(--ui-text-highlighted)">
+                  <div class="cms-tree-title">
                      {{ node.row.label }}
                   </div>
-                  <div class="cms-label truncate">{{ node.row.path }}</div>
+                  <div class="cms-tree-path">{{ node.row.path }}</div>
                </div>
-               <span class="cms-label shrink-0">{{ lastEdit(node.row.updatedAt) }}</span>
-               <CmsIcon name="chevron-right" class="size-4 shrink-0 text-(--ui-text-dimmed)" />
+               <span class="cms-tree-meta">{{ lastEdit(node.row.updatedAt) }}</span>
+               <CmsIcon name="chevron-right" class="cms-tree-chevron size-4" />
             </NuxtLink>
          </div>
 
@@ -89,39 +103,60 @@
                placeholder="Search…"
                class="flex-1"
             />
-            <div class="cms-toolbar-actions">
-               <CmsDropdownMenu v-if="rows.length" :items="columnItems" :content="{ align: 'end' }">
-                  <CmsButton label="Columns" icon="view-columns" variant="soft" />
-               </CmsDropdownMenu>
+            <div v-if="selected.length" :key="'bulk'" class="cms-toolbar-actions cms-bulk-actions">
+               <span class="cms-bulk-count">{{ selected.length }} selected</span>
+               <CmsButton
+                  icon="x-mark"
+                  variant="ghost"
+                  color="neutral"
+                  size="sm"
+                  aria-label="Clear selection"
+                  title="Clear selection"
+                  @click="selected = []"
+               />
+               <template v-if="drafts">
+                  <CmsButton
+                     label="Draft"
+                     icon="pencil-square"
+                     variant="soft"
+                     :disabled="saving"
+                     @click="bulkStatus('draft')"
+                  />
+                  <CmsButton
+                     label="Publish"
+                     icon="check-circle"
+                     variant="soft"
+                     :disabled="saving"
+                     @click="bulkStatus('published')"
+                  />
+               </template>
+               <CmsButton
+                  label="Delete"
+                  icon="trash"
+                  color="error"
+                  :loading="saving"
+                  @click="bulkDelete"
+               />
+            </div>
+            <div v-else :key="'default'" class="cms-toolbar-actions">
                <CmsButton label="New entry" icon="plus" @click="openCreate" />
             </div>
          </div>
 
          <CmsTable
             v-if="rows.length"
-            v-model:column-visibility="columnVisibility"
+            v-model:selected="selected"
+            selectable
             v-model:sort="sort"
             :data="rows"
             :columns="columns"
             @select="onSelect"
-            @reorder="reorderColumns"
          >
             <template v-for="key in mediaKeys" #[`${key}-cell`]="{ row }" :key="key">
                <CmsMediaThumb :value="mediaThumbValue(key, row.original[key])" />
             </template>
             <template v-if="drafts" #status-cell="{ row }">
                <CmsStatusBadge :published="row.original.status === 'published'" />
-            </template>
-            <template #actions-cell="{ row }">
-               <div class="cms-table-cell-actions">
-                  <CmsButton
-                     icon="trash"
-                     variant="ghost"
-                     color="error"
-                     size="xs"
-                     @click.stop="deleteRow(row.original)"
-                  />
-               </div>
             </template>
          </CmsTable>
 
@@ -179,6 +214,7 @@ import {
 import cmsConfig from '#cms-config'
 import { useCmsConfirm } from '../composables/cms-confirm'
 import { useCmsRuntime } from '../composables/cms-runtime'
+import { entryListColumns, useCmsSettingsState } from '../composables/cms-settings'
 import { useCmsToast } from '../composables/cms-toast'
 import { cmsApi } from '../utils/api'
 import { errorMessage } from '../utils/ui'
@@ -200,6 +236,12 @@ const config = (cmsConfig as CmsConfig)[name]
 if (!config) {
    throw createError({ statusCode: 404, statusMessage: 'Unknown collection', fatal: true })
 }
+const KIND_META = {
+   collection: { icon: 'square-3-stack-3d', description: 'Collection of entries.' },
+   single: { icon: 'document-text', description: 'Single entry, edited in place.' },
+   page: { icon: 'window', description: 'Content for the routes of your app.' },
+}
+const kindMeta = { ...KIND_META[config.kind], icon: config.icon ?? KIND_META[config.kind].icon }
 const fieldKeys = Object.keys(config.fields)
 const mediaKeys = fieldKeys.filter((key) => config.fields[key]!.type === 'media')
 const drafts = config.kind === 'collection' && !!config.drafts
@@ -397,92 +439,24 @@ function displayValue(field: FieldConfig, key: string, value: unknown): string {
    }
 }
 
-const columnOrder = ref<string[]>([...fieldKeys])
-
-const orderedKeys = computed(() => {
-   const known = columnOrder.value.filter((key) => fieldKeys.includes(key))
-   return [...known, ...fieldKeys.filter((key) => !known.includes(key))]
-})
-
 function isSortable(field: FieldConfig) {
    if (field.type === 'blocks') return false
    return !(field.type === 'relation' && field.cardinality === 'many-to-many')
 }
 
-const columns = computed(() => [
-   ...orderedKeys.value.map((key) => ({
-      id: key,
-      accessorFn: (row: Row) => displayValue(config.fields[key]!, key, row[key]),
-      header: config.fields[key]!.label,
-      reorderable: true,
-      sortable: isSortable(config.fields[key]!),
-   })),
-   ...(drafts ? [{ accessorKey: 'status', header: 'Status', sortable: true }] : []),
-   { id: 'actions', header: '' },
-])
+const settings = useCmsSettingsState()
 
-function reorderColumns(from: string, to: string) {
-   const next = [...orderedKeys.value]
-   const fromIndex = next.indexOf(from)
-   const toIndex = next.indexOf(to)
-   if (fromIndex === -1 || toIndex === -1) return
-   next.splice(toIndex, 0, ...next.splice(fromIndex, 1))
-   columnOrder.value = next
-}
-
-const DEFAULT_VISIBLE_COLUMNS = 4
-const columnStorageKey = `cms:columns:${name}`
-const columnOrderStorageKey = `cms:column-order:${name}`
-const columnVisibility = ref<Record<string, boolean>>(
-   Object.fromEntries(fieldKeys.map((key, index) => [key, index < DEFAULT_VISIBLE_COLUMNS]))
-)
-
-function readStored<T>(key: string): T | undefined {
-   const stored = localStorage.getItem(key)
-   if (!stored) return undefined
-   try {
-      return JSON.parse(stored) as T
-   } catch {
-      return undefined
-   }
-}
-
-onMounted(() => {
-   const storedVisibility = readStored<Record<string, boolean>>(columnStorageKey)
-   if (storedVisibility) {
-      columnVisibility.value = Object.fromEntries(
-         fieldKeys.map((key) => [
-            key,
-            storedVisibility[key] ?? columnVisibility.value[key] ?? false,
-         ])
-      )
-   }
-
-   const storedOrder = readStored<string[]>(columnOrderStorageKey)
-   if (Array.isArray(storedOrder)) {
-      columnOrder.value = storedOrder.filter((key) => typeof key === 'string')
-   }
-
-   watch(
-      columnVisibility,
-      (value) => localStorage.setItem(columnStorageKey, JSON.stringify(value)),
-      { deep: true }
+const columns = computed(() =>
+   entryListColumns(name, settings.value).map((key) =>
+      key === 'status' && !config.fields.status
+         ? { accessorKey: 'status', header: 'Status', sortable: true }
+         : {
+              id: key,
+              accessorFn: (row: Row) => displayValue(config.fields[key]!, key, row[key]),
+              header: config.fields[key]!.label,
+              sortable: isSortable(config.fields[key]!),
+           }
    )
-   watch(orderedKeys, (value) => localStorage.setItem(columnOrderStorageKey, JSON.stringify(value)))
-})
-
-const columnItems = computed(() =>
-   orderedKeys.value.map((key) => ({
-      label: config.fields[key]!.label,
-      type: 'checkbox' as const,
-      checked: columnVisibility.value[key],
-      onUpdateChecked(checked: boolean) {
-         columnVisibility.value = { ...columnVisibility.value, [key]: checked }
-      },
-      onSelect(event: Event) {
-         event.preventDefault()
-      },
-   }))
 )
 
 const drawerOpen = ref(false)
@@ -505,10 +479,62 @@ async function onDrawerDeleted() {
 
 const confirmAction = useCmsConfirm()
 
-async function deleteRow(row: Record<string, unknown>) {
-   if (!(await confirmAction('Delete this row?'))) return
-   const lastOnPage = rows.value.length === 1 && page.value > 1
-   const ok = await submit(() => cmsApi(`${endpoint}/${row.id}`, { method: 'DELETE' }))
-   if (ok && lastOnPage) page.value -= 1
+const selected = ref<string[]>([])
+
+watch(rows, (current) => {
+   const ids = new Set(current.map((row) => String(row.id)))
+   selected.value = selected.value.filter((id) => ids.has(id))
+})
+
+function entriesLabel(count: number) {
+   return `${count} ${count === 1 ? 'entry' : 'entries'}`
+}
+
+async function runBulk(ids: string[], action: (id: string) => Promise<unknown>) {
+   saving.value = true
+   try {
+      const results = await Promise.allSettled(ids.map(action))
+      const failed = results.flatMap((result, index) =>
+         result.status === 'rejected' ? [{ id: ids[index]!, reason: result.reason }] : []
+      )
+      await refresh()
+      selected.value = failed.map((f) => f.id)
+      return failed
+   } finally {
+      saving.value = false
+   }
+}
+
+function reportBulk(done: string, total: number, failed: { reason: unknown }[]) {
+   const succeeded = total - failed.length
+   if (succeeded) toast.add({ title: `${done}: ${entriesLabel(succeeded)}`, color: 'success' })
+   if (failed.length) {
+      toast.add({
+         title: `${entriesLabel(failed.length)} not changed`,
+         description: errorMessage(failed[0]!.reason),
+         color: 'error',
+      })
+   }
+}
+
+async function bulkDelete() {
+   const ids = [...selected.value]
+   if (!ids.length || saving.value) return
+   if (!(await confirmAction(`Delete ${entriesLabel(ids.length)}?`))) return
+   const emptiesPage = ids.length >= rows.value.length && page.value > 1
+   const failed = await runBulk(ids, (id) => cmsApi(`${endpoint}/${id}`, { method: 'DELETE' }))
+   reportBulk('Deleted', ids.length, failed)
+   if (!failed.length && emptiesPage) page.value -= 1
+}
+
+async function bulkStatus(status: 'draft' | 'published') {
+   const ids = [...selected.value]
+   if (!ids.length || saving.value) return
+   const failed = await runBulk(ids, async (id) => {
+      const entry = await cmsApi<Row>(`${endpoint}/${id}`)
+      const body = Object.fromEntries(formKeys.map((key) => [key, entry[key] ?? null]))
+      return cmsApi(`${endpoint}/${id}`, { method: 'PUT', body: { ...body, status } })
+   })
+   reportBulk(status === 'published' ? 'Published' : 'Moved to draft', ids.length, failed)
 }
 </script>
