@@ -1,6 +1,39 @@
 # Changelog
 
 
+## v0.2.0
+
+[compare changes](https://github.com/xleddyl/nuxt-cms/compare/v0.1.61...v0.2.0)
+
+### 🚀 Enhancements
+
+- Upload whole folders to the media library, with their subfolders ([87f8471](https://github.com/xleddyl/nuxt-cms/commit/87f8471))
+- **admin:** Redesign the panel with a light and dark theme and a settings modal ([b611592](https://github.com/xleddyl/nuxt-cms/commit/b611592))
+- **admin:** Select table rows to delete, publish or unpublish them in bulk ([3bdf5d5](https://github.com/xleddyl/nuxt-cms/commit/3bdf5d5))
+- **admin:** Edit single-media blocks fields as a media list with add, remove and drag ([a1f7ea2](https://github.com/xleddyl/nuxt-cms/commit/a1f7ea2))
+- Configure form layouts, table columns and icons, and let admins change them in settings ([81d727e](https://github.com/xleddyl/nuxt-cms/commit/81d727e))
+- Add admin accounts that the super admin creates from settings ([c79a417](https://github.com/xleddyl/nuxt-cms/commit/c79a417))
+
+### 🩹 Fixes
+
+- Show the required message when a required field is empty ([da224da](https://github.com/xleddyl/nuxt-cms/commit/da224da))
+
+### 📖 Documentation
+
+- Document form layouts, settings and admin accounts ([4eb1a20](https://github.com/xleddyl/nuxt-cms/commit/4eb1a20))
+
+### 🏡 Chore
+
+- **playground:** Cover every CMS option and move to a local sqlite database ([f980c82](https://github.com/xleddyl/nuxt-cms/commit/f980c82))
+
+### 🤖 CI
+
+- Move actions to the node 24 runtime and fix the release notes input ([cdc5e60](https://github.com/xleddyl/nuxt-cms/commit/cdc5e60))
+
+### ❤️ Contributors
+
+- Edoardo Alberti <edoalberti99@gmail.com>
+
 ## v0.1.61
 
 [compare changes](https://github.com/xleddyl/nuxt-cms/compare/v0.1.60...v0.1.61)
