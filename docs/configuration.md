@@ -71,10 +71,19 @@ media: {
 
 // local: library backed by the public/ folder, publicBaseUrl is required
 media: { storage: 'local', publicBaseUrl: '/images' }
+
+// filesystem: uploads written to a directory on the server's disk, all keys optional
+media: {
+   storage: 'filesystem',
+   dir: 'data/media',            // relative to rootDir or absolute (NUXT_CMS_MEDIA_DIR)
+   publicBaseUrl: '/media',      // root-relative path the module serves the files from
+   maxFileSize: 10485760,        // max upload size in bytes (default 10 MB)
+}
 ```
 
 The `local` variant does not accept the S3-only keys (`endpoint`, `bucket`, `accessKeyId`, etc.),
-and requires `publicBaseUrl` since there is no other way to know which files to list.
+and requires `publicBaseUrl` since there is no other way to know which files to list. The `filesystem` variant only accepts `dir`,
+`publicBaseUrl` and `maxFileSize`; see [Media](media.md#filesystem-mode-files-on-the-servers-disk).
 
 ### `enabled`
 
@@ -101,8 +110,8 @@ handlers and plugins, the database aliases, the Drizzle schema/config templates,
 `nuxt-auth-utils` dependency. Components can therefore call the composables unconditionally and
 render their empty states, with no crash at build, SSR prerender or on the client.
 
-Note that the generated aliases (`#cms-types`, `#cms-graphql`, `#cms-tables`, `#cms-db`) are not
-registered when disabled, so application code must not import from them directly.
+Note that the server-side aliases (`#cms-tables`, `#cms-db`, `#cms-migrations`) are not registered
+when disabled, so application code must not import from them directly.
 
 ### `configPath`
 
@@ -129,14 +138,17 @@ by the host app instead of a bucket — no S3 config needed. In that mode a root
 `publicBaseUrl` (e.g. `/images` → `<rootDir>/public/images`) also selects the folder the library is
 read from: live from disk wherever that folder exists, otherwise from a manifest baked at build
 time. Nothing is written back to the database. `maxFileSize` caps a single upload in bytes
-(default 10 MB, must be a positive integer); raise it for large assets such as magazine PDFs. See
+(default 10 MB, must be a positive integer); raise it for large assets such as magazine PDFs. The
+admin panel checks the size in the browser against `NUXT_PUBLIC_CMS_MEDIA_MAX_FILE_SIZE`, so when you
+override the limit at runtime with env vars, set it and `NUXT_CMS_MEDIA_MAX_FILE_SIZE` to the same
+value. `storage: 'filesystem'` stores uploads in a directory on the server's disk and serves them
+under `publicBaseUrl` (default `/media`), with no bucket needed. See
 [Media](media.md).
 
 ### `i18n`
 
 `locales` / `defaultLocale` are only required when a field is marked `translatable: true`.
-`defaultLocale` must be one of `locales`. This also feeds the admin UI language (English and Italian
-ship built in). See [Schema → Translatable fields](schema.md#translatable-fields).
+`defaultLocale` must be one of `locales`. See [Schema → Translatable fields](schema.md#translatable-fields).
 
 ### `graphql.maxDepth`
 
@@ -161,7 +173,9 @@ Secrets should be provided as env vars rather than committed to `nuxt.config.ts`
 | `NUXT_CMS_MEDIA_BUCKET` | for media | bucket name |
 | `NUXT_CMS_MEDIA_ACCESS_KEY_ID` | for media | S3 access key id |
 | `NUXT_CMS_MEDIA_SECRET_ACCESS_KEY` | for media | S3 secret access key |
-| `NUXT_CMS_MEDIA_MAX_FILE_SIZE` | no | max upload size in bytes (default `10485760`) |
+| `NUXT_CMS_MEDIA_MAX_FILE_SIZE` | no | max upload size in bytes (default `10485760`), enforced by the server |
+| `NUXT_PUBLIC_CMS_MEDIA_MAX_FILE_SIZE` | no | same limit, checked by the admin client; set it to the same value as `NUXT_CMS_MEDIA_MAX_FILE_SIZE` |
+| `NUXT_CMS_MEDIA_DIR` | for filesystem media | directory for uploaded files (default `data/media`) |
 | `NUXT_PUBLIC_CMS_MEDIA_BASE_URL` | for media | public base URL for uploaded files |
 
 Env vars follow Nuxt's runtime-config convention: `cms.admin.email` ← `NUXT_CMS_ADMIN_EMAIL`,

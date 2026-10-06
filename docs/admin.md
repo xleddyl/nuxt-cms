@@ -62,7 +62,7 @@ The [`layout` and `list` options](schema.md#form-layout) of the config are the d
 goes at the end, and a removed field disappears.
 
 All pages except `/cms/login` require an authenticated admin session (enforced by the `cms-auth`
-route middleware). The admin UI ships in English and Italian.
+route middleware).
 
 ## Authentication
 

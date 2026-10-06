@@ -46,6 +46,7 @@ NUXT_CMS_MEDIA_ACCESS_KEY_ID=...
 NUXT_CMS_MEDIA_SECRET_ACCESS_KEY=...
 NUXT_PUBLIC_CMS_MEDIA_BASE_URL=https://cdn.example.com
 NUXT_CMS_MEDIA_MAX_FILE_SIZE=52428800
+NUXT_PUBLIC_CMS_MEDIA_MAX_FILE_SIZE=52428800
 ```
 
 - **`storage`** — `'s3'` (default) enables uploads against object storage; `'local'` turns the
@@ -65,7 +66,10 @@ NUXT_CMS_MEDIA_MAX_FILE_SIZE=52428800
 - **`maxFileSize`** (`NUXT_CMS_MEDIA_MAX_FILE_SIZE`): the largest single upload accepted, in bytes
   (default `10485760`, i.e. 10 MB). Must be a positive integer. The admin panel checks it before
   uploading and the presign endpoint rejects anything larger with `413`. Raise it for large assets
-  such as magazine PDFs, and keep any bucket or proxy limits in mind. Unused in `'local'` mode.
+  such as magazine PDFs, and keep any bucket or proxy limits in mind. Unused in `'local'` mode. The
+  server enforces `NUXT_CMS_MEDIA_MAX_FILE_SIZE`, while the admin client checks
+  `NUXT_PUBLIC_CMS_MEDIA_MAX_FILE_SIZE`, so a runtime override must set both env vars to the same
+  value.
 
 ## Local mode (files own the library)
 
