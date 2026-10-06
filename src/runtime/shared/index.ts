@@ -208,6 +208,40 @@ export interface MediaUsage {
    field: string
 }
 
+export interface MediaUsageEntry {
+   collection: string
+   label: string
+   kind: CmsEntryKind
+   id: string | null
+   title: string | null
+   fields: string[]
+}
+
+export function groupMediaUsage(usage: MediaUsage[]): MediaUsageEntry[] {
+   const entries = new Map<string, MediaUsageEntry>()
+   for (const { field, ...rest } of usage) {
+      const id = `${rest.collection}\u0000${rest.id ?? ''}`
+      const entry = entries.get(id)
+      if (!entry) entries.set(id, { ...rest, fields: [field] })
+      else if (!entry.fields.includes(field)) entry.fields.push(field)
+   }
+   return [...entries.values()]
+}
+
+export interface MediaUsageGroup {
+   key: string
+   entries: MediaUsageEntry[]
+}
+
+export function mediaUsageGroups(
+   usage: Record<string, MediaUsage[]>,
+   keys: string[]
+): MediaUsageGroup[] {
+   return [...new Set(keys)]
+      .map((key) => ({ key, entries: groupMediaUsage(usage[key] ?? []) }))
+      .filter((group) => group.entries.length > 0)
+}
+
 export interface BlockConfig {
    label: string
    fields: Record<string, FieldConfig>

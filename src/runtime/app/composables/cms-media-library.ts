@@ -11,6 +11,7 @@ import { invalidateCmsMediaKeys } from './cms-media-keys'
 import { useCmsToast } from './cms-toast'
 
 const endpoint = '/api/cms/admin/media'
+const USAGE_CHUNK = 1000
 
 export interface MediaFolderStats {
    files: number
@@ -132,13 +133,18 @@ export function useCmsMediaLibrary() {
    }
 
    async function usage(keys: string[]): Promise<Record<string, MediaUsage[]> | null> {
-      if (!keys.length) return {}
+      const unique = [...new Set(keys)]
+      if (!unique.length) return {}
       try {
-         const result = await $fetch<{ usage: Record<string, MediaUsage[]> }>(`${endpoint}/usage`, {
-            method: 'POST',
-            body: { keys },
-         })
-         return result.usage
+         const merged: Record<string, MediaUsage[]> = {}
+         for (let index = 0; index < unique.length; index += USAGE_CHUNK) {
+            const result = await $fetch<{ usage: Record<string, MediaUsage[]> }>(
+               `${endpoint}/usage`,
+               { method: 'POST', body: { keys: unique.slice(index, index + USAGE_CHUNK) } }
+            )
+            Object.assign(merged, result.usage)
+         }
+         return merged
       } catch {
          return null
       }
@@ -166,22 +172,6 @@ export function useCmsMediaLibrary() {
 
 export type CmsMediaLibrary = ReturnType<typeof useCmsMediaLibrary>
 
-export function usageSummary(usage: Record<string, MediaUsage[]> | null, keys: string[]) {
-   if (!usage) return ''
-   const entries = new Set<string>()
-   let used = 0
-   for (const key of keys) {
-      const list = usage[key] ?? []
-      if (list.length) used++
-      for (const item of list) entries.add(`${item.collection}:${item.id ?? ''}`)
-   }
-   if (!used) return ''
-   const files = keys.length === 1 ? 'It is' : `${used} of them are`
-   return `${files} used in ${entries.size} entr${
-      entries.size === 1 ? 'y' : 'ies'
-   }, which will keep a broken link.`
-}
-
-export function usageLink(usage: MediaUsage) {
+export function usageLink(usage: Pick<MediaUsage, 'collection' | 'id'>) {
    return usage.id === null ? `/cms/${usage.collection}` : `/cms/${usage.collection}/${usage.id}`
 }

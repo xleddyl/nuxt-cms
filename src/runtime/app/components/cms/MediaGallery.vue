@@ -340,6 +340,19 @@
                      <div v-if="query && item.folder" class="cms-media-folder">
                         <CmsIcon name="folder" class="size-3" />{{ item.folder }}
                      </div>
+                     <span
+                        v-if="!selectable"
+                        class="cms-media-usage-badge"
+                        :class="{ 'is-unused': usageCount(item.key) === 0 }"
+                     >
+                        <template v-if="usageCount(item.key) !== null">
+                           <CmsIcon
+                              :name="usageCount(item.key) ? 'link' : 'link-slash'"
+                              class="size-3"
+                           />{{ usageLabel(item.key) }}
+                        </template>
+                        <template v-else>&nbsp;</template>
+                     </span>
                   </div>
                </div>
             </div>
@@ -380,6 +393,18 @@
                      {{ mediaFilename(item.key) }}
                      <span v-if="query && item.folder" class="cms-media-folder">
                         <CmsIcon name="folder" class="size-3" />{{ item.folder }}
+                     </span>
+                  </span>
+                  <span v-if="!selectable" class="cms-media-row-cell is-usage">
+                     <span
+                        v-if="usageCount(item.key) !== null"
+                        class="cms-media-usage-badge"
+                        :class="{ 'is-unused': usageCount(item.key) === 0 }"
+                     >
+                        <CmsIcon
+                           :name="usageCount(item.key) ? 'link' : 'link-slash'"
+                           class="size-3"
+                        />{{ usageLabel(item.key) }}
                      </span>
                   </span>
                   <span class="cms-media-row-cell is-mono">{{ extension(item.key) }}</span>
@@ -550,7 +575,7 @@
 </template>
 
 <script setup lang="ts">
-import type { MediaItem, MediaType } from '#nuxt-cms'
+import type { MediaItem, MediaType, MediaUsage } from '#nuxt-cms'
 import { computed, onMounted, ref, watch } from '#imports'
 import {
    isWithinMediaFolder,
@@ -563,13 +588,15 @@ import {
    mediaFolderName,
    mediaFolderParent,
    mediaIconFor,
+   groupMediaUsage,
+   mediaUsageGroups,
    mediaTypeAccept,
    mediaTypeFilter,
    rebaseMediaFolder,
    slugify,
 } from '#nuxt-cms'
 import { useCmsConfirm } from '../../composables/cms-confirm'
-import { useCmsMediaLibrary, usageSummary } from '../../composables/cms-media-library'
+import { useCmsMediaLibrary, usageLink } from '../../composables/cms-media-library'
 import type { UploadTree } from '../../composables/cms-media-uploader'
 import {
    uploadTreeFromDrop,
@@ -761,6 +788,42 @@ watch(visibleFiles, (list) => {
 const paged = computed(() =>
    visibleFiles.value.slice((page.value - 1) * PAGE_SIZE, page.value * PAGE_SIZE)
 )
+
+const usageByKey = ref<Record<string, MediaUsage[]>>({})
+let usageRequest = 0
+
+watch(
+   () => [props.selectable, library.loading.value, paged.value] as const,
+   async ([selectable, loading, items]) => {
+      const request = ++usageRequest
+      if (selectable || loading || !items.length) return
+      const usage = await library.usage(items.map((item) => item.key))
+      if (request !== usageRequest) return
+      usageByKey.value = usage ?? {}
+   },
+   { immediate: true }
+)
+
+const usageCounts = computed(
+   () =>
+      new Map(
+         Object.entries(usageByKey.value).map(([key, list]) => [key, groupMediaUsage(list).length])
+      )
+)
+
+function usageCount(key: string) {
+   return usageCounts.value.get(key) ?? null
+}
+
+function entriesLabel(count: number) {
+   return `${count} entr${count === 1 ? 'y' : 'ies'}`
+}
+
+function usageLabel(key: string) {
+   const count = usageCount(key)
+   if (count === null) return ''
+   return count ? `Used in ${entriesLabel(count)}` : 'Unused'
+}
 
 const emptyState = computed(() => {
    if (query.value) {
@@ -992,6 +1055,34 @@ async function renameFolder() {
    openFolder(to)
 }
 
+async function confirmDelete(keys: string[], question: string, title: string) {
+   const usage = await library.usage(keys)
+   const groups = usage ? mediaUsageGroups(usage, keys) : []
+   if (!groups.length) {
+      const warning = usage ? '' : ' Could not check where the files are used.'
+      return confirmAction(`${question}${warning}`, { title, confirmLabel: 'Delete' })
+   }
+   const single = keys.length === 1
+   const usedIn = single
+      ? `This file is used in ${entriesLabel(groups[0]!.entries.length)}.`
+      : `${groups.length} of ${keys.length} files are used in your content.`
+   return confirmAction(
+      `${question} ${usedIn} Deleting ${single ? 'it' : 'them'} leaves broken links there.`,
+      {
+         title: single ? 'File in use' : 'Files in use',
+         confirmLabel: 'Delete anyway',
+         groups: groups.map((group) => ({
+            title: group.key,
+            links: group.entries.map((entry) => ({
+               title: entry.title ?? entry.label,
+               meta: `${entry.label} · ${entry.fields.join(', ')}`,
+               to: usageLink(entry),
+            })),
+         })),
+      }
+   )
+}
+
 async function removeFolder(path: string) {
    const files = library.itemsWithin(path)
    const subfolders = library.folders.value.filter(
@@ -1000,12 +1091,16 @@ async function removeFolder(path: string) {
    const contents: string[] = []
    if (subfolders) contents.push(`${subfolders} subfolder${subfolders > 1 ? 's' : ''}`)
    if (files.length) contents.push(`${files.length} file${files.length > 1 ? 's' : ''}`)
-   const keys = files.map((item) => item.key)
-   const summary = usageSummary(await library.usage(keys), keys)
-   const message = contents.length
-      ? `Delete "${mediaFolderName(path)}" with ${contents.join(' and ')}? ${summary}`
+   const question = contents.length
+      ? `Delete "${mediaFolderName(path)}" with ${contents.join(' and ')}?`
       : `Delete the empty folder "${mediaFolderName(path)}"?`
-   if (!(await confirmAction(message.trim(), { title: 'Delete folder', confirmLabel: 'Delete' })))
+   if (
+      !(await confirmDelete(
+         files.map((item) => item.key),
+         question,
+         'Delete folder'
+      ))
+   )
       return
    const ok = await run(() => library.deleteFolder(path))
    if (ok && folder.value && isWithinMediaFolder(folder.value, path)) {
@@ -1016,16 +1111,9 @@ async function removeFolder(path: string) {
 async function removeItems(items: MediaItem[]) {
    if (!items.length) return
    const keys = items.map((item) => item.key)
-   const summary = usageSummary(await library.usage(keys), keys)
    const question =
       keys.length === 1 ? `Delete "${mediaFilename(keys[0]!)}"?` : `Delete ${keys.length} files?`
-   if (
-      !(await confirmAction(`${question} ${summary}`.trim(), {
-         title: 'Delete',
-         confirmLabel: 'Delete',
-      }))
-   )
-      return
+   if (!(await confirmDelete(keys, question, 'Delete'))) return
    const ok = await run(() => library.deleteItems(keys))
    if (!ok) return
    if (detailKey.value && keys.includes(detailKey.value)) detailKey.value = null

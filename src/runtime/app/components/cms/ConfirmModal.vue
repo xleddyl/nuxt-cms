@@ -2,12 +2,25 @@
    <CmsModal
       v-model:open="state.open"
       :title="state.title ?? 'Are you sure?'"
-      size="sm"
+      :size="state.groups?.length ? undefined : 'sm'"
       @after:leave="finish(false)"
    >
       <template #body>
          <div class="cms-form">
             <p class="text-sm">{{ state.message }}</p>
+            <div v-if="state.groups?.length" class="cms-confirm-groups">
+               <section v-for="group in state.groups" :key="group.title" class="cms-confirm-group">
+                  <h3 class="cms-confirm-group-title" :title="group.title">{{ group.title }}</h3>
+                  <ul class="cms-media-usage-list">
+                     <li v-for="link in group.links" :key="link.to + link.meta">
+                        <NuxtLink :to="link.to" class="cms-media-usage-link" @click="finish(false)">
+                           <span class="cms-media-usage-title">{{ link.title }}</span>
+                           <span class="cms-media-usage-meta">{{ link.meta }}</span>
+                        </NuxtLink>
+                     </li>
+                  </ul>
+               </section>
+            </div>
             <div class="cms-actions is-end">
                <CmsButton label="Cancel" variant="soft" color="neutral" @click="finish(false)" />
                <CmsButton
@@ -26,9 +39,6 @@ import { useCmsConfirmState } from '../../composables/cms-confirm'
 
 const state = useCmsConfirmState()
 
-// Settles the pending promise exactly once. Buttons call finish() directly;
-// closing via backdrop/escape triggers the modal's after:leave -> finish(false).
-// The resolve guard makes whichever fires first win and no-ops the other.
 function finish(value: boolean) {
    const resolve = state.value.resolve
    if (!resolve) return
