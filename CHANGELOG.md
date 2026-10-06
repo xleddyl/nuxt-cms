@@ -1,6 +1,28 @@
 # Changelog
 
 
+## v0.2.1
+
+[compare changes](https://github.com/xleddyl/nuxt-cms/compare/v0.2.0...v0.2.1)
+
+### 🩹 Fixes
+
+- Show the real light and dark colors in the theme previews ([e36c16d](https://github.com/xleddyl/nuxt-cms/commit/e36c16d))
+- **server:** Harden uploads, GraphQL depth checks, folder queries and Postgres search ([df3f9ad](https://github.com/xleddyl/nuxt-cms/commit/df3f9ad))
+- **admin:** Close only the top overlay on Escape, ignore stale loads and remove unused code ([dfaa676](https://github.com/xleddyl/nuxt-cms/commit/dfaa676))
+
+### 📖 Documentation
+
+- Document filesystem storage and the client upload limit, drop the i18n claim ([e3f4067](https://github.com/xleddyl/nuxt-cms/commit/e3f4067))
+
+### 🏡 Chore
+
+- Skip generated migration metadata in prettier ([de686c3](https://github.com/xleddyl/nuxt-cms/commit/de686c3))
+
+### ❤️ Contributors
+
+- Edoardo Alberti <edoalberti99@gmail.com>
+
 ## v0.2.0
 
 [compare changes](https://github.com/xleddyl/nuxt-cms/compare/v0.1.61...v0.2.0)
