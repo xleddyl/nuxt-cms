@@ -1,9 +1,3 @@
-/* Vendored Tailwind, scoped to the CMS admin panel only.
-   Preflight (the global reset) and utilities are confined under .cms-scope so
-   installing this module never restyles the host app. theme(inline) inlines token
-   values into our utilities instead of emitting :root variables, so the host's own
-   Tailwind theme (fonts, colors) is never overridden. source(none) disables
-   automatic content detection; @source below limits scanning to our own files. */
 @layer theme, base, components, utilities;
 @import 'tailwindcss/theme.css' layer(theme) theme(inline);
 .cms-scope {
@@ -37,7 +31,6 @@ html:has(.cms-scope),
    --cms-accent-contrast: #ffffff;
    --cms-accent-soft: color-mix(in oklab, var(--cms-accent) 11%, transparent);
    --cms-accent-line: color-mix(in oklab, var(--cms-accent) 34%, transparent);
-   --cms-accent-glow: light-dark(#a78bfa, #8b5cf6);
 
    --cms-error: light-dark(#d9383a, #f47a7a);
    --cms-success: light-dark(#1d8a54, #5ccf90);
@@ -247,8 +240,6 @@ body:has(.cms-scope)
    padding: 1.5rem;
 }
 
-/* ── App shell ────────────────────────────────────────────────────────────── */
-
 .cms-shell {
    display: flex;
    height: 100dvh;
@@ -281,13 +272,8 @@ body:has(.cms-scope)
    height: 1.75rem;
    flex: none;
    border-radius: var(--cms-radius-md);
-   background: linear-gradient(145deg, var(--cms-accent-glow), var(--cms-accent) 60%);
-   color: var(--cms-accent-contrast);
-   box-shadow:
-      inset 0 1px 0 rgb(255 255 255 / 0.28),
-      inset 0 -1px 0 rgb(0 0 0 / 0.12),
-      0 1px 2px color-mix(in oklab, var(--cms-accent) 40%, transparent),
-      0 4px 12px -4px color-mix(in oklab, var(--cms-accent) 60%, transparent);
+   background: var(--ui-bg-inverted);
+   color: var(--ui-text-inverted);
 }
 
 .cms-brand-mark svg {
@@ -441,12 +427,11 @@ body:has(.cms-scope)
    height: 1.75rem;
    flex: none;
    border-radius: 9999px;
-   background: linear-gradient(145deg, var(--cms-accent-glow), var(--cms-accent));
+   background: var(--cms-accent);
    color: var(--cms-accent-contrast);
    font-size: 0.75rem;
    font-weight: 600;
    text-transform: uppercase;
-   box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.25);
 }
 
 .cms-avatar.is-lg {
@@ -678,8 +663,6 @@ body:has(.cms-scope)
       padding: 1.25rem 1rem 2rem;
    }
 }
-
-/* ── Page composition ─────────────────────────────────────────────────────── */
 
 .cms-page {
    display: flex;
@@ -958,48 +941,12 @@ body:has(.cms-scope)
    margin-top: 1rem;
 }
 
-/* ── Auth screen ──────────────────────────────────────────────────────────── */
-
 .cms-auth {
-   position: relative;
-   isolation: isolate;
    display: flex;
    min-height: 100dvh;
    align-items: center;
    justify-content: center;
    padding: 1.5rem;
-   overflow: hidden;
-}
-
-.cms-auth::before {
-   content: '';
-   position: absolute;
-   inset: 0;
-   z-index: -1;
-   background-image: linear-gradient(to right, var(--cms-line) 1px, transparent 1px),
-      linear-gradient(to bottom, var(--cms-line) 1px, transparent 1px);
-   background-size: 44px 44px;
-   background-position: center center;
-   mask-image: radial-gradient(ellipse 55% 50% at 50% 42%, black 10%, transparent 75%);
-}
-
-.cms-auth::after {
-   content: '';
-   position: absolute;
-   top: -18rem;
-   left: 50%;
-   z-index: -1;
-   width: 48rem;
-   height: 30rem;
-   translate: -50% 0;
-   border-radius: 9999px;
-   background: radial-gradient(
-      closest-side,
-      color-mix(in oklab, var(--cms-accent-glow) 34%, transparent),
-      transparent
-   );
-   filter: blur(24px);
-   opacity: 0.9;
 }
 
 .cms-auth-panel {
@@ -1450,8 +1397,6 @@ body:has(.cms-scope)
    text-underline-offset: 2px;
 }
 
-/* ── Hand-built UI primitives (replacing Nuxt UI) ─────────────────────────── */
-
 .cms-btn {
    position: relative;
    display: inline-flex;
@@ -1484,7 +1429,6 @@ body:has(.cms-scope)
 .cms-btn.is-block {
    width: 100%;
 }
-/* Label-less buttons collapse to a square so the icon stays optically centred. */
 .cms-btn.is-icon {
    width: var(--cms-btn-size);
    padding-inline: 0;
@@ -1523,7 +1467,6 @@ body:has(.cms-scope)
    border-radius: 10px;
 }
 
-/* color × variant matrix */
 .cms-btn-primary.cms-btn-solid {
    background: var(--cms-accent);
    color: var(--cms-accent-contrast);
@@ -2892,8 +2835,6 @@ textarea.cms-field {
    animation: cms-pop 180ms var(--cms-ease-out);
 }
 
-/* ── Media library ────────────────────────────────────────────────────────── */
-
 .cms-media-gallery {
    position: relative;
    display: flex;
@@ -3688,6 +3629,50 @@ textarea.cms-field {
    font-family: var(--cms-font-mono);
    font-size: 0.6875rem;
    color: var(--ui-text-dimmed);
+}
+
+.cms-media-usage-badge {
+   display: inline-flex;
+   flex: none;
+   align-items: center;
+   gap: 0.25rem;
+   white-space: nowrap;
+   font-size: 0.6875rem;
+   font-weight: 500;
+   color: var(--cms-accent-text);
+}
+
+.cms-media-usage-badge.is-unused {
+   font-weight: 400;
+   color: var(--ui-text-dimmed);
+}
+
+.cms-media-row-cell.is-usage {
+   width: 7.5rem;
+}
+
+.cms-confirm-groups {
+   display: flex;
+   flex-direction: column;
+   gap: 0.875rem;
+   max-height: min(50vh, 24rem);
+   overflow-y: auto;
+}
+
+.cms-confirm-group {
+   display: flex;
+   flex-direction: column;
+   gap: 0.375rem;
+}
+
+.cms-confirm-group-title {
+   overflow: hidden;
+   text-overflow: ellipsis;
+   white-space: nowrap;
+   font-family: var(--cms-font-mono);
+   font-size: 0.75rem;
+   font-weight: 500;
+   color: var(--ui-text-toned);
 }
 
 .cms-media-grid {

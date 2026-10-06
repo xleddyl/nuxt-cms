@@ -2,12 +2,11 @@
    <span class="cms-brand-mark" :class="{ 'is-lg': size === 'lg' }" aria-hidden="true">
       <svg viewBox="0 0 16 16" fill="none">
          <path
-            d="M4.25 12.25V7.5a3.75 3.75 0 0 1 7.5 0v4.75"
+            d="M4.5 5.5h7M4.5 8h7M4.5 10.5h4"
             stroke="currentColor"
-            stroke-width="2"
+            stroke-width="1.5"
             stroke-linecap="round"
          />
-         <circle cx="8" cy="12.25" r="1.25" fill="currentColor" />
       </svg>
    </span>
 </template>
