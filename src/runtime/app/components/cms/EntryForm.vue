@@ -73,6 +73,8 @@
                            :field="fields[key]!"
                            :locale="localeFor(key)"
                            :slug-source="slugSource(fields[key]!)"
+                           :entry-name="entryName"
+                           :field-key="key"
                         />
                      </CmsFormField>
                   </div>

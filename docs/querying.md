@@ -212,7 +212,8 @@ For a value without `__typename` (a hand-written query, or raw data), pass the e
 The components are imported at build time from `#components`, as lazy components, through a
 generated map (`#cms-blocks`). Nothing is registered globally and nothing is resolved by name at
 runtime. The `annotate` prop adds `data-cms-block` (the index) and `data-cms-block-type` to the root
-element of each block, for tools that need to find a block in the page.
+element of each block, for tools that need to find a block in the page. The visual editor uses it,
+so give each block component a single root element.
 
 ## Example
 

@@ -137,6 +137,12 @@ export default defineCmsConfig({
             translatable: true,
             description: 'A short banner above the hero. Leave it empty to hide it.',
          },
+         sections: {
+            label: 'Sections',
+            type: 'blocks',
+            description: 'Full-width sections under the hero, edited in the visual editor.',
+            blocks: sections,
+         },
          highlights: {
             label: 'Highlights',
             type: 'blocks',
@@ -164,6 +170,7 @@ export default defineCmsConfig({
          ['launchDate', 'showCountdown'],
          'heroImage',
          'announcement',
+         'sections',
          {
             title: 'Highlights',
             description: 'Stats and callouts under the hero.',
@@ -349,6 +356,7 @@ export default defineCmsConfig({
       kind: 'content',
       icon: 'newspaper',
       blocks: sections,
+      preview: { component: 'NewsArticle' },
       labels: { excerpt: 'Summary' },
       fields: {
          category: { label: 'Category', type: 'relation', to: 'categories' },

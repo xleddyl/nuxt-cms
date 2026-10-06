@@ -29,7 +29,14 @@ import { renderGraphqlSdl } from './runtime/shared/graphql-sdl'
 import { migrationsDirFor } from './runtime/shared/migrations-dir'
 import type { CmsConfig, CmsPageRoute, MediaStorageMode } from './runtime/shared/index'
 import { DEFAULT_MEDIA_MAX_FILE_SIZE, normalizeCmsConfig } from './runtime/shared/index'
-import { collectBlockComponents, missingBlockComponents, renderBlocksFile } from './blocks-codegen'
+import {
+   collectBlockComponents,
+   collectPreviewComponents,
+   missingBlockComponents,
+   missingPreviewComponents,
+   renderBlocksFile,
+} from './blocks-codegen'
+import { DEFAULT_CMS_PREVIEW_PATH, previewPathErrors } from './runtime/shared/preview'
 import {
    collectMediaManifest,
    renderMediaManifestFile,
@@ -85,6 +92,10 @@ export interface ModuleOptions {
    graphql?: {
       maxDepth?: number
    }
+   preview?: {
+      path?: string
+      component?: string
+   }
 }
 
 interface ResolvedModuleOptions {
@@ -120,6 +131,10 @@ interface ResolvedModuleOptions {
    }
    graphql: {
       maxDepth: number
+   }
+   preview: {
+      path: string
+      component: string
    }
 }
 
@@ -217,6 +232,10 @@ function resolveModuleOptions(options: ModuleOptions): ResolvedModuleOptions {
       },
       graphql: {
          maxDepth: options.graphql?.maxDepth ?? 8,
+      },
+      preview: {
+         path: options.preview?.path ?? DEFAULT_CMS_PREVIEW_PATH,
+         component: options.preview?.component?.trim() ?? '',
       },
    }
 }
@@ -383,25 +402,28 @@ function addCmsTypeTemplates(nuxt: Nuxt, cmsConfig: CmsConfig) {
 function addCmsBlocks(
    nuxt: Nuxt,
    resolver: ReturnType<typeof createResolver>,
-   cmsConfig: CmsConfig
+   cmsConfig: CmsConfig,
+   previewComponent: string
 ) {
    const refs = collectBlockComponents(cmsConfig)
+   const previews = collectPreviewComponents(cmsConfig, previewComponent)
    const blocksTemplate = addTemplate({
       filename: 'cms/blocks.ts',
       write: true,
-      getContents: () => renderBlocksFile(refs),
+      getContents: () => renderBlocksFile(refs, previews),
    })
    nuxt.options.alias['#cms-blocks'] = blocksTemplate.dst
    addComponent({
       name: 'CmsBlocks',
       filePath: resolver.resolve('./runtime/app/blocks/CmsBlocks.vue'),
    })
-   if (!refs.length) return
+   if (!refs.length && !previews.length) return
    nuxt.hook('components:extend', (components) => {
-      const errors = missingBlockComponents(
-         refs,
-         components.map((component) => component.pascalName)
-      )
+      const names = components.map((component) => component.pascalName)
+      const errors = [
+         ...missingBlockComponents(refs, names),
+         ...missingPreviewComponents(previews, names),
+      ]
       if (errors.length)
          throw new Error(`[nuxt-cms] Invalid block components:\n${errors.join('\n')}`)
    })
@@ -474,12 +496,13 @@ export default defineNuxtModule<ModuleOptions>({
             logger
          )
          addCmsTypeTemplates(nuxt, disabledConfig)
-         addCmsBlocks(nuxt, resolver, disabledConfig)
+         addCmsBlocks(nuxt, resolver, disabledConfig, resolved.preview.component)
          nuxt.options.runtimeConfig.public.cms = {
             mediaBaseUrl: resolved.media.publicBaseUrl,
             mediaStorage: resolved.media.storage,
             mediaMaxFileSize: resolved.media.maxFileSize,
             i18n: resolved.i18n,
+            previewPath: resolved.preview.path,
          }
          logger.info(
             '[nuxt-cms] disabled: registering no-op query composables and generated types, skipping admin, server and database setup'
@@ -553,7 +576,23 @@ export default defineNuxtModule<ModuleOptions>({
          { name: 'useCmsContents', from: entryComposables },
          { name: 'useCmsContent', from: entryComposables },
       ])
-      addCmsBlocks(nuxt, resolver, cmsConfig)
+      addCmsBlocks(nuxt, resolver, cmsConfig, resolved.preview.component)
+
+      const previewErrors = previewPathErrors(resolved.preview.path, Object.keys(cmsConfig))
+      if (previewErrors.length) throw new Error(`[nuxt-cms] ${previewErrors.join('\n')}`)
+      const previewPath = resolved.preview.path
+      const previewRule = nuxt.options.routeRules?.[previewPath] ?? {}
+      nuxt.options.routeRules = {
+         ...nuxt.options.routeRules,
+         [previewPath]: {
+            ...previewRule,
+            headers: {
+               'x-robots-tag': 'noindex, nofollow',
+               'x-frame-options': 'SAMEORIGIN',
+               ...previewRule.headers,
+            },
+         },
+      }
 
       const {
          driver,
@@ -790,6 +829,7 @@ export default defineNuxtModule<ModuleOptions>({
          mediaStorage: resolved.media.storage,
          mediaMaxFileSize: resolved.media.maxFileSize,
          i18n: resolved.i18n,
+         previewPath,
       }
 
       addTypeTemplate(
@@ -844,6 +884,10 @@ export default defineNuxtModule<ModuleOptions>({
             name: 'cms-admin',
             file: resolver.resolve('./runtime/app/layouts/cms-admin.vue'),
          }
+         app.layouts['cms-editor'] = {
+            name: 'cms-editor',
+            file: resolver.resolve('./runtime/app/layouts/cms-editor.vue'),
+         }
       })
       addComponentsDir({ path: resolver.resolve('./runtime/app/components') })
       addRouteMiddleware({
@@ -851,8 +895,31 @@ export default defineNuxtModule<ModuleOptions>({
          path: resolver.resolve('./runtime/app/middleware/cms-auth'),
       })
 
+      const contentPages = Object.entries(cmsConfig)
+         .filter(([, entry]) => entry.kind === 'content')
+         .flatMap(([name]) => [
+            {
+               name: `cms-admin-content-${name}-new`,
+               path: `/cms/${name}/new`,
+               file: resolver.resolve('./runtime/app/pages/admin-content.vue'),
+               meta: { cmsEntry: name },
+            },
+            {
+               name: `cms-admin-content-${name}`,
+               path: `/cms/${name}/:id()`,
+               file: resolver.resolve('./runtime/app/pages/admin-content.vue'),
+               meta: { cmsEntry: name },
+            },
+         ])
+
       extendPages((pages) => {
          pages.unshift(
+            {
+               name: 'cms-preview',
+               path: previewPath,
+               file: resolver.resolve('./runtime/app/pages/admin-preview.vue'),
+            },
+            ...contentPages,
             {
                name: 'cms-admin',
                path: '/cms',

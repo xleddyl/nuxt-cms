@@ -510,7 +510,12 @@ export interface CmsEntry {
    layout?: CmsLayoutBlock[]
    list?: CmsListInput
    blocks?: Record<string, BlockConfig>
+   preview?: CmsPreviewOptions
    declared?: CmsContentDeclared
+}
+
+export interface CmsPreviewOptions {
+   component?: string
 }
 
 export interface CmsContentDeclared {
@@ -1029,6 +1034,7 @@ export interface CmsContentInput {
    tabs?: CmsTab[]
    layout?: CmsLayoutBlock[]
    list?: CmsListInput
+   preview?: CmsPreviewOptions
    titleField?: never
    drafts?: never
 }

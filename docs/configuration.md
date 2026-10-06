@@ -27,6 +27,10 @@ cms: {
    graphql: {
       maxDepth: 8,                  // max query nesting depth (rejects deeper queries)
    },
+   preview: {
+      path: '/cms/preview',         // the site page shown inside the visual editor
+      component: '',                // default wrapper component for content previews
+   },
 }
 ```
 
@@ -155,6 +159,17 @@ under `publicBaseUrl` (default `/media`), with no bucket needed. See
 
 Upper bound on GraphQL query nesting; deeper queries are rejected. Raise it if you have deeply
 nested relations.
+
+### `preview`
+
+The [visual editor](admin.md#visual-editor) shows a page of the site in an iframe.
+
+- `path` (default `/cms/preview`) is the route of that page. It must be one lowercase segment under
+  `/cms`, and it cannot be `login`, `media` or the name of an entry.
+- `component` names a site component (as Nuxt auto-imports it) that wraps the body of every content
+  item in the preview, for example the header of your article page. A content entry can override it
+  with its own [`preview.component`](schema.md#preview-component). The build fails when the
+  component is not registered.
 
 ## Environment variables
 

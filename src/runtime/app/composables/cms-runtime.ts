@@ -7,5 +7,6 @@ export function useCmsRuntime() {
       mediaStorage: MediaStorageMode
       mediaMaxFileSize: number
       i18n: CmsI18n
+      previewPath?: string
    }
 }

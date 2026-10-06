@@ -77,7 +77,9 @@ function optionalize(field: FieldConfig, base: z.ZodType, m: ValidationMessages)
 function translatableSchema(field: FieldConfig, i18n: CmsI18n, m: ValidationMessages): z.ZodType {
    const { locales, defaultLocale } = i18n
    const record = z
-      .record(z.string(), field.type === 'media' ? objectKeySchema : z.string())
+      .record(z.string(), field.type === 'media' ? objectKeySchema : z.string(), {
+         error: (issue) => (issue.input == null ? m.required : undefined),
+      })
       .refine((v) => Object.keys(v).every((k) => locales.includes(k)), m.unknownLocale)
    return field.required
       ? record.refine((v) => !!v[defaultLocale]?.trim(), m.requiredLocale(defaultLocale))

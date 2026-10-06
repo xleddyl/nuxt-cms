@@ -10,6 +10,8 @@
       v-model="blocksValue"
       :field="field"
       :locale="locale"
+      :entry-name="entryName"
+      :field-key="fieldKey"
    />
    <CmsRichTextField v-else-if="field.type === 'richtext'" v-model="strOrNull" />
    <CmsTextarea
@@ -70,6 +72,8 @@ const props = defineProps<{
    field: FieldConfig
    slugSource?: string | null
    locale?: string
+   entryName?: string
+   fieldKey?: string
 }>()
 
 const model = defineModel<unknown>({ required: true })

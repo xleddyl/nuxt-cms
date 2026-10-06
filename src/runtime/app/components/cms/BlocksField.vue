@@ -112,6 +112,45 @@
          </button>
       </div>
 
+      <CmsButton
+         v-if="visual"
+         class="self-start"
+         label="Open visual editor"
+         icon="window"
+         size="sm"
+         variant="soft"
+         color="neutral"
+         @click="visualOpen = true"
+      />
+
+      <Teleport to="body">
+         <div v-if="visual && visualOpen" class="cms-scope cms-editor-overlay" :data-theme="theme">
+            <CmsVisualEditor
+               :state="{ [fieldKey!]: model }"
+               :entry-name="entryName!"
+               :field-key="fieldKey!"
+               :fields="{ [fieldKey!]: field }"
+               :title="field.label"
+               @update:state="onVisualUpdate"
+            >
+               <template #start>
+                  <CmsButton
+                     icon="arrow-left"
+                     size="sm"
+                     variant="ghost"
+                     color="neutral"
+                     aria-label="Back to the form"
+                     title="Back to the form"
+                     @click="visualOpen = false"
+                  />
+               </template>
+               <template #actions>
+                  <CmsButton label="Done" size="sm" @click="visualOpen = false" />
+               </template>
+            </CmsVisualEditor>
+         </div>
+      </Teleport>
+
       <CmsModal v-if="mediaOnly" v-model:open="pickerOpen" title="Media" size="lg">
          <template #body>
             <CmsMediaGallery
@@ -205,12 +244,19 @@ import {
    mediaTypeForKey,
    pickTranslatedMedia,
 } from '#nuxt-cms'
-import { computed, ref, useState } from '#imports'
+import { computed, ref, useState, watch } from '#imports'
 import { useCmsMediaKeys } from '../../composables/cms-media-keys'
+import { useCmsOverlay } from '../../composables/cms-overlay'
 import { useCmsRuntime } from '../../composables/cms-runtime'
+import { useCmsTheme } from '../../composables/cms-theme'
 import { fieldIcon } from '../../utils/ui'
 
-const props = defineProps<{ field: FieldConfig; locale?: string }>()
+const props = defineProps<{
+   field: FieldConfig
+   locale?: string
+   entryName?: string
+   fieldKey?: string
+}>()
 
 const model = defineModel<Record<string, unknown>[] | null>({ required: true })
 
@@ -230,6 +276,33 @@ const mediaOnly = computed(() => {
    if (field.type !== 'media' || isTranslatableMediaField(field)) return null
    return { type, key, field }
 })
+
+const visual = computed(() => {
+   const list = Object.values(blocks.value)
+   return (
+      !mediaOnly.value &&
+      !!props.entryName &&
+      !!props.fieldKey &&
+      !!list.length &&
+      list.every((block) => typeof block.component === 'string' && !!block.component.trim())
+   )
+})
+
+const visualOpen = ref(false)
+const theme = useCmsTheme()
+const visualOverlay = useCmsOverlay(() => {
+   visualOpen.value = false
+})
+
+watch(visualOpen, (open) => {
+   if (open) visualOverlay.activate()
+   else visualOverlay.deactivate()
+})
+
+function onVisualUpdate(state: Record<string, unknown>) {
+   const value = props.fieldKey ? state[props.fieldKey] : null
+   model.value = Array.isArray(value) && value.length ? (value as Record<string, unknown>[]) : null
+}
 
 const addMediaLabel = computed(() => {
    const types = [mediaOnly.value?.field.mediaType ?? []].flat()

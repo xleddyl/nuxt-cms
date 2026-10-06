@@ -105,6 +105,7 @@ export function validateConfig(config: CmsConfig, i18n?: CmsI18n): string[] {
       if (!['collection', 'single', 'page', 'content'].includes(entry.kind))
          errors.push(`${at}: kind must be 'collection', 'single', 'page' or 'content'`)
       if (entry.kind === 'content') errors.push(...contentErrors(at, entry))
+      else if (entry.preview !== undefined) errors.push(`${at}: preview needs kind 'content'`)
       if (entry.kind === 'page') {
          if (pageEntry) {
             errors.push(
@@ -417,6 +418,13 @@ function contentErrors(at: string, entry: CmsEntry): string[] {
    if (!entry.blocks || typeof entry.blocks !== 'object' || !Object.keys(entry.blocks).length)
       errors.push(`${at}: content entries need a non-empty blocks map for the body`)
    if (entry.table) errors.push(`${at}: content entries cannot use a custom table`)
+   if (entry.preview !== undefined) {
+      const component = (entry.preview as { component?: unknown } | null)?.component
+      if (!entry.preview || typeof entry.preview !== 'object')
+         errors.push(`${at}: preview must be an object`)
+      else if (component !== undefined && (typeof component !== 'string' || !component.trim()))
+         errors.push(`${at}: preview.component must be a non-empty string`)
+   }
    for (const key of Object.keys(entry.labels ?? {})) {
       if (!system.includes(key))
          errors.push(`${at}: labels names '${key}', which is not a system field`)

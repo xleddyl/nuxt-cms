@@ -37,6 +37,38 @@ export function collectBlockComponents(config: CmsConfig): BlockComponentRef[] {
    return refs
 }
 
+export interface PreviewComponentRef {
+   entry: string
+   component: string
+}
+
+export function collectPreviewComponents(
+   config: CmsConfig,
+   fallback?: string
+): PreviewComponentRef[] {
+   const refs: PreviewComponentRef[] = []
+   for (const [entryName, entry] of Object.entries(config)) {
+      if (entry.kind !== 'content') continue
+      const name = entry.preview?.component ?? fallback
+      if (typeof name !== 'string' || !name.trim()) continue
+      refs.push({ entry: entryName, component: componentPascalName(name.trim()) })
+   }
+   return refs
+}
+
+export function missingPreviewComponents(
+   refs: PreviewComponentRef[],
+   available: Iterable<string>
+): string[] {
+   const known = new Set(available)
+   return refs
+      .filter((ref) => !known.has(ref.component))
+      .map(
+         (ref) =>
+            `cms.config entry '${ref.entry}': preview component '${ref.component}' is not a registered Nuxt component`
+      )
+}
+
 export function missingBlockComponents(
    refs: BlockComponentRef[],
    available: Iterable<string>
@@ -50,8 +82,11 @@ export function missingBlockComponents(
       )
 }
 
-export function renderBlocksFile(refs: BlockComponentRef[]): string {
-   const components = [...new Set(refs.map((ref) => ref.component))].sort()
+export function renderBlocksFile(
+   refs: BlockComponentRef[],
+   previews: PreviewComponentRef[] = []
+): string {
+   const components = [...new Set([...refs, ...previews].map((ref) => ref.component))].sort()
    const lines = [`import type { Component } from 'vue'`]
    if (components.length)
       lines.push(
@@ -61,6 +96,10 @@ export function renderBlocksFile(refs: BlockComponentRef[]): string {
       ``,
       `export const cmsBlockComponents: Record<string, Component> = {`,
       ...refs.map((ref) => `   ${JSON.stringify(ref.typeName)}: Lazy${ref.component},`),
+      `}`,
+      ``,
+      `export const cmsPreviewComponents: Record<string, Component> = {`,
+      ...previews.map((ref) => `   ${JSON.stringify(ref.entry)}: Lazy${ref.component},`),
       `}`,
       ``
    )

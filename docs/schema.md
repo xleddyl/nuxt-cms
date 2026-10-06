@@ -234,7 +234,9 @@ export default defineCmsConfig({
 - `fields` (optional) adds extra fields to every item, with the same options as a collection.
 - `labels` (optional) renames system fields in the admin, keyed by system field name.
 - `tabs`, `layout` and `list` work as on a collection. The default list columns are title, status
-  and publish date.
+  and publish date. In the visual editor, `layout` orders the fields of the Content tab.
+- `preview` (optional) sets the component that wraps the body in the visual editor, see
+  [Preview component](#preview-component).
 - `titleField`, `drafts`, `columns`, `routes`, `include`, `exclude`, `overrides` and a custom
   `table` are config errors on a content entry.
 
@@ -262,6 +264,46 @@ at a content entry. Content entries can be the target of a relation (`to: 'news'
 
 Content items are stored in a regular table named after the entry, so they follow the same
 migrations as collections.
+
+Items are edited in the [visual editor](admin.md#visual-editor): the body is drawn by the block
+components of the site, with live updates, drag and drop and a palette of the blocks.
+
+### Preview component
+
+By default the visual editor shows only the blocks of the body. To show the whole article as the
+site does, name a site component that takes the item and renders the body in its default slot:
+
+```ts
+news: {
+   id: 'news',
+   kind: 'content',
+   blocks: sections,
+   preview: { component: 'NewsArticle' },
+   ...
+}
+```
+
+```vue
+<template>
+   <article>
+      <h1>{{ item.title }}</h1>
+      <p v-if="item.excerpt">{{ item.excerpt }}</p>
+      <slot />
+   </article>
+</template>
+
+<script setup lang="ts">
+import type { News } from '#cms-types'
+
+defineProps<{ item: Pick<News, 'title' | 'excerpt' | 'cover'>; locale?: string }>()
+</script>
+```
+
+The component receives `item` (every public field of the item in the active language, media as
+`CmsMedia` objects, relations as ids, values not saved yet included) and `locale`. Use the same
+component on the site page, with `<CmsBlocks>` in the slot, and the preview matches the page.
+`cms.preview.component` in `nuxt.config` sets a default for every content entry. A `preview` option
+on an entry that is not `kind: 'content'` is a config error.
 
 ## Field types
 
@@ -376,6 +418,8 @@ blocks: {
 - `icon` is a Heroicons outline name; `description` is a short help text.
 - These keys work in every `blocks` field: collections, singles, pages and content.
 - A block with a `component` cannot have fields named `key`, `ref`, `class` or `style`.
+- When every block of a field has a `component`, the admin edits that field in the
+  [visual editor](admin.md#visual-editor) as well; other `blocks` fields keep the tile grid.
 
 Render a blocks value with [`<CmsBlocks>`](querying.md#rendering-blocks). Each component receives
 the fields of its block as props. Type them with the generated interface
