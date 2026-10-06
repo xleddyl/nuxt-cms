@@ -43,7 +43,6 @@ const page = defineModel<number>('page', { default: 1 })
 
 const pageCount = computed(() => Math.max(1, Math.ceil(props.total / props.itemsPerPage)))
 
-// Windowed page list: at most 7 buttons centered on the current page.
 const pages = computed(() => {
    const count = pageCount.value
    if (count <= 7) return Array.from({ length: count }, (_, index) => index + 1)

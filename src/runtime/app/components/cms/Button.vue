@@ -35,7 +35,6 @@ const props = defineProps<{
    type?: 'button' | 'submit' | 'reset'
    form?: string
    icon?: string
-   // Render the icon after the label instead of before it.
    trailingIcon?: boolean
    size?: 'xs' | 'sm' | 'md' | 'lg'
    color?: 'primary' | 'neutral' | 'error' | 'success'
@@ -45,7 +44,6 @@ const props = defineProps<{
    block?: boolean
 }>()
 
-// The spinner takes over the icon slot while loading, keeping its leading/trailing position.
 const iconName = computed(() => (props.loading ? 'arrow-path' : props.icon))
 
 const slots = useSlots()

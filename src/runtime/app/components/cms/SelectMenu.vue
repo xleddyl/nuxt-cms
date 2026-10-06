@@ -97,9 +97,6 @@ const placeholder = computed(() => {
    return selectedLabel.value || props.placeholder || ''
 })
 
-/** In single mode the field doubles as a combobox: while open the user types to
- *  search; while closed it shows the current selection in solid (not placeholder)
- *  text so the chosen value reads black, not grey. */
 const displayValue = computed(() => {
    if (props.multiple) return search.value
    return open.value ? search.value : selectedLabel.value
@@ -115,9 +112,6 @@ function onFocus() {
    open.value = true
 }
 
-/** Items shown in the dropdown: filtered by the search term (unless the parent
- *  filters externally) and, in multiple mode, with already-selected values
- *  removed so picked tags disappear from the list. */
 const visibleItems = computed<Item[]>(() => {
    let list = props.items
    if (!props.ignoreFilter) {

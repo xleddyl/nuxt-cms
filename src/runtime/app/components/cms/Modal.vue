@@ -1,7 +1,5 @@
 <template>
    <Teleport to="body">
-      <!-- Wrapped in .cms-scope so the vendored Tailwind utilities still apply
-           once teleported outside the admin layout root. -->
       <Transition name="cms-modal">
          <div v-if="open" class="cms-scope cms-overlay" @click.self="close">
             <div

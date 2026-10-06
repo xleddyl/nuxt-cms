@@ -30,19 +30,19 @@ export const invalid = defineCmsConfig({
       label: 'Broken',
       kind: 'collection',
       fields: {
-         // @ts-expect-error select requires options
+         // @ts-expect-error
          badSelect: { label: 'Bad', type: 'select' },
-         // @ts-expect-error relation requires to
+         // @ts-expect-error
          badRelation: { label: 'Bad', type: 'relation' },
-         // @ts-expect-error slug requires from
+         // @ts-expect-error
          badSlug: { label: 'Bad', type: 'slug' },
-         // @ts-expect-error blocks requires a blocks map
+         // @ts-expect-error
          badBlocks: { label: 'Bad', type: 'blocks' },
-         // @ts-expect-error text fields do not accept options
+         // @ts-expect-error
          badText: { label: 'Bad', type: 'text', options: ['a'] },
-         // @ts-expect-error number fields do not accept translatable
+         // @ts-expect-error
          badNumber: { label: 'Bad', type: 'number', translatable: true },
-         // @ts-expect-error unknown field type
+         // @ts-expect-error
          badType: { label: 'Bad', type: 'nope' },
       },
    },

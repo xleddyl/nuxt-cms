@@ -1,8 +1,6 @@
 import type { InjectionKey, Reactive } from 'vue'
 import type { FieldConfig, FieldType } from '#nuxt-cms'
 
-/** Shared reactive map of field-name -> error message, provided by CmsForm and
- *  read by CmsFormField to render inline validation errors. */
 export const CMS_FORM_ERRORS: InjectionKey<Reactive<Record<string, string>>> =
    Symbol('cms-form-errors')
 

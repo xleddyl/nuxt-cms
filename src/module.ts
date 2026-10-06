@@ -359,7 +359,7 @@ function addCmsTypeTemplates(nuxt: Nuxt, cmsConfig: CmsConfig) {
             ``,
             `declare const graphql: CmsGraphql`,
             ``,
-            `// @ts-ignore: gql.tada's cache overload rejects this instantiation, but the parse overload still resolves`,
+            `// @ts-ignore`,
             `export type CmsDocument<Query extends string> = ReturnType<typeof graphql<Query, []>>`,
             ``,
             `export type CmsResult<Query extends string> = string extends Query`,
@@ -790,8 +790,6 @@ export default defineNuxtModule<ModuleOptions>({
       )
 
       addVitePlugin(tailwindcss())
-      // defaultImport 'url' keeps the host's own `import x from './x.svg'` returning a
-      // URL (unchanged); CmsIcon opts in explicitly via the `?component` query.
       addVitePlugin(svgLoader({ defaultImport: 'url', svgoConfig: { plugins: ['prefixIds'] } }))
       nuxt.options.css.push(
          resolveImport('@fontsource-variable/geist/index.css'),
