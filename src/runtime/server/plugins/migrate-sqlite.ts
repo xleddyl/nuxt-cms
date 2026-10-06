@@ -1,6 +1,6 @@
 import { useDb } from '../utils/db-sqlite'
-import { runCmsMigrations } from '../utils/migrate'
+import { runSqliteMigrations } from '../utils/migrate'
 
 export default async () => {
-   await runCmsMigrations(useDb())
+   await runSqliteMigrations(useDb())
 }

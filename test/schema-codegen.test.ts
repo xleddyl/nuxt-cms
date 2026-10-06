@@ -25,6 +25,16 @@ describe('renderSchemaFile', () => {
       expect(out).not.toContain("tags: text('tags')")
    })
 
+   it('keeps the sqlite timestamp defaults so existing tables are not rebuilt', () => {
+      const out = renderSchemaFile(sampleConfig(), 'sqlite')
+      const legacyDefault = ".notNull().default(sql`(datetime('now'))`)"
+      expect(out).not.toContain('strftime(')
+      for (const table of ['events', 'cms_media', 'cms_users', 'cms_settings']) {
+         const body = out.slice(out.indexOf(`export const ${table} =`)).split('\n})')[0]!
+         expect(body).toContain(legacyDefault)
+      }
+   })
+
    it('renders a postgres schema', () => {
       const out = renderSchemaFile(sampleConfig(), 'postgres')
       expect(out).toContain("export const events = pgTable('events'")

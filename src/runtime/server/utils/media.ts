@@ -4,6 +4,7 @@ import { createError } from 'h3'
 import { useRuntimeConfig } from '#imports'
 import type { MediaItem, MediaStorageMode } from '../../shared/index'
 import { formatFileSize, mediaPublicUrl, mediaTypeFor } from '../../shared/index'
+import { normalizeTimestamp } from '../../shared/timestamps'
 import { removeMediaFile, writeMediaFile } from './media-fs'
 
 interface MediaConfig {
@@ -193,6 +194,7 @@ export function toMediaItem(
 ): MediaItem {
    return {
       ...row,
+      createdAt: normalizeTimestamp(row.createdAt),
       type: mediaTypeFor(row.mime, row.key),
       url: publicUrl(row.key),
    }

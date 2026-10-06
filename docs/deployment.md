@@ -147,10 +147,10 @@ cms: {
 process, which is correct for one instance and only for one instance. Do not run two replicas
 against the same file; use `libsql`, `postgres` or `d1` instead.
 
-**D1 has no transactions.** Writes that touch an entry and its many-to-many relations run as separate
-statements, so a failure halfway through can leave the relations out of sync with the entry. This
-affects the admin write path only; reads are unaffected. If you need atomic writes, pick another
-driver.
+**D1 has no interactive transactions.** Admin writes that touch several rows (an entry and its
+many-to-many relations, a page, a media folder rename or a bulk media move or delete) are built up
+front and sent as one D1 batch, which D1 applies atomically, so a failure leaves nothing half
+written.
 
 ## Cloudflare Workers
 

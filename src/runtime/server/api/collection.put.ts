@@ -1,5 +1,5 @@
 import { createError, defineEventHandler, readValidatedBody } from 'h3'
-import { withTransaction } from '#cms-db'
+import { runBatch, useDb } from '#cms-db'
 import { mapConstraintErrors } from '../utils/db-errors'
 import {
    buildValidator,
@@ -7,12 +7,13 @@ import {
    encodeColumnValues,
    getRegistryEntry,
    idColumn,
+   withTimestamps,
    withUpdatedAt,
 } from '../utils/registry'
 import {
    assertRelationTargets,
    attachManyToMany,
-   saveManyToMany,
+   manyToManyStatements,
    splitRelationValues,
 } from '../utils/relations'
 import { requireAdmin } from '../utils/require-admin'
@@ -32,18 +33,17 @@ export default defineEventHandler(async (event) => {
    await assertRelationTargets(entry, lists)
    const set = withUpdatedAt(table, values)
 
-   return mapConstraintErrors(() =>
-      withTransaction(async (db) => {
-         const [row] = await db
+   return mapConstraintErrors(async () => {
+      const [upserted] = await runBatch((db) => [
+         db
             .insert(table)
-            .values({ id: entry.id, ...set } as Record<string, unknown>)
+            .values(withTimestamps(table, { id: entry.id, ...set }))
             .onConflictDoUpdate({ target: idColumn(table), set })
-            .returning()
-         await saveManyToMany(db, name, entry.id, lists)
-         const [attached] = await attachManyToMany(db, name, entry, [
-            row as Record<string, unknown>,
-         ])
-         return decodeRows(entry, [attached!])[0]
-      })
-   )
+            .returning(),
+         ...manyToManyStatements(db, name, entry.id, lists),
+      ])
+      const [row] = upserted as Record<string, unknown>[]
+      const [attached] = await attachManyToMany(useDb(), name, entry, [row!])
+      return decodeRows(entry, [attached!])[0]
+   })
 })

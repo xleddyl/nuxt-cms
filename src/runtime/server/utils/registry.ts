@@ -12,6 +12,7 @@ import {
    pageFields,
    pageRouteOf,
 } from '../../shared/index'
+import { normalizeTimestampFields, nowTimestamp } from '../../shared/timestamps'
 import { buildEntrySchema } from '../../shared/validation'
 
 let contentI18n: CmsI18n | undefined
@@ -39,8 +40,16 @@ export function idColumn(table: SQLiteTable) {
 
 export function withUpdatedAt(table: SQLiteTable, values: Record<string, unknown>) {
    const set = { ...values }
-   if ('updatedAt' in table) set.updatedAt = new Date().toISOString()
+   if ('updatedAt' in table) set.updatedAt = nowTimestamp()
    return set
+}
+
+export function withTimestamps(table: SQLiteTable, values: Record<string, unknown>) {
+   const now = nowTimestamp()
+   const stamped = { ...values }
+   if ('createdAt' in table) stamped.createdAt ??= now
+   if ('updatedAt' in table) stamped.updatedAt ??= now
+   return stamped
 }
 
 export function getRegistryEntry(event: H3Event): {
@@ -76,6 +85,7 @@ export function encodeColumnValues(entry: CmsEntry, values: Record<string, unkno
 }
 
 export function decodeRows<T extends Record<string, unknown>>(entry: CmsEntry, rows: T[]): T[] {
+   for (const row of rows) normalizeTimestampFields(row)
    return decodeEntryTranslatableMedia(entry, rows, getContentI18n().defaultLocale)
 }
 

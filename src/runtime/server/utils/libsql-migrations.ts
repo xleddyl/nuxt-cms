@@ -12,6 +12,7 @@ export interface LibsqlStatement {
 export interface LibsqlMigrationClient {
    execute: (statement: string) => Promise<{ rows: ArrayLike<unknown>[] }>
    batch: (statements: LibsqlStatement[], mode: 'write') => Promise<unknown>
+   migrate: (statements: LibsqlStatement[]) => Promise<unknown>
 }
 
 const MIGRATIONS_TABLE = '__drizzle_migrations'
@@ -48,7 +49,7 @@ export async function applyLibsqlMigrations(
    ])
 
    try {
-      await client.batch(statements, 'write')
+      await client.migrate(statements)
    } catch (error) {
       const latest = Math.max(...migrations.map((migration) => migration.folderMillis))
       const appliedNow = await lastAppliedMillis(client).catch(() => null)

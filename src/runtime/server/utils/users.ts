@@ -2,6 +2,7 @@ import { eq } from 'drizzle-orm'
 import { useDb } from '#cms-db'
 import { cms_users } from '#cms-tables'
 import type { CmsAccount, CmsUserRole } from '../../shared/index'
+import { normalizeTimestamp } from '../../shared/timestamps'
 
 export type CmsUserRow = typeof cms_users.$inferSelect
 
@@ -39,7 +40,7 @@ export function toAccount(row: CmsUserRow): CmsAccount {
       email: row.email,
       name: row.name ?? null,
       role: row.role as CmsUserRole,
-      lastLoginAt: row.lastLoginAt ?? null,
-      createdAt: String(row.createdAt),
+      lastLoginAt: normalizeTimestamp(row.lastLoginAt ?? null),
+      createdAt: String(normalizeTimestamp(row.createdAt)),
    }
 }

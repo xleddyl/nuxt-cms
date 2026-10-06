@@ -66,9 +66,9 @@ afterAll(async () => {
 })
 
 describe('applyLibsqlMigrations', () => {
-   it('applies a large migration in one batch without an interactive transaction', async () => {
+   it('applies a large migration in one call without an interactive transaction', async () => {
       const client = await makeClient()
-      const batch = vi.spyOn(client, 'batch')
+      const migrate = vi.spyOn(client, 'migrate')
       const transaction = vi.spyOn(client, 'transaction')
 
       const applied = await applyLibsqlMigrations(asMigrationClient(client), [
@@ -76,9 +76,8 @@ describe('applyLibsqlMigrations', () => {
       ])
 
       expect(applied).toBe(1)
-      expect(batch).toHaveBeenCalledTimes(1)
-      expect(batch.mock.calls[0]![0]).toHaveLength(251)
-      expect(batch.mock.calls[0]![1]).toBe('write')
+      expect(migrate).toHaveBeenCalledTimes(1)
+      expect(migrate.mock.calls[0]![0]).toHaveLength(251)
       expect(transaction).not.toHaveBeenCalled()
       expect(await tableNames(client)).toHaveLength(250)
       expect(await appliedRows(client)).toEqual([{ hash: 'hash-1000', createdAt: 1000 }])
@@ -88,12 +87,12 @@ describe('applyLibsqlMigrations', () => {
       const client = await makeClient()
       const migrations = [tableMigration(1000, 3), tableMigration(2000, 2)]
       await applyLibsqlMigrations(asMigrationClient(client), migrations)
-      const batch = vi.spyOn(client, 'batch')
+      const migrate = vi.spyOn(client, 'migrate')
 
       const applied = await applyLibsqlMigrations(asMigrationClient(client), migrations)
 
       expect(applied).toBe(0)
-      expect(batch).not.toHaveBeenCalled()
+      expect(migrate).not.toHaveBeenCalled()
       expect(await tableNames(client)).toHaveLength(5)
       expect(await appliedRows(client)).toHaveLength(2)
    })
@@ -101,7 +100,7 @@ describe('applyLibsqlMigrations', () => {
    it('runs only the migrations newer than the last applied one', async () => {
       const client = await makeClient()
       await applyLibsqlMigrations(asMigrationClient(client), [tableMigration(1000, 2)])
-      const batch = vi.spyOn(client, 'batch')
+      const migrate = vi.spyOn(client, 'migrate')
 
       const applied = await applyLibsqlMigrations(asMigrationClient(client), [
          tableMigration(1000, 2),
@@ -110,8 +109,8 @@ describe('applyLibsqlMigrations', () => {
       ])
 
       expect(applied).toBe(2)
-      expect(batch).toHaveBeenCalledTimes(1)
-      expect(batch.mock.calls[0]![0]).toHaveLength(6)
+      expect(migrate).toHaveBeenCalledTimes(1)
+      expect(migrate.mock.calls[0]![0]).toHaveLength(6)
       expect(await tableNames(client)).toHaveLength(6)
       expect(await appliedRows(client)).toEqual([
          { hash: 'hash-1000', createdAt: 1000 },
@@ -140,10 +139,10 @@ describe('applyLibsqlMigrations', () => {
       const client = await makeClient()
       const racing = openClient(join(temporaryDirs.at(-1)!, 'cms.db'))
       const migrations = [tableMigration(1000, 2), tableMigration(2000, 2)]
-      const originalBatch = client.batch.bind(client)
-      vi.spyOn(client, 'batch').mockImplementationOnce(async (statements, mode) => {
+      const originalMigrate = client.migrate.bind(client)
+      vi.spyOn(client, 'migrate').mockImplementationOnce(async (statements) => {
          await applyLibsqlMigrations(asMigrationClient(racing), migrations)
-         return originalBatch(statements, mode)
+         return originalMigrate(statements)
       })
 
       const applied = await applyLibsqlMigrations(asMigrationClient(client), migrations)
@@ -151,6 +150,31 @@ describe('applyLibsqlMigrations', () => {
       expect(applied).toBe(0)
       expect(await tableNames(client)).toHaveLength(4)
       expect(await appliedRows(client)).toHaveLength(2)
+   })
+
+   it('rebuilds a referenced table without cascading into its children', async () => {
+      const client = await makeClient()
+      await applyLibsqlMigrations(asMigrationClient(client), [
+         migration(1000, [
+            "CREATE TABLE t_parent (id text PRIMARY KEY, created_at text DEFAULT (datetime('now')) NOT NULL)",
+            'CREATE TABLE t_child (parent_id text NOT NULL REFERENCES t_parent(id) ON DELETE cascade)',
+         ]),
+      ])
+      await client.execute("INSERT INTO t_parent (id) VALUES ('a')")
+      await client.execute("INSERT INTO t_child (parent_id) VALUES ('a')")
+
+      await applyLibsqlMigrations(asMigrationClient(client), [
+         migration(2000, [
+            "CREATE TABLE t_new_parent (id text PRIMARY KEY, created_at text DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')) NOT NULL)",
+            'INSERT INTO t_new_parent (id, created_at) SELECT id, created_at FROM t_parent',
+            'DROP TABLE t_parent',
+            'ALTER TABLE t_new_parent RENAME TO t_parent',
+         ]),
+      ])
+
+      const { rows } = await client.execute('SELECT parent_id FROM t_child')
+      expect(rows.map((row) => row.parent_id)).toEqual(['a'])
+      expect((await client.execute('PRAGMA foreign_keys')).rows[0]?.[0]).toBe(1)
    })
 
    it('rethrows when the migrations are still missing after a failure', async () => {
@@ -195,13 +219,13 @@ describe('createCmsSeeder libsql migrate', () => {
       })
       const client = seeder.db.$client as Client
       clients.push(client)
-      const batch = vi.spyOn(client, 'batch')
+      const migrate = vi.spyOn(client, 'migrate')
       const transaction = vi.spyOn(client, 'transaction')
 
       await seeder.migrate()
       await seeder.migrate()
 
-      expect(batch).toHaveBeenCalledTimes(1)
+      expect(migrate).toHaveBeenCalledTimes(1)
       expect(transaction).not.toHaveBeenCalled()
       expect(await tableNames(client)).toHaveLength(210)
       expect(await appliedRows(client)).toHaveLength(1)

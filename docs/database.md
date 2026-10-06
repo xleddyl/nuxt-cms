@@ -140,8 +140,8 @@ request.
 
 Two things behave differently from the other drivers:
 
-- **No transactions.** D1 has no interactive transactions, so writes that span an entry and its
-  many-to-many relations are not atomic. This affects the admin write path only.
+- **No interactive transactions.** Writes that span several rows (an entry and its many-to-many
+  relations, for example) run as one atomic D1 batch instead, like they do on libSQL.
 - **Migrations run on the first request** of a Worker isolate rather than at boot, because
   Cloudflare forbids I/O in global scope.
 

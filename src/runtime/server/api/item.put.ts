@@ -1,6 +1,6 @@
 import { eq } from 'drizzle-orm'
 import { createError, defineEventHandler, readValidatedBody } from 'h3'
-import { withTransaction } from '#cms-db'
+import { runBatch, useDb } from '#cms-db'
 import {
    buildValidator,
    decodeRows,
@@ -17,7 +17,7 @@ import { writePage } from '../utils/page-storage'
 import {
    assertRelationTargets,
    attachManyToMany,
-   saveManyToMany,
+   manyToManyStatements,
    splitRelationValues,
 } from '../utils/relations'
 import { requireAdmin } from '../utils/require-admin'
@@ -54,19 +54,25 @@ export default defineEventHandler(async (event) => {
    await assertRelationTargets(entry, lists)
    const set = withUpdatedAt(table, values)
 
-   return mapConstraintErrors(() =>
-      withTransaction(async (db) => {
-         const [row] = await db
+   const [existing] = await useDb()
+      .select({ id: idColumn(table) })
+      .from(table)
+      .where(eq(idColumn(table), id))
+      .limit(1)
+   if (!existing) throw createError({ statusCode: 404, statusMessage: 'Row not found' })
+
+   return mapConstraintErrors(async () => {
+      const [updated] = await runBatch((db) => [
+         db
             .update(table)
             .set(set)
             .where(eq(idColumn(table), id))
-            .returning()
-         if (!row) throw createError({ statusCode: 404, statusMessage: 'Row not found' })
-         await saveManyToMany(db, name, id, lists)
-         const [attached] = await attachManyToMany(db, name, entry, [
-            row as Record<string, unknown>,
-         ])
-         return decodeRows(entry, [attached!])[0]
-      })
-   )
+            .returning(),
+         ...manyToManyStatements(db, name, id, lists),
+      ])
+      const [row] = updated as Record<string, unknown>[]
+      if (!row) throw createError({ statusCode: 404, statusMessage: 'Row not found' })
+      const [attached] = await attachManyToMany(useDb(), name, entry, [row])
+      return decodeRows(entry, [attached!])[0]
+   })
 })

@@ -34,13 +34,11 @@ export type CmsDb = Db
 
 export const cmsDialect: 'sqlite' | 'postgres' = 'sqlite'
 
-export function withTransaction<T>(fn: (db: CmsDb) => Promise<T>): Promise<T> {
-   return fn(useDb())
-}
-
 export function runBatch(build: (db: CmsDb) => PromiseLike<unknown>[]): Promise<unknown[]> {
    const db = useDb()
-   return db.batch(build(db) as unknown as Parameters<Db['batch']>[0]) as unknown as Promise<
+   const statements = build(db)
+   if (!statements.length) return Promise.resolve([])
+   return db.batch(statements as unknown as Parameters<Db['batch']>[0]) as unknown as Promise<
       unknown[]
    >
 }

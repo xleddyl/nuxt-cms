@@ -1,20 +1,21 @@
-import { eq } from 'drizzle-orm'
 import { createError, defineEventHandler, readValidatedBody } from 'h3'
 import { z } from 'zod'
-import { useDb } from '#cms-db'
+import { runBatch } from '#cms-db'
 import { cms_media } from '#cms-tables'
 import {
-   isMediaFolderMarker,
    isWithinMediaFolder,
    MEDIA_FOLDER_MAX_DEPTH,
    mediaFolderDepth,
+   mediaFolderMarkerKey,
    mediaFolderSegments,
    normalizeMediaFolder,
    rebaseMediaFolder,
 } from '../../shared/index'
 import { useMediaStorage } from '../utils/media'
-import { mediaRowsInFolder, writeMediaFolderMarker } from '../utils/media-folders'
+import { mediaRowsInFolder } from '../utils/media-folders'
 import { requireAdmin } from '../utils/require-admin'
+import type { WriteDb } from '../utils/write-statements'
+import { mediaFolderRenameStatements, planMediaFolderRename } from '../utils/write-statements'
 
 const bodySchema = z.object({
    from: z.string().min(1).max(255),
@@ -57,20 +58,13 @@ export default defineEventHandler(async (event) => {
       throw tooDeep()
    }
 
-   const db = useDb()
-   const fileFolders = new Map<string, string>()
-   for (const row of rebased) {
-      if (!isMediaFolderMarker(row.key)) fileFolders.set(row.folder!, row.target)
+   const plan = planMediaFolderRename(rebased)
+   for (const folder of plan.markers) {
+      await store.write(mediaFolderMarkerKey(folder), new Uint8Array(), 'application/x-empty')
    }
-   for (const [folder, target] of fileFolders) {
-      await db.update(cms_media).set({ folder: target }).where(eq(cms_media.folder, folder))
-   }
-
-   for (const row of rebased) {
-      if (!isMediaFolderMarker(row.key)) continue
-      await writeMediaFolderMarker(store, row.target)
-      await store.remove(row.key)
-      await db.delete(cms_media).where(eq(cms_media.key, row.key))
+   await runBatch((db) => mediaFolderRenameStatements(db as unknown as WriteDb, cms_media, plan))
+   for (const key of plan.staleMarkers) {
+      await store.remove(key)
    }
 
    return { folder: to, moved: rows.length }

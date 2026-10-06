@@ -1,7 +1,11 @@
+import { sql } from 'drizzle-orm'
+import type { BaseSQLiteDatabase } from 'drizzle-orm/sqlite-core'
 import cmsConfig from '#cms-config'
 import { migrations as bundledMigrations } from '#cms-migrations'
+import * as cmsTables from '#cms-tables'
 import { useRuntimeConfig } from '#imports'
 import { applyLibsqlMigrations, type LibsqlMigrationClient } from './libsql-migrations'
+import { backfillTimestamps } from './timestamps'
 
 export interface CmsMigration {
    sql: string[]
@@ -69,12 +73,44 @@ export async function runCmsMigrations(db: unknown): Promise<void> {
    await dialect.migrate(migrations, session, {})
 }
 
+export async function runSqliteMigrations(db: unknown): Promise<void> {
+   const migrations = await pendingMigrations()
+   if (!migrations.length) return
+
+   const { dialect, session, $client } = db as MigratableDb & {
+      $client: { pragma: (source: string) => unknown }
+   }
+   $client.pragma('foreign_keys = OFF')
+   try {
+      await dialect.migrate(migrations, session, {})
+   } finally {
+      $client.pragma('foreign_keys = ON')
+   }
+
+   const sqlite = db as BaseSQLiteDatabase<'sync', unknown>
+   await backfillTimestamps(cmsTables, {
+      select: async (query) => sqlite.all(sql.raw(query)),
+      write: async (statements) => {
+         for (const statement of statements) sqlite.run(sql.raw(statement))
+      },
+   })
+}
+
 export async function runLibsqlMigrations(db: unknown): Promise<void> {
    const migrations = await pendingMigrations()
    if (!migrations.length) return
 
    const { $client } = db as { $client: LibsqlMigrationClient }
    await applyLibsqlMigrations($client, migrations)
+
+   await backfillTimestamps(cmsTables, {
+      select: async (query) => Array.from((await $client.execute(query)).rows),
+      write: (statements) =>
+         $client.batch(
+            statements.map((statement) => ({ sql: statement, args: [] })),
+            'write'
+         ),
+   })
 }
 
 export async function runD1Migrations(binding: unknown): Promise<void> {
@@ -106,4 +142,9 @@ export async function runD1Migrations(binding: unknown): Promise<void> {
       )
    }
    if (batch.length) await d1.batch(batch)
+
+   await backfillTimestamps(cmsTables, {
+      select: async (query) => (await d1.prepare(query).all<unknown>()).results,
+      write: (statements) => d1.batch(statements.map((statement) => d1.prepare(statement))),
+   })
 }

@@ -41,6 +41,7 @@ import {
    renderGraphqlSdl,
    typeName,
 } from '../../shared/graphql-sdl'
+import { normalizeTimestampFields } from '../../shared/timestamps'
 import { useMediaIndex } from './media-index'
 import { readPages } from './page-storage'
 import { getContentI18n, resolveTable, tableColumns } from './registry'
@@ -134,7 +135,7 @@ function resolveLocaleArg(locale: unknown): string {
 
 function localizeRow(entry: CmsEntry, row: Record<string, unknown>, locale: string): Row {
    const { defaultLocale } = getContentI18n()
-   const result: Row = { ...row, [LOCALE]: locale }
+   const result: Row = normalizeTimestampFields({ ...row, [LOCALE]: locale })
    const fields = entryFieldsFor(entry)
    for (const key of translatableFieldKeys(entry)) {
       if (isTranslatableMediaField(fields[key]!)) {

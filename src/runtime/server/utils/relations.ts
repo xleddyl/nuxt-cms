@@ -1,4 +1,4 @@
-import { asc, eq, inArray } from 'drizzle-orm'
+import { asc, inArray } from 'drizzle-orm'
 import type { AnySQLiteColumn, SQLiteTable } from 'drizzle-orm/sqlite-core'
 import { createError } from 'h3'
 import cmsConfig from '#cms-config'
@@ -8,6 +8,8 @@ import * as cmsTables from '#cms-tables'
 import type { CmsEntry } from '../../shared/index'
 import { entryFieldsFor } from '../../shared/index'
 import { resolveTable, tableColumns } from './registry'
+import type { JoinTable, WriteDb } from './write-statements'
+import { joinWriteStatements } from './write-statements'
 
 type Row = Record<string, unknown>
 
@@ -17,7 +19,7 @@ function manyToManyKeys(entry: CmsEntry): string[] {
       .map(([key]) => key)
 }
 
-function joinTable(name: string, key: string) {
+function joinTable(name: string, key: string): JoinTable {
    const table = (cmsTables as Record<string, unknown>)[`${name}_${key}`] as SQLiteTable | undefined
    if (!table) {
       throw createError({ statusCode: 500, statusMessage: `No join table for ${name}.${key}` })
@@ -68,21 +70,15 @@ export async function assertRelationTargets(entry: CmsEntry, lists: Record<strin
    }
 }
 
-export async function saveManyToMany(
+export function manyToManyStatements(
    db: CmsDb,
    name: string,
    sourceId: string,
    lists: Record<string, string[]>
-) {
-   for (const [key, ids] of Object.entries(lists)) {
-      const join = joinTable(name, key)
-      await db.delete(join.table).where(eq(join.sourceId, sourceId))
-      if (ids.length) {
-         await db
-            .insert(join.table)
-            .values(ids.map((targetId, position) => ({ sourceId, targetId, position })))
-      }
-   }
+): PromiseLike<unknown>[] {
+   return Object.entries(lists).flatMap(([key, ids]) =>
+      joinWriteStatements(db as unknown as WriteDb, joinTable(name, key), sourceId, ids)
+   )
 }
 
 export async function relationTitles(

@@ -1,7 +1,7 @@
 import { and, inArray, not, like } from 'drizzle-orm'
 import { defineEventHandler, readValidatedBody } from 'h3'
 import { z } from 'zod'
-import { useDb } from '#cms-db'
+import { runBatch } from '#cms-db'
 import { cms_media } from '#cms-tables'
 import { MEDIA_FOLDER_MARKER, normalizeMediaFolder } from '../../shared/index'
 import { objectKeySchema } from '../../shared/validation'
@@ -20,17 +20,21 @@ export default defineEventHandler(async (event) => {
    const { keys, folder } = await readValidatedBody(event, bodySchema.parse)
    const target = normalizeMediaFolder(folder)
 
-   let moved = 0
-   for (const chunk of keyChunks([...new Set(keys)])) {
-      const rows = await useDb()
-         .update(cms_media)
-         .set({ folder: target })
-         .where(
-            and(inArray(cms_media.key, chunk), not(like(cms_media.key, `%/${MEDIA_FOLDER_MARKER}`)))
-         )
-         .returning({ key: cms_media.key })
-      moved += rows.length
-   }
+   const results = await runBatch((db) =>
+      keyChunks([...new Set(keys)]).map((chunk) =>
+         db
+            .update(cms_media)
+            .set({ folder: target })
+            .where(
+               and(
+                  inArray(cms_media.key, chunk),
+                  not(like(cms_media.key, `%/${MEDIA_FOLDER_MARKER}`))
+               )
+            )
+            .returning({ key: cms_media.key })
+      )
+   )
+   const moved = (results as unknown[][]).reduce((total, rows) => total + rows.length, 0)
 
    return { folder: target, moved }
 })

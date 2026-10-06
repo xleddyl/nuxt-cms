@@ -5,6 +5,7 @@ import { useDb } from '#cms-db'
 import { cms_media } from '#cms-tables'
 import type { MediaItem } from '../../shared/index'
 import { normalizeMediaFolder } from '../../shared/index'
+import { nowTimestamp } from '../../shared/timestamps'
 import { objectKeySchema } from '../../shared/validation'
 import { requireMediaFilePath } from '../utils/media-fs'
 import {
@@ -48,7 +49,7 @@ export default defineEventHandler(async (event): Promise<MediaItem> => {
 
    const [row] = await useDb()
       .insert(cms_media)
-      .values(values)
+      .values({ ...values, createdAt: nowTimestamp() })
       .onConflictDoUpdate({ target: cms_media.key, set: values })
       .returning()
 

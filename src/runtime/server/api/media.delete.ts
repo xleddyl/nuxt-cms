@@ -21,9 +21,9 @@ export default defineEventHandler(async (event) => {
       throw createError({ statusCode: 404, statusMessage: 'Media not found' })
    }
 
-   await store.remove(key)
-
    await db.delete(cms_media).where(eq(cms_media.key, key))
+
+   await store.remove(key)
 
    return { ok: true }
 })

@@ -1,12 +1,18 @@
 import { createError, defineEventHandler, readValidatedBody } from 'h3'
-import { withTransaction } from '#cms-db'
+import { runBatch, useDb } from '#cms-db'
 import { customId } from '../utils/custom-id'
 import { mapConstraintErrors } from '../utils/db-errors'
-import { buildValidator, decodeRows, encodeColumnValues, getRegistryEntry } from '../utils/registry'
+import {
+   buildValidator,
+   decodeRows,
+   encodeColumnValues,
+   getRegistryEntry,
+   withTimestamps,
+} from '../utils/registry'
 import {
    assertRelationTargets,
    attachManyToMany,
-   saveManyToMany,
+   manyToManyStatements,
    splitRelationValues,
 } from '../utils/relations'
 import { requireAdmin } from '../utils/require-admin'
@@ -25,15 +31,15 @@ export default defineEventHandler(async (event) => {
    const { values, lists } = splitRelationValues(entry, encodeColumnValues(entry, body))
    await assertRelationTargets(entry, lists)
    if (entry.drafts) values.status ??= 'draft'
-   values.id = customId(entry.id)
-   return mapConstraintErrors(() =>
-      withTransaction(async (db) => {
-         const [row] = await db.insert(table).values(values).returning()
-         await saveManyToMany(db, name, (row as Record<string, unknown>).id as string, lists)
-         const [attached] = await attachManyToMany(db, name, entry, [
-            row as Record<string, unknown>,
-         ])
-         return decodeRows(entry, [attached!])[0]
-      })
-   )
+   const id = customId(entry.id)
+   values.id = id
+   return mapConstraintErrors(async () => {
+      const [inserted] = await runBatch((db) => [
+         db.insert(table).values(withTimestamps(table, values)).returning(),
+         ...manyToManyStatements(db, name, id, lists),
+      ])
+      const [row] = inserted as Record<string, unknown>[]
+      const [attached] = await attachManyToMany(useDb(), name, entry, [row!])
+      return decodeRows(entry, [attached!])[0]
+   })
 })

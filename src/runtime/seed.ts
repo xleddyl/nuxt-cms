@@ -98,5 +98,15 @@ export async function createCmsSeeder(opts: CmsSeederOptions = {}) {
    sqlite.pragma('journal_mode = WAL')
    sqlite.pragma('foreign_keys = ON')
    const db = drizzle(sqlite)
-   return { db, migrate: () => migrate(db, { migrationsFolder }) }
+   return {
+      db,
+      migrate: () => {
+         sqlite.pragma('foreign_keys = OFF')
+         try {
+            migrate(db, { migrationsFolder })
+         } finally {
+            sqlite.pragma('foreign_keys = ON')
+         }
+      },
+   }
 }
