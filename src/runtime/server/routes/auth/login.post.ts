@@ -14,11 +14,9 @@ const credentialsSchema = z.object({
    password: z.string().min(1).max(256),
 })
 
-const RATE_WINDOW_MS = 15 * 60_000
-const RATE_MAX_FAILURES = 10
-const RATE_GLOBAL_MAX_FAILURES = 100
+const RATE_LOCK_MS = 5 * 60_000
+const RATE_MAX_FAILURES = 5
 const RATE_PRUNE_EVERY = 200
-const GLOBAL_KEY = 'global'
 
 interface RateEntry {
    count: number
@@ -31,8 +29,8 @@ function rateStorage() {
    return useStorage('cms:login-rate')
 }
 
-function rateKey(ip: string) {
-   return ip.replace(/[^a-z0-9]/gi, '-')
+function rateKey(kind: 'ip' | 'email', value: string) {
+   return `${kind}:${value.replace(/[^a-z0-9]/gi, '-')}`
 }
 
 async function readEntry(key: string, now: number): Promise<RateEntry | null> {
@@ -40,9 +38,14 @@ async function readEntry(key: string, now: number): Promise<RateEntry | null> {
    return entry && entry.resetAt > now ? entry : null
 }
 
-async function recordFailure(key: string, now: number) {
-   const current = (await readEntry(key, now)) ?? { count: 0, resetAt: now + RATE_WINDOW_MS }
+function isLocked(entry: RateEntry | null) {
+   return !!entry && entry.count >= RATE_MAX_FAILURES
+}
+
+async function recordAttempt(key: string, now: number) {
+   const current = (await readEntry(key, now)) ?? { count: 0, resetAt: now + RATE_LOCK_MS }
    current.count++
+   if (current.count >= RATE_MAX_FAILURES) current.resetAt = now + RATE_LOCK_MS
    await rateStorage().setItem(key, current, {
       ttl: Math.ceil((current.resetAt - now) / 1000),
    })
@@ -61,6 +64,17 @@ async function prune(now: number) {
    )
 }
 
+async function clearAttempts(keys: string[]) {
+   await Promise.all(keys.map((key) => rateStorage().removeItem(key)))
+}
+
+function tooManyAttempts() {
+   return createError({
+      statusCode: 429,
+      statusMessage: 'Too many failed attempts, try again in 5 minutes',
+   })
+}
+
 function safeEqual(a: string, b: string) {
    const hashA = createHash('sha256').update(a).digest()
    const hashB = createHash('sha256').update(b).digest()
@@ -69,25 +83,17 @@ function safeEqual(a: string, b: string) {
 
 export default defineEventHandler(async (event) => {
    assertSameOrigin(event)
-   const ip = rateKey(getRequestIP(event, { xForwardedFor: true }) ?? 'unknown')
    const now = Date.now()
-
-   const [attempts, globalFailures] = await Promise.all([
-      readEntry(ip, now),
-      readEntry(GLOBAL_KEY, now),
-   ])
-   if (
-      (globalFailures && globalFailures.count >= RATE_GLOBAL_MAX_FAILURES) ||
-      (attempts && attempts.count >= RATE_MAX_FAILURES)
-   ) {
-      throw createError({
-         statusCode: 429,
-         statusMessage: 'Too many failed attempts, try again later',
-      })
-   }
-
    const body = await readValidatedBody(event, credentialsSchema.parse)
    const email = body.email.toLowerCase()
+   const keys = [
+      rateKey('ip', getRequestIP(event, { xForwardedFor: true }) ?? 'unknown'),
+      rateKey('email', email),
+   ]
+
+   const entries = await Promise.all(keys.map((key) => readEntry(key, now)))
+   if (entries.some(isLocked)) throw tooManyAttempts()
+   await Promise.all([...keys.map((key) => recordAttempt(key, now)), prune(now)])
    const { adminEmail, adminPassword } = useRuntimeConfig(event).cms as {
       adminEmail: string
       adminPassword: string
@@ -100,7 +106,7 @@ export default defineEventHandler(async (event) => {
       safeEqual(body.password, adminPassword)
 
    if (superAdmin) {
-      await rateStorage().removeItem(ip)
+      await clearAttempts(keys)
       await replaceUserSession(event, { user: { email, role: 'superadmin' } })
       return { loggedIn: true }
    }
@@ -110,11 +116,10 @@ export default defineEventHandler(async (event) => {
       ? await verifyPassword(row.passwordHash, body.password)
       : await verifyNothing(body.password)
    if (!row || !passwordOk) {
-      await Promise.all([recordFailure(ip, now), recordFailure(GLOBAL_KEY, now), prune(now)])
       throw createError({ statusCode: 401, statusMessage: 'Invalid credentials' })
    }
 
-   await rateStorage().removeItem(ip)
+   await clearAttempts(keys)
    await useDb()
       .update(cms_users)
       .set({ lastLoginAt: new Date().toISOString() })

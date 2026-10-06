@@ -80,8 +80,8 @@ route middleware).
 - On a successful login at `/cms/login` a session cookie is set via
   [`nuxt-auth-utils`](https://github.com/atinux/nuxt-auth-utils).
 - Email and password are compared with a timing-safe hash comparison.
-- **Login rate limiting:** after 10 failed attempts from one IP within 15 minutes (or 100 failures
-  globally in the same window) further attempts return `429` until the window resets. Counters live
+- **Login rate limiting:** after 5 failed attempts from one IP, or for one email, further attempts
+  return `429` for 5 minutes. The lock always lasts 5 minutes and does not grow. Counters live
   in Nitro's `useStorage()` under `cms:login-rate`, which defaults to an in-memory driver: with more
   than one instance the limit is enforced per instance unless you mount a shared driver. See
   [Deployment → Horizontal scaling](deployment.md#horizontal-scaling).
