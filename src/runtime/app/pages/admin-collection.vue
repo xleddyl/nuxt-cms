@@ -1,5 +1,5 @@
 <template>
-   <div class="cms-page" :class="{ 'is-fill': config.kind === 'collection' && !error }">
+   <div class="cms-page" :class="{ 'is-fill': isCollectionKind(config) && !error }">
       <CmsPageHeader
          :title="config.label"
          :icon="kindMeta.icon"
@@ -156,7 +156,11 @@
                <CmsMediaThumb :value="mediaThumbValue(key, row.original[key])" />
             </template>
             <template v-if="drafts" #status-cell="{ row }">
-               <CmsStatusBadge :published="row.original.status === 'published'" />
+               <CmsStatusBadge
+                  :published="row.original.status === 'published'"
+                  :scheduled="mounted && isContent && isScheduledContent(row.original)"
+                  :at="formatDateTime(row.original.publishedAt)"
+               />
             </template>
          </CmsTable>
 
@@ -182,6 +186,7 @@
          <CmsPagination v-model:page="page" :total="total" :items-per-page="PAGE_SIZE" />
 
          <CmsEntryDrawer
+            v-if="!isContent"
             v-model:open="drawerOpen"
             :collection="name"
             :config="config"
@@ -196,6 +201,8 @@
 <script setup lang="ts">
 import type { CmsConfig, FieldConfig } from '#nuxt-cms'
 import {
+   isCollectionKind,
+   isScheduledContent,
    isTranslatableField,
    isTranslatableMediaField,
    pageParentPath,
@@ -205,6 +212,7 @@ import {
    computed,
    createError,
    definePageMeta,
+   navigateTo,
    onMounted,
    ref,
    useFetch,
@@ -240,11 +248,13 @@ const KIND_META = {
    collection: { icon: 'square-3-stack-3d', description: 'Collection of entries.' },
    single: { icon: 'document-text', description: 'Single entry, edited in place.' },
    page: { icon: 'window', description: 'Content for the routes of your app.' },
+   content: { icon: 'newspaper', description: 'Items built from blocks, with scheduling.' },
 }
 const kindMeta = { ...KIND_META[config.kind], icon: config.icon ?? KIND_META[config.kind].icon }
 const fieldKeys = Object.keys(config.fields)
 const mediaKeys = fieldKeys.filter((key) => config.fields[key]!.type === 'media')
-const drafts = config.kind === 'collection' && !!config.drafts
+const isContent = config.kind === 'content'
+const drafts = isCollectionKind(config) && !!config.drafts
 const formKeys = drafts ? [...fieldKeys, 'status'] : fieldKeys
 
 type Row = Record<string, unknown>
@@ -405,6 +415,16 @@ function mediaThumbValue(key: string, value: unknown): string | null {
    return pickTranslatedMedia(value as Record<string, string> | null, locale, locale)
 }
 
+function formatDateTime(value: unknown): string {
+   if (typeof value !== 'string' || !value) return ''
+   const date = new Date(value)
+   if (Number.isNaN(date.getTime()) || !mounted.value) return value.slice(0, 16).replace('T', ' ')
+   return `${date.toLocaleDateString()} ${date.toLocaleTimeString([], {
+      hour: '2-digit',
+      minute: '2-digit',
+   })}`
+}
+
 function relationLabel(field: FieldConfig, key: string, id: unknown): string {
    const title = relations.value[key]?.[String(id)]
    if (title == null || title === '') return `#${id}`
@@ -427,6 +447,8 @@ function displayValue(field: FieldConfig, key: string, value: unknown): string {
          return truncate(stripHtml(String(value)))
       case 'json':
          return truncate(JSON.stringify(value))
+      case 'datetime':
+         return formatDateTime(value)
       case 'blocks':
          return `${(value as unknown[]).length} ▤`
       case 'relation': {
@@ -463,11 +485,19 @@ const drawerOpen = ref(false)
 const drawerEntryId = ref<string | null>(null)
 
 function onSelect(_event: Event, row: { original: Row }) {
+   if (isContent) {
+      void navigateTo(`/cms/${name}/${row.original.id}`)
+      return
+   }
    drawerEntryId.value = String(row.original.id)
    drawerOpen.value = true
 }
 
 function openCreate() {
+   if (isContent) {
+      void navigateTo(`/cms/${name}/new`)
+      return
+   }
    drawerEntryId.value = null
    drawerOpen.value = true
 }

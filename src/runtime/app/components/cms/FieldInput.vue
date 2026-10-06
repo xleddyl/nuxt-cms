@@ -50,6 +50,7 @@
       :placeholder="field.placeholder"
    />
    <CmsInput v-else-if="field.type === 'date'" v-model="str" type="date" />
+   <CmsInput v-else-if="field.type === 'datetime'" v-model="localDateTime" type="datetime-local" />
    <CmsRelationField
       v-else-if="field.type === 'relation'"
       v-model="relationValue"
@@ -103,6 +104,20 @@ const translatable = proxy<Record<string, string> | null>((v) => v as Record<str
 const blocksValue = proxy<Record<string, unknown>[] | null>(
    (v) => v as Record<string, unknown>[] | null
 )
+function toLocalDateTime(value: unknown): string {
+   if (typeof value !== 'string' || !value) return ''
+   const date = new Date(value)
+   if (Number.isNaN(date.getTime())) return ''
+   return new Date(date.getTime() - date.getTimezoneOffset() * 60_000).toISOString().slice(0, 16)
+}
+
+function fromLocalDateTime(value: string): string | null {
+   if (!value) return null
+   const date = new Date(value)
+   return Number.isNaN(date.getTime()) ? null : date.toISOString()
+}
+
+const localDateTime = proxy<string>(toLocalDateTime, fromLocalDateTime)
 const relationValue = proxy<string | string[] | null>((v) => v as string | string[] | null)
 const jsonValue = proxy<unknown>((v) => v)
 </script>

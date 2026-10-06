@@ -247,6 +247,7 @@ describe('resolveCmsPages', () => {
          '/about',
          '/guides',
          '/guides/knots',
+         '/news',
       ])
    })
 })

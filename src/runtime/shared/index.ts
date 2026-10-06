@@ -10,6 +10,7 @@ export type FieldType =
    | 'number'
    | 'boolean'
    | 'date'
+   | 'datetime'
    | 'email'
    | 'slug'
    | 'select'
@@ -244,6 +245,9 @@ export function mediaUsageGroups(
 
 export interface BlockConfig {
    label: string
+   component?: string
+   icon?: string
+   description?: string
    fields: Record<string, FieldConfig>
 }
 
@@ -426,6 +430,24 @@ export function hasTranslatableBlockFields(field: FieldConfig): boolean {
    )
 }
 
+export const BLOCK_HIDDEN_KEY = 'hidden'
+
+export function declaresHiddenField(block: BlockConfig | undefined): boolean {
+   return !!block && Object.hasOwn(block.fields, BLOCK_HIDDEN_KEY)
+}
+
+export function isHiddenBlock(item: unknown): boolean {
+   return !!item && typeof item === 'object' && (item as Record<string, unknown>).hidden === true
+}
+
+export function publicBlocks(field: FieldConfig, value: unknown): unknown {
+   if (!Array.isArray(value)) return value
+   return value.filter((item) => {
+      if (!isHiddenBlock(item)) return true
+      return declaresHiddenField(field.blocks?.[String((item as Record<string, unknown>).type)])
+   })
+}
+
 export function localizeBlock(
    field: FieldConfig,
    item: unknown,
@@ -459,7 +481,7 @@ export function localizeBlocks(
 
 export const CMS_GRAPHQL_BATCH_LIMIT = 20
 
-export type CmsEntryKind = 'collection' | 'single' | 'page'
+export type CmsEntryKind = 'collection' | 'single' | 'page' | 'content'
 
 export interface CmsPageRoute {
    path: string
@@ -487,6 +509,14 @@ export interface CmsEntry {
    icon?: string
    layout?: CmsLayoutBlock[]
    list?: CmsListInput
+   blocks?: Record<string, BlockConfig>
+   declared?: CmsContentDeclared
+}
+
+export interface CmsContentDeclared {
+   fields: string[]
+   titleField?: unknown
+   drafts?: unknown
 }
 
 export const MOBILE_MEDIA_SUFFIX = 'Mobile'
@@ -547,6 +577,160 @@ export function expandMobileMedia<T extends Record<string, unknown>>(config: T):
       }
    }
    return config
+}
+
+export const CONTENT_TITLE_FIELD = 'title'
+
+export const CONTENT_SLUG_FIELD = 'slug'
+
+export const CONTENT_PUBLISHED_AT_FIELD = 'publishedAt'
+
+export const CONTENT_BODY_FIELD = 'body'
+
+export const CONTENT_SYSTEM_FIELDS = [
+   'title',
+   'slug',
+   'publishedAt',
+   'excerpt',
+   'cover',
+   'body',
+   'seoTitle',
+   'seoDescription',
+   'seoImage',
+] as const
+
+export type CmsContentSystemField = (typeof CONTENT_SYSTEM_FIELDS)[number]
+
+export const CONTENT_LIST_COLUMNS = ['title', 'status', 'publishedAt']
+
+export function isContentEntry(entry: Pick<CmsEntry, 'kind'>): boolean {
+   return entry.kind === 'content'
+}
+
+export function isCollectionKind(entry: Pick<CmsEntry, 'kind'>): boolean {
+   return entry.kind === 'collection' || entry.kind === 'content'
+}
+
+function contentSystemFields(
+   blocks: Record<string, BlockConfig>,
+   labels: Record<string, string>,
+   translatable: boolean
+): Record<CmsContentSystemField, FieldConfig> {
+   const label = (key: CmsContentSystemField, fallback: string) => labels[key] || fallback
+   const localized = translatable ? { translatable: true } : {}
+   return {
+      title: { label: label('title', 'Title'), type: 'text', required: true, ...localized },
+      slug: {
+         label: label('slug', 'Slug'),
+         type: 'slug',
+         from: CONTENT_TITLE_FIELD,
+         required: true,
+         description: 'Filled from the title in the default language.',
+      },
+      publishedAt: {
+         label: label('publishedAt', 'Published at'),
+         type: 'datetime',
+         description: 'Empty means now when you publish. A future date schedules the item.',
+      },
+      excerpt: {
+         label: label('excerpt', 'Excerpt'),
+         type: 'text',
+         textarea: true,
+         ...localized,
+      },
+      cover: { label: label('cover', 'Cover'), type: 'media', mediaType: 'image' },
+      body: { label: label('body', 'Body'), type: 'blocks', blocks },
+      seoTitle: { label: label('seoTitle', 'SEO title'), type: 'text', ...localized },
+      seoDescription: {
+         label: label('seoDescription', 'SEO description'),
+         type: 'text',
+         textarea: true,
+         ...localized,
+      },
+      seoImage: { label: label('seoImage', 'SEO image'), type: 'media', mediaType: 'image' },
+   }
+}
+
+function normalizeContentEntry(entry: CmsEntry, translatable: boolean): CmsEntry {
+   if (entry.declared) return entry
+   const declared = entry.fields ?? {}
+   const system = contentSystemFields(entry.blocks ?? {}, entry.labels ?? {}, translatable)
+   const extra = Object.fromEntries(
+      Object.entries(declared).filter(([key]) => !Object.hasOwn(system, key))
+   )
+   const { body, seoTitle, seoDescription, seoImage, ...head } = system
+   return Object.assign(entry, {
+      declared: {
+         fields: Object.keys(declared),
+         ...(entry.titleField !== undefined ? { titleField: entry.titleField } : {}),
+         ...(entry.drafts !== undefined ? { drafts: entry.drafts } : {}),
+      },
+      titleField: CONTENT_TITLE_FIELD,
+      drafts: true,
+      fields: { ...head, ...extra, body, seoTitle, seoDescription, seoImage },
+      list: entry.list ?? { columns: [...CONTENT_LIST_COLUMNS] },
+   })
+}
+
+export function normalizeContentEntries<T extends Record<string, unknown>>(
+   config: T,
+   i18n?: Pick<CmsI18n, 'locales'>
+): T {
+   const translatable = !!i18n?.locales.length
+   for (const entry of Object.values(config) as CmsEntry[]) {
+      if (entry?.kind === 'content') normalizeContentEntry(entry, translatable)
+   }
+   return config
+}
+
+export function normalizeCmsConfig<T extends Record<string, unknown>>(
+   config: T,
+   i18n?: Pick<CmsI18n, 'locales'>
+): T {
+   return expandMobileMedia(normalizeContentEntries(config, i18n))
+}
+
+export function slugSourceValue(
+   source: FieldConfig | undefined,
+   value: unknown,
+   defaultLocale: string
+): string | null {
+   if (value == null) return null
+   if (source && isTranslatableField(source) && typeof value === 'object') {
+      return (value as Record<string, string>)[defaultLocale] ?? null
+   }
+   return typeof value === 'string' ? value : null
+}
+
+export function isScheduledContent(
+   row: Record<string, unknown> | null | undefined,
+   now: Date = new Date()
+): boolean {
+   if (!row || row.status !== 'published') return false
+   const at = row[CONTENT_PUBLISHED_AT_FIELD]
+   if (typeof at !== 'string' || !at) return false
+   const time = new Date(at).getTime()
+   return !Number.isNaN(time) && time > now.getTime()
+}
+
+export function resolveBlocksMedia(
+   field: FieldConfig,
+   value: unknown,
+   resolve: (key: string) => unknown
+): unknown {
+   if (!Array.isArray(value)) return value
+   return value.map((item) => {
+      if (!item || typeof item !== 'object') return item
+      const block = field.blocks?.[String((item as Record<string, unknown>).type)]
+      if (!block) return item
+      const resolved: Record<string, unknown> = { ...(item as Record<string, unknown>) }
+      for (const [key, blockField] of Object.entries(block.fields)) {
+         if (blockField.type !== 'media') continue
+         const media = resolved[key]
+         resolved[key] = typeof media === 'string' && media ? resolve(media) ?? null : null
+      }
+      return resolved
+   })
 }
 
 export function entryTabs(entry: Pick<CmsEntry, 'tabs'>): CmsTab[] {
@@ -720,6 +904,10 @@ export interface DateFieldInput extends FieldInputBase {
    type: 'date'
 }
 
+export interface DateTimeFieldInput extends FieldInputBase {
+   type: 'datetime'
+}
+
 export interface EmailFieldInput extends FieldInputBase {
    type: 'email'
 }
@@ -762,6 +950,7 @@ export type BlockFieldInput =
    | BlockField<NumberFieldInput>
    | BlockField<BooleanFieldInput>
    | BlockField<DateFieldInput>
+   | BlockField<DateTimeFieldInput>
    | BlockField<EmailFieldInput>
    | BlockField<SelectFieldInput>
    | BlockField<JsonFieldInput>
@@ -769,6 +958,9 @@ export type BlockFieldInput =
 
 export interface BlockInput {
    label: string
+   component?: string
+   icon?: string
+   description?: string
    fields: Record<string, BlockFieldInput>
 }
 
@@ -783,6 +975,7 @@ export type CmsFieldInput =
    | NumberFieldInput
    | BooleanFieldInput
    | DateFieldInput
+   | DateTimeFieldInput
    | EmailFieldInput
    | SlugFieldInput
    | SelectFieldInput
@@ -825,12 +1018,31 @@ export interface CmsPageInput extends CmsEntryInputBase {
    columns?: string[]
 }
 
-export type CmsEntryInput = CmsCollectionInput | CmsSingleInput | CmsPageInput
+export interface CmsContentInput {
+   id: string
+   label: string
+   kind: 'content'
+   icon?: string
+   blocks: Record<string, BlockInput>
+   fields?: Record<string, CmsFieldInput>
+   labels?: Partial<Record<CmsContentSystemField, string>>
+   tabs?: CmsTab[]
+   layout?: CmsLayoutBlock[]
+   list?: CmsListInput
+   titleField?: never
+   drafts?: never
+}
+
+export type CmsEntryInput = CmsCollectionInput | CmsSingleInput | CmsPageInput | CmsContentInput
 
 export type CmsConfigInput = Record<string, CmsEntryInput>
 
 export function defineCmsConfig<T extends CmsConfigInput>(config: T): T {
    return config
+}
+
+export function defineCmsBlocks<T extends Record<string, BlockInput>>(blocks: T): T {
+   return blocks
 }
 
 export * from './layout'

@@ -1,8 +1,11 @@
 import { typeName } from './runtime/shared/graphql-sdl'
-import type { CmsConfig, CmsEntry, CmsI18n, FieldConfig } from './runtime/shared/index'
+import type { BlockConfig, CmsConfig, CmsEntry, CmsI18n, FieldConfig } from './runtime/shared/index'
 import {
+   CONTENT_SLUG_FIELD,
+   CONTENT_SYSTEM_FIELDS,
    PAGE_PATH_FIELD,
    fieldConditions,
+   isCollectionKind,
    isMultiSelect,
    isRequiredField,
    isTranslatableField,
@@ -10,6 +13,7 @@ import {
    layoutErrors,
    listErrors,
    mobileMediaKey,
+   normalizeContentEntries,
    pageAllFields,
    pageColumnFields,
    pageFieldsTableName,
@@ -33,9 +37,19 @@ const RESERVED_ENTRY_KEYS = [
    'cms_users',
 ]
 const RESERVED_COLUMNS = ['id', 'status', 'created_at', 'updated_at']
-const TITLE_FIELD_TYPES = ['text', 'slug', 'email', 'number', 'date', 'select']
+const TITLE_FIELD_TYPES = ['text', 'slug', 'email', 'number', 'date', 'datetime', 'select']
 const TRANSLATABLE_FIELD_TYPES = ['text', 'richtext', 'media']
-const CONDITION_FIELD_TYPES = ['select', 'boolean', 'text', 'number', 'date', 'email', 'slug']
+const CONDITION_FIELD_TYPES = [
+   'select',
+   'boolean',
+   'text',
+   'number',
+   'date',
+   'datetime',
+   'email',
+   'slug',
+]
+const COMPONENT_RESERVED_KEYS = ['key', 'ref', 'class', 'style']
 const RESERVED_TYPE_NAMES = [
    'Query',
    'Mutation',
@@ -53,6 +67,7 @@ export function validateConfig(config: CmsConfig, i18n?: CmsI18n): string[] {
    const errors: string[] = []
 
    const locales = i18n?.locales ?? []
+   normalizeContentEntries(config, { locales })
    if (locales.length && !locales.includes(i18n!.defaultLocale)) {
       errors.push(
          `cms.i18n: defaultLocale '${i18n!.defaultLocale}' is not in locales [${locales.join(
@@ -87,8 +102,9 @@ export function validateConfig(config: CmsConfig, i18n?: CmsI18n): string[] {
       } else {
          entryIds.set(entry.id, name)
       }
-      if (entry.kind !== 'collection' && entry.kind !== 'single' && entry.kind !== 'page')
-         errors.push(`${at}: kind must be 'collection', 'single' or 'page'`)
+      if (!['collection', 'single', 'page', 'content'].includes(entry.kind))
+         errors.push(`${at}: kind must be 'collection', 'single', 'page' or 'content'`)
+      if (entry.kind === 'content') errors.push(...contentErrors(at, entry))
       if (entry.kind === 'page') {
          if (pageEntry) {
             errors.push(
@@ -140,7 +156,7 @@ export function validateConfig(config: CmsConfig, i18n?: CmsI18n): string[] {
          errors.push(`${at}: routes, include, exclude and overrides need kind 'page'`)
       }
       if (entry.kind !== 'page' && entry.columns) errors.push(`${at}: columns need kind 'page'`)
-      if (entry.drafts && entry.kind !== 'collection')
+      if (entry.drafts && !isCollectionKind(entry))
          errors.push(`${at}: drafts are only supported on collections`)
       const tabIds = new Set<string>()
       for (const tab of entry.tabs ?? []) {
@@ -182,8 +198,8 @@ export function validateConfig(config: CmsConfig, i18n?: CmsI18n): string[] {
       const allFields = entry.kind === 'page' ? pageAllFields(entry) : entry.fields ?? {}
       errors.push(...layoutErrors(at, allFields, entry.layout))
       errors.push(...listErrors(at, allFields, entry.list, entry.drafts ? ['status'] : []))
-      if (entry.list && entry.kind !== 'collection')
-         errors.push(`${at}: list needs kind 'collection'`)
+      if (entry.list && !isCollectionKind(entry))
+         errors.push(`${at}: list needs kind 'collection' or 'content'`)
       if (entry.icon !== undefined && (typeof entry.icon !== 'string' || !entry.icon))
          errors.push(`${at}: icon must be a non-empty string`)
       const columnNames = new Set<string>()
@@ -268,7 +284,10 @@ export function validateConfig(config: CmsConfig, i18n?: CmsI18n): string[] {
             if (!source) errors.push(`${fat}: slug source '${field.from}' is not a declared field`)
             else if (source.type !== 'text')
                errors.push(`${fat}: slug source '${field.from}' must be a text field`)
-            else if (isTranslatableField(source))
+            else if (
+               isTranslatableField(source) &&
+               !(entry.kind === 'content' && key === CONTENT_SLUG_FIELD)
+            )
                errors.push(`${fat}: slug source '${field.from}' cannot be translatable`)
          }
          if (field.type === 'blocks') {
@@ -282,6 +301,7 @@ export function validateConfig(config: CmsConfig, i18n?: CmsI18n): string[] {
                   errors.push(`${bat}: key must be a valid identifier`)
                if (!block.fields || !Object.keys(block.fields).length)
                   errors.push(`${bat}: fields must not be empty`)
+               errors.push(...blockMetaErrors(bat, block))
                for (const [blockFieldKey, blockField] of Object.entries(block.fields ?? {})) {
                   const bfat = `${bat}, field '${blockFieldKey}'`
                   if (!IDENTIFIER.test(blockFieldKey))
@@ -323,8 +343,10 @@ export function validateConfig(config: CmsConfig, i18n?: CmsI18n): string[] {
             if (!field.to || !target) {
                errors.push(`${fat}: relation target '${field.to}' is not in the registry`)
             } else {
-               if (target.kind !== 'collection')
-                  errors.push(`${fat}: relation target '${field.to}' must be a collection`)
+               if (!isCollectionKind(target))
+                  errors.push(
+                     `${fat}: relation target '${field.to}' must be a collection or a content entry`
+                  )
                if (!entry.table && target.table)
                   errors.push(
                      `${fat}: relation target '${field.to}' uses a custom table: derived relations can only target derived entries`
@@ -378,6 +400,46 @@ export function validateConfig(config: CmsConfig, i18n?: CmsI18n): string[] {
       }
    }
 
+   return errors
+}
+
+function contentErrors(at: string, entry: CmsEntry): string[] {
+   const errors: string[] = []
+   const system: readonly string[] = CONTENT_SYSTEM_FIELDS
+   for (const key of entry.declared?.fields ?? []) {
+      if (system.includes(key))
+         errors.push(`${at}: '${key}' is a system field of content entries, remove it from fields`)
+   }
+   if (entry.declared?.titleField !== undefined)
+      errors.push(`${at}: content entries use 'title' as titleField, remove titleField`)
+   if (entry.declared?.drafts !== undefined)
+      errors.push(`${at}: content entries always have drafts, remove the drafts option`)
+   if (!entry.blocks || typeof entry.blocks !== 'object' || !Object.keys(entry.blocks).length)
+      errors.push(`${at}: content entries need a non-empty blocks map for the body`)
+   if (entry.table) errors.push(`${at}: content entries cannot use a custom table`)
+   for (const key of Object.keys(entry.labels ?? {})) {
+      if (!system.includes(key))
+         errors.push(`${at}: labels names '${key}', which is not a system field`)
+   }
+   return errors
+}
+
+function blockMetaErrors(at: string, block: BlockConfig): string[] {
+   const errors: string[] = []
+   if (block.component !== undefined) {
+      if (typeof block.component !== 'string' || !block.component.trim())
+         errors.push(`${at}: component must be a non-empty string`)
+      for (const key of Object.keys(block.fields ?? {})) {
+         if (COMPONENT_RESERVED_KEYS.includes(key))
+            errors.push(
+               `${at}, field '${key}': '${key}' cannot be a prop of the block component, rename it`
+            )
+      }
+   }
+   if (block.icon !== undefined && (typeof block.icon !== 'string' || !block.icon))
+      errors.push(`${at}: icon must be a non-empty string`)
+   if (block.description !== undefined && typeof block.description !== 'string')
+      errors.push(`${at}: description must be a string`)
    return errors
 }
 
@@ -499,7 +561,7 @@ function tableExpr(name: string, entry: CmsEntry, dialect: Dialect): string {
 
    if (entry.drafts) lines.push(`  status: text('status').notNull().default('draft'),`)
 
-   if (entry.kind === 'collection') lines.push(`  createdAt: ${nowExpr(pg, 'created_at')},`)
+   if (isCollectionKind(entry)) lines.push(`  createdAt: ${nowExpr(pg, 'created_at')},`)
    lines.push(`  updatedAt: ${nowExpr(pg, 'updated_at')},`)
 
    return `export const ${name} = ${tableFn}('${name}', {\n${lines.join('\n')}\n})`

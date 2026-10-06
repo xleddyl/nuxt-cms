@@ -2,10 +2,23 @@
    <div class="cms-page">
       <CmsPageHeader :title="headerTitle" :links="breadcrumb">
          <template v-if="drafts" #badge>
-            <CmsStatusBadge :published="published" />
+            <CmsStatusBadge
+               :published="published"
+               :scheduled="scheduled"
+               :at="String(formState.publishedAt ?? '')"
+            />
          </template>
          <div class="cms-actions">
             <CmsButton label="Back" icon="arrow-left" variant="soft" @click="goBack" />
+            <CmsButton
+               v-if="isContent && !isNew"
+               label="Delete"
+               icon="trash"
+               variant="ghost"
+               color="error"
+               :disabled="saving"
+               @click="remove"
+            />
             <CmsButton type="submit" :form="FORM_ID" label="Save" :loading="saving" />
             <CmsButton
                v-if="drafts"
@@ -36,7 +49,14 @@
 
 <script setup lang="ts">
 import type { CmsConfig } from '#nuxt-cms'
-import { pageFields, pageParentPath, pageRouteOf, pageRoutes } from '#nuxt-cms'
+import {
+   isCollectionKind,
+   isScheduledContent,
+   pageFields,
+   pageParentPath,
+   pageRouteOf,
+   pageRoutes,
+} from '#nuxt-cms'
 import {
    computed,
    createError,
@@ -44,6 +64,7 @@ import {
    navigateTo,
    onBeforeRouteLeave,
    onBeforeUnmount,
+   onMounted,
    ref,
    useFetch,
    useRoute,
@@ -69,12 +90,13 @@ const toast = useCmsToast()
 
 const name = route.params.collection as string
 const config = (cmsConfig as CmsConfig)[name]
-if (!config || (config.kind !== 'collection' && config.kind !== 'page')) {
+if (!config || (!isCollectionKind(config) && config.kind !== 'page')) {
    throw createError({ statusCode: 404, statusMessage: 'Unknown collection', fatal: true })
 }
 
 const id = route.params.id as string | undefined
 const isPage = config.kind === 'page'
+const isContent = config.kind === 'content'
 const pageRoute = isPage && id ? pageRouteOf(config, id) : undefined
 if (isPage && !pageRoute) {
    throw createError({ statusCode: 404, statusMessage: 'Unknown page', fatal: true })
@@ -158,6 +180,14 @@ const published = computed({
    },
 })
 
+const mounted = ref(false)
+
+onMounted(() => {
+   mounted.value = true
+})
+
+const scheduled = computed(() => isContent && mounted.value && isScheduledContent(formState.value))
+
 function togglePublished() {
    published.value = !published.value
 }
@@ -169,6 +199,21 @@ function revertStatus() {
 
 function goBack() {
    navigateTo(`/cms/${name}`)
+}
+
+async function remove() {
+   if (!(await confirmAction('Delete this entry?'))) return
+   saving.value = true
+   try {
+      await cmsApi(`${endpoint}/${id}`, { method: 'DELETE' })
+      snapshot.value = JSON.stringify(formState.value)
+      toast.add({ title: 'Deleted', color: 'success' })
+      goBack()
+   } catch (error) {
+      toast.add({ title: 'Delete failed', description: errorMessage(error), color: 'error' })
+   } finally {
+      saving.value = false
+   }
 }
 
 async function save() {

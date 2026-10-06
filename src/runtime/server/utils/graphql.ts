@@ -24,6 +24,8 @@ import * as cmsTables from '#cms-tables'
 import { useRuntimeConfig } from '#imports'
 import type { CmsConfig, CmsEntry, FieldConfig, MediaStorageMode } from '../../shared/index'
 import {
+   CONTENT_SLUG_FIELD,
+   CONTENT_PUBLISHED_AT_FIELD,
    decodeTranslatableMedia,
    entryFieldsFor,
    hasTranslatableBlockFields,
@@ -33,6 +35,7 @@ import {
    mediaPublicUrl,
    mediaTypeFor,
    pickTranslatedMedia,
+   publicBlocks,
    translatableFieldKeys,
 } from '../../shared/index'
 import {
@@ -45,6 +48,7 @@ import { normalizeTimestampFields } from '../../shared/timestamps'
 import { useMediaIndex } from './media-index'
 import { readPages } from './page-storage'
 import { getContentI18n, resolveTable, tableColumns } from './registry'
+import { visibilityConditions } from './visibility'
 
 const MAX_LIMIT = 100
 const DEFAULT_LIMIT = 50
@@ -113,9 +117,7 @@ function tableFor(name: string): SQLiteTable {
 }
 
 function publishedFilter(entry: CmsEntry, table: SQLiteTable): SQL[] {
-   if (!entry.drafts) return []
-   const status = tableColumns(table).status
-   return status ? [eq(status, 'published')] : []
+   return visibilityConditions(entry, tableColumns(table))
 }
 
 function localeOf(parent: Row): string {
@@ -147,8 +149,11 @@ function localizeRow(entry: CmsEntry, row: Record<string, unknown>, locale: stri
       result[key] = value?.[locale] ?? value?.[defaultLocale] ?? null
    }
    for (const [key, field] of Object.entries(fields)) {
-      if (isPrivateField(field) || !hasTranslatableBlockFields(field)) continue
-      result[key] = localizeBlocks(field, result[key], locale, defaultLocale)
+      if (isPrivateField(field) || field.type !== 'blocks') continue
+      const visible = publicBlocks(field, result[key])
+      result[key] = hasTranslatableBlockFields(field)
+         ? localizeBlocks(field, visible, locale, defaultLocale)
+         : visible
    }
    return result
 }
@@ -203,7 +208,11 @@ function filterConditions(table: SQLiteTable, filters: Filters | null | undefine
    return conditions
 }
 
-function sortOrder(table: SQLiteTable, sort: SortInput[] | null | undefined): SQL[] {
+function sortOrder(
+   entry: CmsEntry,
+   table: SQLiteTable,
+   sort: SortInput[] | null | undefined
+): SQL[] {
    const order: SQL[] = []
    for (const part of sort ?? []) {
       const column = columnFor(table, part.field)
@@ -211,7 +220,10 @@ function sortOrder(table: SQLiteTable, sort: SortInput[] | null | undefined): SQ
       order.push(part.direction === 'desc' ? desc(column) : asc(column))
    }
    if (!order.length) {
-      const fallback = tableColumns(table).createdAt ?? tableColumns(table).id
+      const columns = tableColumns(table)
+      const published = entry.kind === 'content' ? columns[CONTENT_PUBLISHED_AT_FIELD] : undefined
+      if (published) order.push(desc(published))
+      const fallback = columns.createdAt ?? columns.id
       if (fallback) order.push(desc(fallback))
    }
    return order
@@ -447,7 +459,7 @@ export function buildCmsSchema() {
             .select()
             .from(table)
             .where(where.length ? and(...where) : undefined)
-            .orderBy(...sortOrder(table, args.sort))
+            .orderBy(...sortOrder(entry, table, args.sort))
             .limit(limit)
             .offset(offset)
          return (rows as Record<string, unknown>[]).map((row) => localizeRow(entry, row, locale))
@@ -462,6 +474,23 @@ export function buildCmsSchema() {
             .where(and(eq(tableColumns(table).id!, args.id), ...publishedFilter(entry, table)))
             .limit(1)
          return row ? localizeRow(entry, row as Record<string, unknown>, locale) : null
+      }
+
+      if (entry.kind === 'content') {
+         queryResolvers[`${name}BySlug`] = async (
+            _: unknown,
+            args: { slug: string; locale?: string }
+         ) => {
+            const locale = resolveLocaleArg(args.locale)
+            const table = tableFor(name)
+            const slug = tableColumns(table)[CONTENT_SLUG_FIELD]!
+            const [row] = await useDb()
+               .select()
+               .from(table)
+               .where(and(eq(slug, args.slug), ...publishedFilter(entry, table)))
+               .limit(1)
+            return row ? localizeRow(entry, row as Record<string, unknown>, locale) : null
+         }
       }
 
       queryResolvers[`${name}Count`] = async (_: unknown, args: { filters?: Filters | null }) => {

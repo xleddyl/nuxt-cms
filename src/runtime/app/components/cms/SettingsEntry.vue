@@ -75,6 +75,7 @@ const KIND_LABELS: Record<CmsEntryKind, string> = {
    collection: 'Collection',
    single: 'Single',
    page: 'Pages',
+   content: 'Content',
 }
 
 const STATUS_LABELS: Record<Status, string> = {
@@ -93,7 +94,7 @@ const entry = computed(() => (cmsConfig as Record<string, CmsEntry>)[props.name]
 const fields = computed(() => entryFields(props.name))
 
 const parts = computed(() => [
-   ...(entry.value.kind === 'collection'
+   ...(entry.value.kind === 'collection' || entry.value.kind === 'content'
       ? [{ id: 'columns' as Part, label: 'Table columns' }]
       : []),
    { id: 'layout' as Part, label: 'Form layout' },

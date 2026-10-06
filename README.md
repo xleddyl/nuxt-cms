@@ -8,6 +8,7 @@ nuxt-cms is a Nuxt module that leverages the Nitro server to ship a lightweight 
 
 - **Zero extra infrastructure**: the CMS runs inside your app's Nitro server; you deploy one thing.
 - **Content types in code**: a `cms.config.ts` with `defineCmsConfig()` declares collections, single documents, relations, blocks and translatable fields; database schema, migrations and TypeScript types are generated from it.
+- **Content with blocks**: news, blog and other content types with title, slug, cover, SEO fields and a body built from your own site components, drafts and scheduled publishing; `<CmsBlocks>` renders the body with typed props.
 - **Admin panel at `/cms`**: entry editing with validation, drafts, media library (S3-compatible storage, a directory on the server's disk, or a local mode backed directly by your `public/` folder), single-admin auth from env credentials.
 - **Public GraphQL API**: read-only, typed end-to-end via gql.tada, with filtering, sorting and pagination; fields marked `private` stay out of it.
 - **SQLite, Postgres, libSQL/Turso or Cloudflare D1**: a local file database by default, one config line to switch (including remote SQLite over the network).
@@ -99,7 +100,7 @@ Full documentation lives in [`docs/`](docs/README.md):
 - [Configuration](docs/configuration.md) — every `cms.*` option and the `NUXT_CMS_*` env vars.
 - [Database](docs/database.md) — SQLite, Postgres, libSQL/Turso and D1 drivers, migrations, studio.
 - [Schema](docs/schema.md) — `defineCmsConfig`, entries, pages, field types, relations, blocks, i18n.
-- [Querying content](docs/querying.md) — GraphQL API, `useCmsSingle` / `useCmsCollection` / `useCmsPage` / `useCms` / `$cmsQuery`, filters, sorting, pagination.
+- [Querying content](docs/querying.md) — GraphQL API, `useCmsSingle` / `useCmsCollection` / `useCmsPage` / `useCmsContents` / `useCmsContent` / `useCms` / `$cmsQuery`, `<CmsBlocks>`, filters, sorting, pagination.
 - [Admin panel & security](docs/admin.md) — pages, authentication, sessions, admin REST API.
 - [Media](docs/media.md) — S3-compatible storage, filesystem storage on the server's disk, or local mode backed by your `public/` folder, upload flow, allowed file types.
 - [Deployment](docs/deployment.md) — host/driver matrix, migrations on serverless, horizontal scaling, Cloudflare Workers.

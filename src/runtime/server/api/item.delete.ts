@@ -3,12 +3,13 @@ import { createError, defineEventHandler } from 'h3'
 import { useDb } from '#cms-db'
 import { mapConstraintErrors } from '../utils/db-errors'
 import { getRegistryEntry, idColumn, parseId } from '../utils/registry'
+import { isCollectionKind } from '../../shared/index'
 import { requireAdmin } from '../utils/require-admin'
 
 export default defineEventHandler(async (event) => {
    await requireAdmin(event)
    const { entry, table } = getRegistryEntry(event)
-   if (entry.kind !== 'collection') {
+   if (!isCollectionKind(entry)) {
       throw createError({
          statusCode: 405,
          statusMessage: 'Only collection entries can be deleted',

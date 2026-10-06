@@ -5,6 +5,7 @@ export default defineConfig({
    resolve: {
       alias: {
          '#imports': fileURLToPath(new URL('./test/stubs/imports.ts', import.meta.url)),
+         '#cms-blocks': fileURLToPath(new URL('./test/stubs/cms-blocks.ts', import.meta.url)),
       },
    },
    test: {

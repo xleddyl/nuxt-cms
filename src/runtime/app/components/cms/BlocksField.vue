@@ -167,6 +167,14 @@
                         color="neutral"
                         @click="duplicateCurrent"
                      />
+                     <CmsButton
+                        v-if="editorItem && !declaresHiddenField(blockOf(editorItem))"
+                        :label="isHidden(editorItem) ? 'Show' : 'Hide'"
+                        :icon="isHidden(editorItem) ? 'eye' : 'eye-slash'"
+                        variant="soft"
+                        color="neutral"
+                        @click="toggleHiddenCurrent"
+                     />
                   </div>
                   <div class="cms-actions">
                      <CmsButton
@@ -188,6 +196,8 @@
 <script setup lang="ts">
 import type { FieldConfig } from '#nuxt-cms'
 import {
+   declaresHiddenField,
+   isHiddenBlock,
    isTranslatableMediaField,
    mediaFilename,
    mediaIconFor,
@@ -316,7 +326,7 @@ function summaryOf(item: Record<string, unknown>) {
 }
 
 function isHidden(item: Record<string, unknown>) {
-   return blockOf(item)?.fields.hidden?.type === 'boolean' && item.hidden === true
+   return isHiddenBlock(item)
 }
 
 function updateField(index: number, key: string, value: unknown) {
@@ -459,6 +469,17 @@ function moveCurrent(delta: number) {
    const next = editorIndex.value + delta
    move(editorIndex.value, delta)
    editorIndex.value = next
+}
+
+function toggleHiddenCurrent() {
+   if (editorIndex.value === null || !editorItem.value) return
+   const index = editorIndex.value
+   const current = items.value[index]
+   if (!current) return
+   const { hidden: _hidden, ...rest } = current
+   const updated = isHidden(current) ? rest : { ...rest, hidden: true }
+   uids.set(updated, uidFor(current))
+   model.value = items.value.map((item, i) => (i === index ? updated : item))
 }
 
 function duplicateCurrent() {

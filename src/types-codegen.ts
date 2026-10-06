@@ -2,6 +2,7 @@ import { blockTypeName, blocksFieldTypeName, typeName } from './runtime/shared/g
 import type { CmsConfig, CmsEntry, FieldConfig } from './runtime/shared/index'
 import {
    entryFieldsFor,
+   isCollectionKind,
    isPrivateField,
    isRequiredField,
    isTranslatableField,
@@ -55,13 +56,18 @@ function fieldTsType(
    return isRequiredField(field) ? base : `${base} | null`
 }
 
+export function blockPropsTypeName(entryName: string, fieldKey: string, blockName: string) {
+   return `${blockTypeName(entryName, fieldKey, blockName)}Props`
+}
+
 function blockTypesTs(entryName: string, key: string, field: FieldConfig): string[] {
    const defs: string[] = []
    const members: string[] = []
    for (const [blockName, block] of Object.entries(field.blocks ?? {})) {
       const name = blockTypeName(entryName, key, blockName)
+      const props = blockPropsTypeName(entryName, key, blockName)
       members.push(name)
-      const lines = [`  __typename?: '${name}'`, `  type: '${blockName}'`]
+      const lines: string[] = []
       for (const [blockFieldKey, blockField] of Object.entries(block.fields)) {
          if (blockField.type === 'media') {
             lines.push(`  ${blockFieldKey}: ${mediaTsType(blockField)} | null`)
@@ -70,7 +76,10 @@ function blockTypesTs(entryName: string, key: string, field: FieldConfig): strin
          const base = scalarTsType(blockField)
          lines.push(`  ${blockFieldKey}: ${blockField.required ? base : `${base} | null`}`)
       }
-      defs.push(`export interface ${name} {\n${lines.join('\n')}\n}`)
+      defs.push(`export interface ${props} {\n${lines.join('\n')}\n}`)
+      defs.push(
+         `export interface ${name} extends ${props} {\n  __typename?: '${name}'\n  type: '${blockName}'\n}`
+      )
    }
    if (members.length)
       defs.push(`export type ${blocksFieldTypeName(entryName, key)} = ${members.join(' | ')}`)
@@ -84,7 +93,7 @@ function entryTs(config: CmsConfig, name: string, entry: CmsEntry): string {
       if (isPrivateField(field)) continue
       lines.push(`  ${key}: ${fieldTsType(config, name, key, field)}`)
    }
-   if (entry.kind === 'collection') lines.push('  createdAt: string')
+   if (isCollectionKind(entry)) lines.push('  createdAt: string')
    lines.push('  updatedAt: string')
    return `export interface ${typeName(name)} {\n${lines.join('\n')}\n}`
 }
@@ -144,11 +153,13 @@ function pageTypesTs(name: string, entry: CmsEntry): string[] {
 function entryMapsTs(config: CmsConfig): string[] {
    const singles: string[] = []
    const collections: string[] = []
+   const contents: string[] = []
    const pages: string[] = []
    for (const [name, entry] of Object.entries(config)) {
       const line = `  ${JSON.stringify(name)}: ${typeName(name)}Auto`
       if (entry.kind === 'single') singles.push(line)
       else if (entry.kind === 'page') pages.push(...pageTypesTs(name, entry))
+      else if (entry.kind === 'content') contents.push(line)
       else collections.push(line)
    }
    if (!pages.length) {
@@ -160,9 +171,39 @@ function entryMapsTs(config: CmsConfig): string[] {
    return [
       `export interface CmsSingleTypes {\n${singles.join('\n')}\n}`,
       `export interface CmsCollectionTypes {\n${collections.join('\n')}\n}`,
+      `export interface CmsContentTypes {\n${contents.join('\n')}\n}`,
       `export type CmsSingleName = keyof CmsSingleTypes`,
       `export type CmsCollectionName = keyof CmsCollectionTypes`,
+      `export type CmsContentName = keyof CmsContentTypes`,
       ...pages,
+   ]
+}
+
+function blockPropsMapTs(config: CmsConfig): string[] {
+   const entries: string[] = []
+   for (const [name, entry] of Object.entries(config)) {
+      const fields: string[] = []
+      for (const [key, field] of Object.entries(entryFieldsFor(entry))) {
+         if (field.type !== 'blocks' || isPrivateField(field)) continue
+         const blocks = Object.keys(field.blocks ?? {}).map(
+            (blockName) =>
+               `      ${JSON.stringify(blockName)}: ${blockPropsTypeName(name, key, blockName)}`
+         )
+         if (blocks.length)
+            fields.push(`    ${JSON.stringify(key)}: {\n${blocks.join('\n')}\n    }`)
+      }
+      if (fields.length) entries.push(`  ${JSON.stringify(name)}: {\n${fields.join('\n')}\n  }`)
+   }
+   return [
+      `export interface CmsBlockPropTypes {\n${entries.join('\n')}\n}`,
+      `export type CmsBlockEntryName = [keyof CmsBlockPropTypes] extends [never]\n  ? string\n  : keyof CmsBlockPropTypes`,
+      [
+         `export type CmsBlockProps<`,
+         `  E extends keyof CmsBlockPropTypes,`,
+         `  F extends keyof CmsBlockPropTypes[E],`,
+         `  B extends keyof CmsBlockPropTypes[E][F],`,
+         `> = CmsBlockPropTypes[E][F][B]`,
+      ].join('\n'),
    ]
 }
 
@@ -190,5 +231,6 @@ export function renderTypesFile(config: CmsConfig): string {
    }
    for (const [name, entry] of Object.entries(config)) parts.push(autoTypeTs(config, name, entry))
    parts.push(...entryMapsTs(config))
+   parts.push(...blockPropsMapTs(config))
    return `${parts.join('\n\n')}\n`
 }

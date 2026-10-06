@@ -15,6 +15,7 @@ const FIELD_ICONS: Record<FieldType, string> = {
    number: 'hashtag',
    boolean: 'check-circle',
    date: 'calendar',
+   datetime: 'clock',
    email: 'at-symbol',
    slug: 'link',
    select: 'chevron-up-down',

@@ -3,6 +3,7 @@ import {
    PAGE_PATH_FIELD,
    blockTypeName,
    blocksFieldTypeName,
+   isCollectionKind,
    isPrivateField,
    isRequiredField,
    isTranslatableField,
@@ -82,7 +83,7 @@ function entrySdl(config: CmsConfig, name: string, entry: CmsEntry): string {
       if (isPrivateField(field)) continue
       lines.push(fieldSdl(config, name, key, field))
    }
-   if (entry.kind === 'collection') lines.push('  createdAt: String!')
+   if (isCollectionKind(entry)) lines.push('  createdAt: String!')
    lines.push('  updatedAt: String!')
    return `type ${typeName(name)} {\n${lines.join('\n')}\n}`
 }
@@ -178,6 +179,8 @@ export function renderGraphqlSdl(config: CmsConfig): string {
       )
       queryLines.push(`  ${name}ById(id: ID!, locale: String): ${gqlType}`)
       queryLines.push(`  ${name}Count(filters: ${gqlType}Filters): Int!`)
+      if (entry.kind === 'content')
+         queryLines.push(`  ${name}BySlug(slug: String!, locale: String): ${gqlType}`)
    }
 
    return [

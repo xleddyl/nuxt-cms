@@ -4,6 +4,7 @@ import { createRequire } from 'node:module'
 import { dirname, isAbsolute, join, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import {
+   addComponent,
    addComponentsDir,
    addImports,
    addRouteMiddleware,
@@ -27,7 +28,8 @@ import { createJiti } from 'jiti'
 import { renderGraphqlSdl } from './runtime/shared/graphql-sdl'
 import { migrationsDirFor } from './runtime/shared/migrations-dir'
 import type { CmsConfig, CmsPageRoute, MediaStorageMode } from './runtime/shared/index'
-import { DEFAULT_MEDIA_MAX_FILE_SIZE, expandMobileMedia } from './runtime/shared/index'
+import { DEFAULT_MEDIA_MAX_FILE_SIZE, normalizeCmsConfig } from './runtime/shared/index'
+import { collectBlockComponents, missingBlockComponents, renderBlocksFile } from './blocks-codegen'
 import {
    collectMediaManifest,
    renderMediaManifestFile,
@@ -247,7 +249,10 @@ async function loadCmsConfig(
          moduleCache: false,
          alias: { '#nuxt-cms': resolver.resolve('./runtime/shared/index') },
       })
-      cmsConfig = expandMobileMedia((await jiti.import(configPath, { default: true })) as CmsConfig)
+      cmsConfig = normalizeCmsConfig(
+         (await jiti.import(configPath, { default: true })) as CmsConfig,
+         i18n
+      )
    } else {
       logger.warn(
          `[nuxt-cms] Config file not found: ${configPath}. Using an empty registry. Create a ${configPathOption}.ts with defineCmsConfig().`
@@ -275,12 +280,12 @@ async function loadCmsConfig(
       write: true,
       getContents: () =>
          [
-            `import { expandMobileMedia } from '#nuxt-cms'`,
+            `import { normalizeCmsConfig } from '#nuxt-cms'`,
             `import config from '${source}'`,
             ``,
             `const pageRoutes = ${JSON.stringify(routesByEntry, null, 3)}`,
             ``,
-            `expandMobileMedia(config)`,
+            `normalizeCmsConfig(config, ${JSON.stringify({ locales: i18n.locales })})`,
             ``,
             `for (const [name, routes] of Object.entries(pageRoutes)) {`,
             `   const entry = Object(config)[name]`,
@@ -375,6 +380,33 @@ function addCmsTypeTemplates(nuxt: Nuxt, cmsConfig: CmsConfig) {
    nuxt.options.alias['#cms-graphql'] = graphqlTemplate.dst
 }
 
+function addCmsBlocks(
+   nuxt: Nuxt,
+   resolver: ReturnType<typeof createResolver>,
+   cmsConfig: CmsConfig
+) {
+   const refs = collectBlockComponents(cmsConfig)
+   const blocksTemplate = addTemplate({
+      filename: 'cms/blocks.ts',
+      write: true,
+      getContents: () => renderBlocksFile(refs),
+   })
+   nuxt.options.alias['#cms-blocks'] = blocksTemplate.dst
+   addComponent({
+      name: 'CmsBlocks',
+      filePath: resolver.resolve('./runtime/app/blocks/CmsBlocks.vue'),
+   })
+   if (!refs.length) return
+   nuxt.hook('components:extend', (components) => {
+      const errors = missingBlockComponents(
+         refs,
+         components.map((component) => component.pascalName)
+      )
+      if (errors.length)
+         throw new Error(`[nuxt-cms] Invalid block components:\n${errors.join('\n')}`)
+   })
+}
+
 export default defineNuxtModule<ModuleOptions>({
    meta: {
       name: '@xleddyl/nuxt-cms',
@@ -431,11 +463,18 @@ export default defineNuxtModule<ModuleOptions>({
             { name: 'useCmsSingle', from: entryStub },
             { name: 'useCmsCollection', from: entryStub },
             { name: 'useCmsPage', from: entryStub },
+            { name: 'useCmsContents', from: entryStub },
+            { name: 'useCmsContent', from: entryStub },
          ])
-         addCmsTypeTemplates(
+         const disabledConfig = await loadCmsConfig(
             nuxt,
-            await loadCmsConfig(nuxt, resolver, resolved.configPath, resolved.i18n, logger)
+            resolver,
+            resolved.configPath,
+            resolved.i18n,
+            logger
          )
+         addCmsTypeTemplates(nuxt, disabledConfig)
+         addCmsBlocks(nuxt, resolver, disabledConfig)
          nuxt.options.runtimeConfig.public.cms = {
             mediaBaseUrl: resolved.media.publicBaseUrl,
             mediaStorage: resolved.media.storage,
@@ -511,7 +550,10 @@ export default defineNuxtModule<ModuleOptions>({
          { name: 'useCmsSingle', from: entryComposables },
          { name: 'useCmsCollection', from: entryComposables },
          { name: 'useCmsPage', from: entryComposables },
+         { name: 'useCmsContents', from: entryComposables },
+         { name: 'useCmsContent', from: entryComposables },
       ])
+      addCmsBlocks(nuxt, resolver, cmsConfig)
 
       const {
          driver,

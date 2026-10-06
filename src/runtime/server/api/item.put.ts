@@ -9,6 +9,7 @@ import {
    idColumn,
    parseId,
    requirePageRoute,
+   withContentDefaults,
    withUpdatedAt,
 } from '../utils/registry'
 import { pageFields } from '../../shared/index'
@@ -52,7 +53,7 @@ export default defineEventHandler(async (event) => {
       encodeColumnValues(entry, body as Record<string, unknown>)
    )
    await assertRelationTargets(entry, lists)
-   const set = withUpdatedAt(table, values)
+   const set = withUpdatedAt(table, withContentDefaults(entry, values))
 
    const [existing] = await useDb()
       .select({ id: idColumn(table) })

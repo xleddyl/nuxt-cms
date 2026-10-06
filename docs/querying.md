@@ -1,13 +1,15 @@
 # Querying content
 
-Content is read through a **public, read-only GraphQL API** at `POST /api/cms/graphql`. Four
-auto-imported composables wrap it.
+Content is read through a **public, read-only GraphQL API** at `POST /api/cms/graphql`.
+Auto-imported composables wrap it.
 
 ```ts
 // one entry, query and types generated from cms.config.ts — no query string to write
 const { data } = await useCmsSingle('homepage', { locale })
 const { data } = await useCmsCollection('events', { sort: [{ field: 'date' }], limit: 10 })
 const { data } = await useCmsPage('/about', { locale })
+const { data } = await useCmsContents('news', { limit: 10, locale })
+const { data } = await useCmsContent('news', slug, { locale })
 
 // reactive, SSR-friendly (wraps useAsyncData) — use in components/pages
 const { data, error, refresh } = useCms(`{ ... }`, variables?, options?)
@@ -36,9 +38,10 @@ const { data } = await useCms(query, { locale }, {
 })
 ```
 
-With [`cms.enabled: false`](configuration.md#enabled) the five composables stay defined but become
-no-ops: `useCms().data`, `useCmsSingle().data` and `useCmsPage().data` are `null`,
-`useCmsCollection().data` is `[]` and `$cmsQuery()` resolves to `{}`. The generated types stay available too, so the same code type-checks
+With [`cms.enabled: false`](configuration.md#enabled) the composables stay defined but become
+no-ops: `useCms().data`, `useCmsSingle().data`, `useCmsPage().data` and `useCmsContent().data` are
+`null`, `useCmsCollection().data` and `useCmsContents().data` are `[]` and `$cmsQuery()` resolves to
+`{}`. `<CmsBlocks>` stays registered too. The generated types stay available too, so the same code type-checks
 in both modes. Callers therefore never need a `typeof useCms === 'function'` guard, they just render
 their empty state.
 
@@ -65,7 +68,7 @@ What they select:
 
 - every public field of the entry, plus `id` and `updatedAt` (and `createdAt` for a collection);
 - media fields with all their keys (`key url type alt folder mime size width height`);
-- blocks fields with `type` plus an inline fragment per block type;
+- blocks fields with `__typename`, `type` and an inline fragment per block type;
 - relations one level deep. The related entry brings its own fields, but not its own relations.
 
 `data` holds `null` for a single and `[]` for a collection before the query resolves and after it
@@ -83,6 +86,20 @@ page.value?.intro
 The path is typed: only the paths of the config are accepted, and `page.value` carries the fields of
 that path alone. The entry also answers the generated queries `<entry>(locale)` for the whole list
 and `<entry>ByPath(path, locale)` for one page.
+
+`useCmsContents` and `useCmsContent` read a [`content` entry](schema.md#content). The list takes
+the same options as `useCmsCollection` and sorts by `publishedAt`, newest first, when `sort` is
+omitted. The item is read by slug:
+
+```ts
+const { data: news } = await useCmsContents('news', { limit: 10, locale })
+const { data: article } = await useCmsContent('news', String(route.params.slug), { locale })
+article.value?.body
+```
+
+`data` holds `[]` for the list and `null` for the item until the query resolves, and the item is
+`null` when the slug is unknown, a draft, or scheduled. When the CMS is disabled both return their
+default without a request.
 
 Write a query with `useCms` when you need a count, a relation two levels deep, several entries in
 one request, or a narrower selection.
@@ -102,6 +119,17 @@ For each **single** (e.g. `homepage`):
 ```graphql
 homepage(locale: String): Homepage
 ```
+
+For each **content** entry (e.g. `news`), the collection queries plus a query by slug:
+
+```graphql
+news(filters: NewsFilters, sort: [NewsSort!], limit: Int, offset: Int, locale: String): [News!]!
+newsById(id: ID!, locale: String): News
+newsBySlug(slug: String!, locale: String): News
+newsCount(filters: NewsFilters): Int!
+```
+
+Without `sort`, the list is ordered by `publishedAt` descending.
 
 For a **page** entry (e.g. `pages`):
 
@@ -159,6 +187,33 @@ body {
 }
 ```
 
+## Rendering blocks
+
+`<CmsBlocks>` renders a blocks value with the components named by `component` on each block (see
+[Block components](schema.md#block-components)). Every block becomes its component, with the fields
+of the block as props (`type` and `__typename` are left out). Hidden blocks (`hidden: true`) are
+skipped, and so is a block whose type has no component; in development a warning names it.
+
+```vue
+<template>
+   <CmsBlocks :blocks="article?.body" />
+</template>
+```
+
+The component of a block is found by its GraphQL type name. The generated queries select
+`__typename`, so the value of `useCmsContents`, `useCmsContent` and the other helpers works as is.
+For a value without `__typename` (a hand-written query, or raw data), pass the entry and the field
+(`field` defaults to `body`):
+
+```vue
+<CmsBlocks :blocks="page?.sections" entry="pages" field="sections" />
+```
+
+The components are imported at build time from `#components`, as lazy components, through a
+generated map (`#cms-blocks`). Nothing is registered globally and nothing is resolved by name at
+runtime. The `annotate` prop adds `data-cms-block` (the index) and `data-cms-block-type` to the root
+element of each block, for tools that need to find a block in the page.
+
 ## Example
 
 ```ts
@@ -186,6 +241,8 @@ const { data } = useCms(`query ($cat: String!) {
 ## Behavior notes
 
 - Entries with `drafts: true` return **published rows only**; drafts are invisible to the API.
+- Content entries also hide **scheduled** items: a published item whose `publishedAt` is still in
+  the future stays out of every query, relations included, until that moment.
 - Fields declared with [`private: true`](schema.md#private-fields) are absent from the schema
   entirely: they cannot be selected, filtered or sorted on, and introspection does not list them.
 - `locale` omitted → `defaultLocale`; unknown locale → error; missing translation → falls back to
@@ -199,7 +256,7 @@ const { data } = useCms(`query ($cat: String!) {
   ```
 - In development a GraphiQL explorer is served at `/api/cms/graphql`.
 - **Batching:** `$cmsQuery` and every composable built on it (`useCms`, `useCmsSingle`,
-  `useCmsCollection`, `useCmsPage`) send the queries started in the same tick as one HTTP request
-  (a JSON array, up to 20 queries per request), and a query identical to one already in flight
+  `useCmsCollection`, `useCmsPage`, `useCmsContents`, `useCmsContent`) send the queries started in
+  the same tick as one HTTP request (a JSON array, up to 20 queries per request), and a query identical to one already in flight
   shares its request. A single query is sent as before. The `useAsyncData` keys, and so the SSR
   payload keys, do not change.

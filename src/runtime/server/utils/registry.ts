@@ -7,6 +7,7 @@ import * as cmsTables from '#cms-tables'
 import { useRuntimeConfig } from '#imports'
 import type { CmsEntry, CmsI18n, CmsPageRoute } from '../../shared/index'
 import {
+   CONTENT_PUBLISHED_AT_FIELD,
    decodeEntryTranslatableMedia,
    encodeEntryTranslatableMedia,
    pageFields,
@@ -87,6 +88,12 @@ export function encodeColumnValues(entry: CmsEntry, values: Record<string, unkno
 export function decodeRows<T extends Record<string, unknown>>(entry: CmsEntry, rows: T[]): T[] {
    for (const row of rows) normalizeTimestampFields(row)
    return decodeEntryTranslatableMedia(entry, rows, getContentI18n().defaultLocale)
+}
+
+export function withContentDefaults(entry: CmsEntry, values: Record<string, unknown>) {
+   if (entry.kind !== 'content' || values.status !== 'published') return values
+   if (!values[CONTENT_PUBLISHED_AT_FIELD]) values[CONTENT_PUBLISHED_AT_FIELD] = nowTimestamp()
+   return values
 }
 
 export function parseId(event: H3Event) {

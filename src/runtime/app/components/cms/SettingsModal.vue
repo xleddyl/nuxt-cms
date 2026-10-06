@@ -150,6 +150,7 @@ const KIND_ICONS: Record<CmsEntryKind, string> = {
    collection: 'square-3-stack-3d',
    single: 'document-text',
    page: 'window',
+   content: 'newspaper',
 }
 
 const ENTRY_PREFIX = 'entry:'

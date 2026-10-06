@@ -2,6 +2,8 @@ import type { AsyncData } from 'nuxt/app'
 import type {
    CmsCollectionName,
    CmsCollectionTypes,
+   CmsContentName,
+   CmsContentTypes,
    CmsPagePath,
    CmsPageTypes,
    CmsSingleName,
@@ -32,6 +34,12 @@ export interface CmsCollectionOptions<ResT, DefaultT, Entry>
    offset?: number
 }
 
+export interface CmsContentOptions<ResT, DefaultT> extends CmsAsyncDataOptions<ResT, DefaultT> {
+   locale?: string
+}
+
+export type CmsContentsOptions<ResT, DefaultT, Entry> = CmsCollectionOptions<ResT, DefaultT, Entry>
+
 export function useCmsSingle<K extends CmsSingleName, DefaultT = null>(
    name: K,
    options: CmsSingleOptions<CmsSingleTypes[K] | null, DefaultT> = {}
@@ -52,6 +60,29 @@ export function useCmsCollection<K extends CmsCollectionName, DefaultT = CmsColl
       key ?? `cms-collection:${String(name)}:${JSON.stringify(variables)}`,
       async () => (fallback ? fallback() : [])
    ) as unknown as AsyncData<CmsCollectionTypes[K][] | DefaultT, Error | undefined>
+}
+
+export function useCmsContents<K extends CmsContentName, DefaultT = CmsContentTypes[K][]>(
+   name: K,
+   options: CmsContentsOptions<CmsContentTypes[K][], DefaultT, CmsContentTypes[K]> = {}
+): AsyncData<CmsContentTypes[K][] | DefaultT, Error | undefined> {
+   const { locale, filters, sort, limit, offset, key, default: fallback } = options
+   const variables = { locale, filters, sort, limit, offset }
+   return useAsyncData(
+      key ?? `cms-contents:${String(name)}:${JSON.stringify(variables)}`,
+      async () => (fallback ? fallback() : [])
+   ) as unknown as AsyncData<CmsContentTypes[K][] | DefaultT, Error | undefined>
+}
+
+export function useCmsContent<K extends CmsContentName, DefaultT = null>(
+   name: K,
+   slug: string,
+   options: CmsContentOptions<CmsContentTypes[K] | null, DefaultT> = {}
+): AsyncData<CmsContentTypes[K] | DefaultT | null, Error | undefined> {
+   const { locale, key, default: fallback } = options
+   return useAsyncData(key ?? `cms-content:${String(name)}:${slug}:${locale ?? ''}`, async () =>
+      fallback ? fallback() : null
+   ) as unknown as AsyncData<CmsContentTypes[K] | DefaultT | null, Error | undefined>
 }
 
 export function useCmsPage<P extends CmsPagePath, DefaultT = null>(

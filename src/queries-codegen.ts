@@ -1,11 +1,17 @@
 import { blockTypeName, typeName } from './runtime/shared/graphql-sdl'
 import type { CmsConfig, CmsEntry, FieldConfig } from './runtime/shared/index'
-import { entryFieldsFor, isPrivateField, pageFields, pageRoutes } from './runtime/shared/index'
+import {
+   entryFieldsFor,
+   isCollectionKind,
+   isPrivateField,
+   pageFields,
+   pageRoutes,
+} from './runtime/shared/index'
 
 const MEDIA_SELECTION = 'key url type alt folder mime size width height'
 
 function blocksSelection(entryName: string, key: string, field: FieldConfig): string {
-   const parts = ['type']
+   const parts = ['__typename type']
    for (const [blockName, block] of Object.entries(field.blocks ?? {})) {
       const fields = Object.entries(block.fields).map(([blockFieldKey, blockField]) =>
          blockField.type === 'media' ? `${blockFieldKey} { ${MEDIA_SELECTION} }` : blockFieldKey
@@ -43,7 +49,7 @@ function entrySelection(
       }
       parts.push(key)
    }
-   if (entry.kind === 'collection') parts.push('createdAt')
+   if (isCollectionKind(entry)) parts.push('createdAt')
    parts.push('updatedAt')
    return parts.join(' ')
 }
@@ -53,7 +59,12 @@ export function singleQuery(config: CmsConfig, name: string, entry: CmsEntry): s
    return `query CmsSingle($locale: String) { ${name}(locale: $locale) { ${selection} } }`
 }
 
-export function collectionQuery(config: CmsConfig, name: string, entry: CmsEntry): string {
+export function collectionQuery(
+   config: CmsConfig,
+   name: string,
+   entry: CmsEntry,
+   operation = 'CmsCollection'
+): string {
    const selection = entrySelection(config, name, entry, true)
    const gqlType = typeName(name)
    const args = [
@@ -63,7 +74,16 @@ export function collectionQuery(config: CmsConfig, name: string, entry: CmsEntry
       '$limit: Int',
       '$offset: Int',
    ].join(', ')
-   return `query CmsCollection(${args}) { ${name}(locale: $locale, filters: $filters, sort: $sort, limit: $limit, offset: $offset) { ${selection} } }`
+   return `query ${operation}(${args}) { ${name}(locale: $locale, filters: $filters, sort: $sort, limit: $limit, offset: $offset) { ${selection} } }`
+}
+
+export function contentListQuery(config: CmsConfig, name: string, entry: CmsEntry): string {
+   return collectionQuery(config, name, entry, 'CmsContents')
+}
+
+export function contentItemQuery(config: CmsConfig, name: string, entry: CmsEntry): string {
+   const selection = entrySelection(config, name, entry, true)
+   return `query CmsContent($slug: String!, $locale: String) { item: ${name}BySlug(slug: $slug, locale: $locale) { ${selection} } }`
 }
 
 export function pageQuery(config: CmsConfig, name: string, entry: CmsEntry, path: string): string {
@@ -75,7 +95,18 @@ export function renderQueriesFile(config: CmsConfig): string {
    const singles: string[] = []
    const collections: string[] = []
    const pages: string[] = []
+   const contents: string[] = []
+   const contentItems: string[] = []
    for (const [name, entry] of Object.entries(config)) {
+      if (entry.kind === 'content') {
+         contents.push(
+            `   ${JSON.stringify(name)}: ${JSON.stringify(contentListQuery(config, name, entry))},`
+         )
+         contentItems.push(
+            `   ${JSON.stringify(name)}: ${JSON.stringify(contentItemQuery(config, name, entry))},`
+         )
+         continue
+      }
       if (entry.kind === 'page') {
          for (const route of pageRoutes(entry)) {
             pages.push(
@@ -105,6 +136,14 @@ export function renderQueriesFile(config: CmsConfig): string {
       ``,
       `export const cmsPageQueries: Record<string, string> = {`,
       ...pages,
+      `}`,
+      ``,
+      `export const cmsContentQueries: Record<string, string> = {`,
+      ...contents,
+      `}`,
+      ``,
+      `export const cmsContentItemQueries: Record<string, string> = {`,
+      ...contentItems,
       `}`,
       ``,
    ].join('\n')

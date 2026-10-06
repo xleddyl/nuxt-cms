@@ -2,12 +2,20 @@ import type { AsyncData } from 'nuxt/app'
 import type {
    CmsCollectionName,
    CmsCollectionTypes,
+   CmsContentName,
+   CmsContentTypes,
    CmsPagePath,
    CmsPageTypes,
    CmsSingleName,
    CmsSingleTypes,
 } from '#cms-types'
-import { cmsCollectionQueries, cmsPageQueries, cmsSingleQueries } from '#cms-queries'
+import {
+   cmsCollectionQueries,
+   cmsContentItemQueries,
+   cmsContentQueries,
+   cmsPageQueries,
+   cmsSingleQueries,
+} from '#cms-queries'
 import { useAsyncData } from '#imports'
 import type { CmsAsyncDataOptions } from './cms-query'
 import { $cmsQuery } from './cms-query'
@@ -33,6 +41,12 @@ export interface CmsCollectionOptions<ResT, DefaultT, Entry>
    limit?: number
    offset?: number
 }
+
+export interface CmsContentOptions<ResT, DefaultT> extends CmsAsyncDataOptions<ResT, DefaultT> {
+   locale?: string
+}
+
+export type CmsContentsOptions<ResT, DefaultT, Entry> = CmsCollectionOptions<ResT, DefaultT, Entry>
 
 function unknownEntry(name: string): never {
    throw new Error(`[nuxt-cms] no generated query for "${name}"; check cms.config.ts`)
@@ -90,6 +104,61 @@ export function useCmsCollection<K extends CmsCollectionName, DefaultT = CmsColl
          ...asyncDataOptions,
       }
    ) as AsyncData<CmsCollectionTypes[K][] | DefaultT, Error | undefined>
+}
+
+export function useCmsContents<K extends CmsContentName, DefaultT = CmsContentTypes[K][]>(
+   name: K,
+   options: CmsContentsOptions<CmsContentTypes[K][], DefaultT, CmsContentTypes[K]> = {}
+): AsyncData<CmsContentTypes[K][] | DefaultT, Error | undefined> {
+   const {
+      locale,
+      filters,
+      sort,
+      limit,
+      offset,
+      key,
+      default: fallback,
+      ...asyncDataOptions
+   } = options
+   const entryName = String(name)
+   const query = cmsContentQueries[entryName]
+   const variables = { locale, filters, sort, limit, offset }
+
+   return useAsyncData(
+      key ?? `cms-contents:${entryName}:${JSON.stringify(variables)}`,
+      async () => {
+         if (!query) unknownEntry(entryName)
+         const result = await $cmsQuery(query, variables)
+         return (result?.[entryName] ?? []) as CmsContentTypes[K][]
+      },
+      {
+         default: (fallback ?? (() => [])) as () => CmsContentTypes[K][],
+         ...asyncDataOptions,
+      }
+   ) as AsyncData<CmsContentTypes[K][] | DefaultT, Error | undefined>
+}
+
+export function useCmsContent<K extends CmsContentName, DefaultT = null>(
+   name: K,
+   slug: string,
+   options: CmsContentOptions<CmsContentTypes[K] | null, DefaultT> = {}
+): AsyncData<CmsContentTypes[K] | DefaultT | null, Error | undefined> {
+   const { locale, key, default: fallback, ...asyncDataOptions } = options
+   const entryName = String(name)
+   const query = cmsContentItemQueries[entryName]
+
+   return useAsyncData(
+      key ?? `cms-content:${entryName}:${slug}:${locale ?? ''}`,
+      async () => {
+         if (!query) unknownEntry(entryName)
+         const result = await $cmsQuery(query, { slug, locale })
+         return (result?.item ?? null) as CmsContentTypes[K] | null
+      },
+      {
+         default: (fallback ?? (() => null)) as () => CmsContentTypes[K] | null,
+         ...asyncDataOptions,
+      }
+   ) as AsyncData<CmsContentTypes[K] | DefaultT | null, Error | undefined>
 }
 
 export function useCmsPage<P extends CmsPagePath, DefaultT = null>(

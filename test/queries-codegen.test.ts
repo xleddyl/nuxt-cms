@@ -38,7 +38,7 @@ describe('generated entry queries', () => {
    })
 
    it('selects each block type with an inline fragment', () => {
-      expect(events).toContain('body { type ... on EventsBodyHero { heading }')
+      expect(events).toContain('body { __typename type ... on EventsBodyHero { heading }')
       expect(events).toContain('... on EventsBodyQuote { text author }')
    })
 

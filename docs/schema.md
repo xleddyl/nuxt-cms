@@ -12,7 +12,7 @@ export default defineCmsConfig({
    <entryKey>: {
       id: '<entryKey>',            // must equal the object key
       label: 'Human label',
-      kind: 'collection' | 'single',
+      kind: 'collection' | 'single' | 'content',
       titleField: 'name',          // collections: required, field used as the entry title
       drafts: true,                // optional; adds draft/published status
       fields: { <fieldKey>: <FieldInput>, ... },
@@ -26,6 +26,9 @@ export default defineCmsConfig({
 - **`single`** — one document, with a single query.
 - **`page`** — one row per route of the app, with a list query and a query by path. See
   [Pages](#pages).
+- **`content`**: one entry per content type (news, blog, ...). Each item has system fields (title,
+  slug, excerpt, cover, publish date, SEO) and a body made of blocks, with drafts and scheduled
+  publishing. See [Content](#content).
 - `id` (equal to the object key), `label`, `kind` and `fields` are required.
 - `titleField` is **required on collections** and not allowed on singles. It picks the field used as
   the entry title: in the admin list, in relation pickers, and to render relation columns (a
@@ -184,6 +187,82 @@ translatable subfield comes out as its JSON text); media subfields go to `<entry
 Postgres use `jsonb_array_elements ... WITH ORDINALITY` (position is the ordinality minus one). Compare
 the GraphQL output of every page before and after the migration.
 
+## Content
+
+A `content` entry is a content type such as news or a blog: each item has a fixed set of system
+fields plus a body made of [blocks](#blocks). Declare one entry per content type, so two types can
+use different blocks and different extra fields.
+
+```ts
+import { defineCmsBlocks, defineCmsConfig } from '#nuxt-cms'
+
+const sections = defineCmsBlocks({
+   text: {
+      label: 'Text',
+      component: 'SectionText',
+      icon: 'bars-3-bottom-left',
+      description: 'A heading and a paragraph.',
+      fields: {
+         heading: { label: 'Heading', type: 'text', translatable: true },
+         body: { label: 'Body', type: 'richtext', translatable: true, required: true },
+      },
+   },
+   image: {
+      label: 'Image',
+      component: 'SectionImage',
+      fields: { image: { label: 'Image', type: 'media', mediaType: 'image', required: true } },
+   },
+})
+
+export default defineCmsConfig({
+   news: {
+      id: 'news',
+      label: 'News',
+      kind: 'content',
+      icon: 'newspaper',
+      blocks: sections,
+      fields: {
+         category: { label: 'Category', type: 'relation', to: 'categories' },
+      },
+      labels: { excerpt: 'Summary' },
+   },
+})
+```
+
+- `blocks` (required) is the set of blocks of the body. `defineCmsBlocks()` returns it unchanged
+  with its literal types, so several entries can share one set.
+- `fields` (optional) adds extra fields to every item, with the same options as a collection.
+- `labels` (optional) renames system fields in the admin, keyed by system field name.
+- `tabs`, `layout` and `list` work as on a collection. The default list columns are title, status
+  and publish date.
+- `titleField`, `drafts`, `columns`, `routes`, `include`, `exclude`, `overrides` and a custom
+  `table` are config errors on a content entry.
+
+System fields, injected for you (declaring one of them in `fields` is a config error):
+
+| field            | type                                 | notes                                              |
+| ---------------- | ------------------------------------ | -------------------------------------------------- |
+| `title`          | `text`, translatable, required       | the title of the item                              |
+| `slug`           | `slug`, unique, required             | generated from the title in the default locale     |
+| `publishedAt`    | `datetime`                           | ISO 8601 UTC; set to now when published empty      |
+| `excerpt`        | `text` textarea, translatable        |                                                    |
+| `cover`          | `media` image                        |                                                    |
+| `body`           | `blocks` built from `blocks`         |                                                    |
+| `seoTitle`       | `text`, translatable                 |                                                    |
+| `seoDescription` | `text` textarea, translatable        |                                                    |
+| `seoImage`       | `media` image                        |                                                    |
+
+The text system fields are translatable when `cms.i18n.locales` is set, plain text otherwise.
+
+Every item has a draft or published `status` and `createdAt`/`updatedAt`. **The public API returns
+an item only when it is published and its `publishedAt` is not in the future**: a published item
+with a future date is scheduled, and it shows up on its own once that moment has passed. The rule
+applies to the list, the count, the queries by id and by slug, and to every relation that points
+at a content entry. Content entries can be the target of a relation (`to: 'news'`).
+
+Content items are stored in a regular table named after the entry, so they follow the same
+migrations as collections.
+
 ## Field types
 
 Every field has `label: string` and optional `required?: boolean` and `private?: boolean` (see
@@ -196,6 +275,7 @@ Every field has `label: string` and optional `required?: boolean` and `private?:
 | `number`   | `integer?: boolean`                                                                 | Float / Int         |
 | `boolean`  | —                                                                                   | Boolean             |
 | `date`     | —                                                                                   | String `yyyy-mm-dd` |
+| `datetime` | none                                                                                | String, ISO 8601 UTC |
 | `email`    | —                                                                                   | String              |
 | `slug`     | `from: '<fieldKey>'` (required; auto-generated from that text field)                | String (unique)     |
 | `select`   | `options: string[]` (required, unique), `multiple?: boolean`                        | String (enum) or `[String!]!` |
@@ -203,6 +283,12 @@ Every field has `label: string` and optional `required?: boolean` and `private?:
 | `media`    | `mediaType?: T \| T[]` where `T` is `'image' \| 'video' \| 'file'`, `accept?: string[]`, `translatable?: boolean`, `mobile?: boolean` | CmsMedia object     |
 | `relation` | see [Relations](#relations)                                                         | related entry / list |
 | `blocks`   | `blocks: Record<name, { label, fields }>` (required)                                | array of typed blocks |
+
+A `datetime` field stores an instant as an ISO 8601 string in UTC (`2026-05-01T08:30:00.000Z`). The
+API accepts any ISO 8601 date and time with a time zone (`Z` or `+02:00`) and stores it in UTC; a
+value without a time zone is rejected. The admin shows a date and time picker in the browser's time
+zone. It filters and sorts as a `StringFilter`, and the fixed format keeps the string order equal to
+the time order.
 
 ## Multi-select fields
 
@@ -234,7 +320,7 @@ category: {
 }
 ```
 
-- The target `to` must be a **collection**.
+- The target `to` must be a **collection** or a [**content**](#content) entry.
 - `many-to-one` / `one-to-one` store a foreign key on the entry; `many-to-many` uses a generated
   join table (`<entry>_<field>`).
 - A `required` relation cannot use `onDelete: 'set null'`.
@@ -264,6 +350,48 @@ Block fields accept every field type **except** `slug`, `relation`, `blocks`, an
 (`select` with `multiple: true`). They can be `translatable` (see below) but not `private` — mark the
 whole `blocks` field private instead.
 See [Querying → Blocks](querying.md#blocks) for how to read them.
+
+Every block item can carry `hidden: true`, set from the block editor with **Hide**. When the block
+does not declare a field named `hidden`, hidden items are dropped from the public API. A block that
+declares its own `hidden` field keeps the old behavior: the value is returned and the site decides.
+
+### Block components
+
+A block can name the site component that renders it, plus an icon and a help text for the admin:
+
+```ts
+blocks: {
+   hero: {
+      label: 'Hero',
+      component: 'SectionHero',
+      icon: 'photo',
+      description: 'Full-width image with a heading.',
+      fields: { ... },
+   },
+}
+```
+
+- `component` is the name of a component of the site as Nuxt auto-imports it (`SectionHero`, or
+  `section-hero`). The build fails when no such component is registered.
+- `icon` is a Heroicons outline name; `description` is a short help text.
+- These keys work in every `blocks` field: collections, singles, pages and content.
+- A block with a `component` cannot have fields named `key`, `ref`, `class` or `style`.
+
+Render a blocks value with [`<CmsBlocks>`](querying.md#rendering-blocks). Each component receives
+the fields of its block as props. Type them with the generated interface
+`<Entry><Field><Block>Props` from `#cms-types`:
+
+```vue
+<script setup lang="ts">
+import type { NewsBodyHeroProps } from '#cms-types'
+
+defineProps<NewsBodyHeroProps>()
+</script>
+```
+
+The same type is reachable as `CmsBlockProps<'news', 'body', 'hero'>`, for use outside
+`defineProps` (Vue cannot resolve a generic indexed type in `defineProps`, so use the named
+interface there).
 
 ### Translatable block fields
 
@@ -540,7 +668,12 @@ export default defineCmsConfig({
 - Entry keys and field keys must be valid identifiers; some names are reserved (`admin`, `auth`,
   `login`, `media`, `graphql`, …) and so are the automatic columns (`id`, `status`, `created_at`,
   `updated_at`).
-- `drafts` is only valid on collections.
+- `drafts` is only valid on collections; content entries always have drafts and do not take the
+  option.
+- A content entry needs a non-empty `blocks` map and cannot declare a system field, `titleField`,
+  `columns`, `routes`, `overrides` or a custom table; `labels` may only name system fields.
+- A block `component` must be a non-empty string naming a registered Nuxt component; `icon` must be
+  a non-empty string.
 - `titleField` is required on collections, must reference a declared field, and that field must be a
   `text`, `slug`, `email`, `number`, `date` or single `select`.
 - `select` needs a non-empty array of unique `options`.
@@ -548,9 +681,10 @@ export default defineCmsConfig({
 - `translatable` is only valid on `text`, `richtext` and `media`, at the top level or inside a block, and requires `cms.i18n.locales`. The `blocks` field itself cannot be translatable.
 - `showIf` must reference another declared field of a comparable type, cannot be used on the `titleField` or inside `blocks`, and needs exactly one of `eq` / `in`.
 - `tab` must name a tab declared by the same entry; tab ids must be unique and every tab needs a label.
-- `slug.from` must point to a non-translatable `text` field.
+- `slug.from` must point to a non-translatable `text` field (the `slug` of a content entry is the
+  only exception: it reads the default locale of the title).
 - `private` is not allowed inside `blocks`.
-- A relation `to` must reference an existing collection.
+- A relation `to` must reference an existing collection or content entry.
 - `columns` is only valid on the page entry and may only list fields that every page has;
   `relation` and `slug` fields of a page must be listed there, and pages cannot have many-to-many
   relations or a custom table.

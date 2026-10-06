@@ -1,5 +1,11 @@
 import type { CmsEntry, CmsEntrySettings, CmsFormLayout, CmsSettingsMap } from '#nuxt-cms'
-import { layoutFromConfig, pageAllFields, resolveFormLayout, resolveListColumns } from '#nuxt-cms'
+import {
+   isCollectionKind,
+   layoutFromConfig,
+   pageAllFields,
+   resolveFormLayout,
+   resolveListColumns,
+} from '#nuxt-cms'
 import { useFetch, useState } from '#imports'
 import cmsConfig from '#cms-config'
 import { cmsApi } from '../utils/api'
@@ -62,7 +68,7 @@ export function entryFormLayout(
 
 export function listExtraColumns(name: string): string[] {
    const entry = entryOf(name)
-   return entry?.kind === 'collection' && entry.drafts ? ['status'] : []
+   return entry && isCollectionKind(entry) && entry.drafts ? ['status'] : []
 }
 
 export function entryListColumns(name: string, settings: CmsSettingsMap): string[] {

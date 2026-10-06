@@ -115,6 +115,11 @@ const groups = computed(() =>
          links: links.filter((l) => l.kind === 'single'),
       },
       {
+         title: 'Content',
+         icon: 'newspaper',
+         links: links.filter((l) => l.kind === 'content'),
+      },
+      {
          title: 'Pages',
          icon: 'window',
          links: links.filter((l) => l.kind === 'page'),

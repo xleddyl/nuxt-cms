@@ -97,9 +97,10 @@ order:
 3. Enabled.
 
 When disabled the module registers stubs for `useCms`, `$cmsQuery`, `useCmsSingle`,
-`useCmsCollection` and `useCmsPage`, with the same signatures as the real ones. `useCms().data`,
-`useCmsSingle().data` and `useCmsPage().data` are `null`, `useCmsCollection().data` is `[]` and
-`$cmsQuery()` resolves to `{}`.
+`useCmsCollection`, `useCmsPage`, `useCmsContents` and `useCmsContent`, with the same signatures as
+the real ones. `useCms().data`, `useCmsSingle().data`, `useCmsPage().data` and
+`useCmsContent().data` are `null`, `useCmsCollection().data` and `useCmsContents().data` are `[]`
+and `$cmsQuery()` resolves to `{}`. `<CmsBlocks>` stays registered, with its component map.
 
 `cms.config.ts` is still read and validated, and the generated types stay available: `#cms-types`,
 `#cms-queries` and `#cms-graphql`. One code base therefore type-checks with the CMS on and off. An

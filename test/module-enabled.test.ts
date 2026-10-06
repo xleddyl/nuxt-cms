@@ -2,6 +2,7 @@ import { resolve } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const kit = vi.hoisted(() => ({
+   addComponent: vi.fn(),
    addComponentsDir: vi.fn(),
    addImports: vi.fn(),
    addRouteMiddleware: vi.fn(),
@@ -83,6 +84,8 @@ describe('module setup when disabled', () => {
          '$cmsQuery',
          'useCms',
          'useCmsCollection',
+         'useCmsContent',
+         'useCmsContents',
          'useCmsPage',
          'useCmsSingle',
       ])
@@ -117,7 +120,18 @@ describe('module setup when disabled', () => {
          'cms/queries.ts',
          'cms/graphql-env.d.ts',
          'cms/graphql.ts',
+         'cms/blocks.ts',
       ])
+   })
+
+   it('still registers the block renderer', async () => {
+      const nuxt = createNuxt()
+      await moduleDefinition.setup(options({ enabled: false }), nuxt)
+
+      expect(kit.addComponent).toHaveBeenCalledWith({
+         name: 'CmsBlocks',
+         filePath: expect.stringContaining('blocks/CmsBlocks.vue'),
+      })
    })
 
    it('registers no database or schema aliases', async () => {
@@ -130,6 +144,7 @@ describe('module setup when disabled', () => {
          '#cms-types',
          '#cms-queries',
          '#cms-graphql',
+         '#cms-blocks',
       ])
       expect(nuxt.options.runtimeConfig.cms).toBeUndefined()
    })
@@ -177,6 +192,8 @@ describe('module setup when enabled', () => {
          '$cmsQuery',
          'useCms',
          'useCmsCollection',
+         'useCmsContent',
+         'useCmsContents',
          'useCmsPage',
          'useCmsSingle',
       ])

@@ -72,11 +72,7 @@
                            v-model="state[key]"
                            :field="fields[key]!"
                            :locale="localeFor(key)"
-                           :slug-source="
-                              fields[key]!.from
-                                 ? (state[fields[key]!.from!] as string | null)
-                                 : undefined
-                           "
+                           :slug-source="slugSource(fields[key]!)"
                         />
                      </CmsFormField>
                   </div>
@@ -105,6 +101,7 @@ import {
    isFieldVisible,
    isTranslatableField,
    resolveFormLayout,
+   slugSourceValue,
 } from '#nuxt-cms'
 import { computed, nextTick, ref, watch } from '#imports'
 import { buildEntrySchema } from '../../../shared/validation'
@@ -200,6 +197,11 @@ function onError() {
    }
    if (key) void nextTick(() => revealField(key))
    emit('error')
+}
+
+function slugSource(field: FieldConfig) {
+   if (!field.from) return undefined
+   return slugSourceValue(props.fields[field.from], state.value[field.from], i18n.defaultLocale)
 }
 
 function hasLocaleSwitch(field: FieldConfig) {

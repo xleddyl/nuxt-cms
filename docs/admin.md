@@ -10,9 +10,9 @@ one account, read from environment variables.
 | `/cms` | dashboard / entry-type index |
 | `/cms/login` | admin login |
 | `/cms/media` | media library |
-| `/cms/:collection` | collection list, single editor, or page list |
-| `/cms/:collection/new` | create entry |
-| `/cms/:collection/:id` | edit entry, or edit one page |
+| `/cms/:collection` | collection list, content list, single editor, or page list |
+| `/cms/:collection/new` | create entry or content item |
+| `/cms/:collection/:id` | edit entry, content item, or one page |
 
 A [`page` entry](schema.md#pages) gets its own section in the sidebar. The list is a tree that
 follows the routes of the site: a child path sits under its parent, indented. On the right of each
@@ -22,10 +22,18 @@ browser. The editor of a page shows the shared fields plus the
 fields of that path, and its title carries a breadcrumb back to each ancestor page and to the list.
 Pages cannot be deleted from the admin.
 
+[Content entries](schema.md#content) get a **Content** group in the sidebar, between Singles and
+Pages. Their list is the collection table, with title, status and publish date as default columns.
+The status badge reads **Scheduled** when an item is published with a future `publishedAt`. New
+and existing items open as a full page (`/cms/<entry>/new`, `/cms/<entry>/<id>`) with Save,
+Publish or Make draft, and Delete. Publishing an item with an empty publish date sets it to now. The
+publish date is picked in the browser's time zone and stored in UTC.
+
 A `blocks` field is edited as a grid of tiles, not as a stack of forms. Each tile previews the
 first media of the block (or its first text) and names it by that file, falling back to the label of
-the block type. A click opens that block alone with its fields, a duplicate and a remove action. The last cell of the grid adds a block. A block with a `boolean`
-field named `hidden` set to true is dimmed in the grid.
+the block type. A click opens that block alone with its fields, a duplicate and a remove action. The last cell of the grid adds a block. The editor also has
+**Hide** and **Show**: a hidden block is dimmed in the grid and left out of the public API. A
+block that declares its own `boolean` field named `hidden` uses that field instead.
 
 A `media` field is a tile of the same shape, with the preview, the file name, replace and remove.
 An empty one is a dashed box that opens the media library.

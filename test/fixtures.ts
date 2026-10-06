@@ -80,3 +80,36 @@ export function sampleConfig(): CmsConfig {
       },
    }
 }
+
+export function contentConfig(): CmsConfig {
+   const config = sampleConfig()
+   config.news = {
+      id: 'news',
+      label: 'News',
+      kind: 'content',
+      icon: 'newspaper',
+      blocks: {
+         text: {
+            label: 'Text',
+            component: 'SectionText',
+            icon: 'bars-3-bottom-left',
+            description: 'A paragraph.',
+            fields: {
+               heading: { label: 'Heading', type: 'text', translatable: true },
+               body: { label: 'Body', type: 'richtext', translatable: true, required: true },
+            },
+         },
+         image: {
+            label: 'Image',
+            component: 'section-image',
+            fields: { image: { label: 'Image', type: 'media', mediaType: 'image' } },
+         },
+      },
+      labels: { excerpt: 'Summary' },
+      fields: {
+         category: { label: 'Category', type: 'relation', to: 'categories' },
+         featured: { label: 'Featured', type: 'boolean' },
+      },
+   } as CmsConfig[string]
+   return config
+}

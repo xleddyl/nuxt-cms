@@ -1,4 +1,37 @@
-import { defineCmsConfig } from '#nuxt-cms'
+import { defineCmsBlocks, defineCmsConfig } from '#nuxt-cms'
+
+const sections = defineCmsBlocks({
+   text: {
+      label: 'Text',
+      component: 'SectionText',
+      icon: 'bars-3-bottom-left',
+      description: 'A heading and a paragraph of rich text.',
+      fields: {
+         heading: { label: 'Heading', type: 'text', translatable: true },
+         body: { label: 'Body', type: 'richtext', translatable: true, required: true },
+      },
+   },
+   image: {
+      label: 'Image',
+      component: 'SectionImage',
+      icon: 'photo',
+      description: 'A full-width image with an optional caption.',
+      fields: {
+         image: { label: 'Image', type: 'media', mediaType: 'image', required: true },
+         caption: { label: 'Caption', type: 'text', translatable: true },
+      },
+   },
+   quote: {
+      label: 'Quote',
+      component: 'SectionQuote',
+      icon: 'chat-bubble-bottom-center-text',
+      description: 'A highlighted quote with its author.',
+      fields: {
+         text: { label: 'Text', type: 'text', textarea: true, translatable: true, required: true },
+         author: { label: 'Author', type: 'text' },
+      },
+   },
+})
 
 export default defineCmsConfig({
    pages: {
@@ -308,6 +341,19 @@ export default defineCmsConfig({
          },
       ],
       list: { columns: ['title', 'date', 'category', 'featured', 'status'] },
+   },
+
+   news: {
+      id: 'news',
+      label: 'News',
+      kind: 'content',
+      icon: 'newspaper',
+      blocks: sections,
+      labels: { excerpt: 'Summary' },
+      fields: {
+         category: { label: 'Category', type: 'relation', to: 'categories' },
+         featured: { label: 'Featured', type: 'boolean' },
+      },
    },
 
    spots: {

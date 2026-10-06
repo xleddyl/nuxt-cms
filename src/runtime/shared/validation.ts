@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import type { CmsEntry, CmsI18n, FieldConfig } from './index'
-import { isFieldVisible, isTranslatableField } from './index'
+import { BLOCK_HIDDEN_KEY, declaresHiddenField, isFieldVisible, isTranslatableField } from './index'
 
 export const objectKeySchema = z
    .string()
@@ -11,6 +11,7 @@ export const objectKeySchema = z
 export interface ValidationMessages {
    required: string
    invalidDate: string
+   invalidDateTime: string
    invalidEmail: string
    invalidSlug: string
    unknownLocale: string
@@ -20,10 +21,24 @@ export interface ValidationMessages {
 const DEFAULT_MESSAGES: ValidationMessages = {
    required: 'Required field',
    invalidDate: 'Invalid date (yyyy-mm-dd)',
+   invalidDateTime: 'Invalid date and time (ISO 8601 with a time zone)',
    invalidEmail: 'Invalid email',
    invalidSlug: 'Invalid slug (lowercase letters, numbers, dashes)',
    unknownLocale: 'Unknown locale key',
    requiredLocale: (locale) => `Required field (locale '${locale}')`,
+}
+
+const DATETIME_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}:\d{2})$/
+
+export function datetimeSchema(message: string) {
+   return z
+      .string()
+      .trim()
+      .refine(
+         (value) => DATETIME_PATTERN.test(value) && !Number.isNaN(new Date(value).getTime()),
+         message
+      )
+      .transform((value) => new Date(value).toISOString())
 }
 
 function scalarSchema(field: FieldConfig, m: ValidationMessages): z.ZodType {
@@ -36,6 +51,8 @@ function scalarSchema(field: FieldConfig, m: ValidationMessages): z.ZodType {
          return z.string().min(1)
       case 'date':
          return z.string().regex(/^\d{4}-\d{2}-\d{2}$/, m.invalidDate)
+      case 'datetime':
+         return datetimeSchema(m.invalidDateTime)
       case 'email':
          return z.email(m.invalidEmail)
       case 'slug':
@@ -81,6 +98,7 @@ function blocksSchema(field: FieldConfig, i18n: CmsI18n, m: ValidationMessages) 
    const variants = Object.entries(field.blocks ?? {}).map(([type, block]) =>
       z.object({
          type: z.literal(type),
+         ...(declaresHiddenField(block) ? {} : { [BLOCK_HIDDEN_KEY]: z.boolean().optional() }),
          ...Object.fromEntries(
             Object.entries(block.fields).map(([key, blockField]) => [
                key,

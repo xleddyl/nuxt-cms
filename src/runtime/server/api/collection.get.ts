@@ -2,7 +2,7 @@ import type { SQL } from 'drizzle-orm'
 import { asc, count, desc, sql } from 'drizzle-orm'
 import { defineEventHandler, getValidatedQuery } from 'h3'
 import { z } from 'zod'
-import { useDb } from '#cms-db'
+import { cmsDialect, useDb } from '#cms-db'
 import { pageRoutes } from '../../shared/index'
 import { decodeRows, getRegistryEntry, idColumn, tableColumns } from '../utils/registry'
 import { readPages } from '../utils/page-storage'
@@ -69,7 +69,8 @@ export default defineEventHandler(async (event) => {
    let where: SQL | undefined
    if (search) {
       const column = titleColumn ?? idColumn(table)
-      where = sql`lower(${column}) like ${likePattern(search.toLowerCase())} escape '\\'`
+      const text = cmsDialect === 'postgres' ? sql`cast(${column} as text)` : sql`${column}`
+      where = sql`lower(${text}) like ${likePattern(search.toLowerCase())} escape '\\'`
    }
 
    const selection = light
