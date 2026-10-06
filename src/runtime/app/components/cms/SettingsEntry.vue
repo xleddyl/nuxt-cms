@@ -56,7 +56,7 @@
 
 <script setup lang="ts">
 import type { CmsEntry, CmsEntryKind, CmsFormLayout } from '#nuxt-cms'
-import { computed, ref, watch } from '#imports'
+import { computed, ref } from '#imports'
 import cmsConfig from '#cms-config'
 import {
    entryFields,
@@ -100,14 +100,6 @@ const parts = computed(() => [
 ])
 
 const activePart = ref<Part>(parts.value[0]!.id)
-
-watch(
-   () => props.name,
-   () => {
-      activePart.value = parts.value[0]!.id
-      status.value = 'idle'
-   }
-)
 
 const columns = computed(() => entryListColumns(props.name, settings.value))
 const layout = computed(() => entryFormLayout(props.name, settings.value, fields.value))

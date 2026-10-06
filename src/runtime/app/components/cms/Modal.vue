@@ -27,7 +27,8 @@
 </template>
 
 <script setup lang="ts">
-import { onBeforeUnmount, watch } from '#imports'
+import { watch } from '#imports'
+import { useCmsOverlay } from '../../composables/cms-overlay'
 
 defineProps<{
    title?: string
@@ -42,21 +43,15 @@ function close() {
    open.value = false
 }
 
-function onKeydown(event: KeyboardEvent) {
-   if (event.key === 'Escape') close()
-}
+const overlay = useCmsOverlay(close)
 
 watch(open, (value, previous) => {
    if (import.meta.server) return
    if (value) {
-      document.addEventListener('keydown', onKeydown)
+      overlay.activate()
    } else {
-      document.removeEventListener('keydown', onKeydown)
+      overlay.deactivate()
       if (previous) emit('after:leave')
    }
-})
-
-onBeforeUnmount(() => {
-   if (import.meta.client) document.removeEventListener('keydown', onKeydown)
 })
 </script>

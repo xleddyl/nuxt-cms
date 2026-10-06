@@ -235,10 +235,14 @@ async function create() {
 
 async function copyCredentials() {
    if (!created.value) return
-   await navigator.clipboard.writeText(
-      `Email: ${created.value.email}\nPassword: ${created.value.password}`
-   )
-   copied.value = true
+   try {
+      await navigator.clipboard.writeText(
+         `Email: ${created.value.email}\nPassword: ${created.value.password}`
+      )
+      copied.value = true
+   } catch {
+      copied.value = false
+   }
 }
 
 const resetting = ref<string | null>(null)

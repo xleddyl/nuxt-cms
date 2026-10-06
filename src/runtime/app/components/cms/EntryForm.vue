@@ -143,8 +143,6 @@ watch(tabList, (tabs) => {
 
 const settings = useCmsSettingsState()
 
-const fields = computed(() => props.fields)
-
 const layout = computed<CmsFormLayout>(() =>
    props.entryName
       ? entryFormLayout(props.entryName, settings.value, props.fields)

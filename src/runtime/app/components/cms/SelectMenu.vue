@@ -1,10 +1,6 @@
 <template>
    <div ref="root" class="relative w-full">
-      <div
-         class="cms-field flex flex-wrap items-center gap-1"
-         :class="`cms-field-${size ?? 'md'}`"
-         @click="focusInput"
-      >
+      <div class="cms-field cms-field-md flex flex-wrap items-center gap-1" @click="focusInput">
          <template v-if="multiple">
             <span v-for="value in modelArray" :key="value" class="cms-tag">
                {{ labelFor(value) }}
@@ -74,7 +70,6 @@ const props = withDefaults(
       multiple?: boolean
       ignoreFilter?: boolean
       loading?: boolean
-      size?: string
       placeholder?: string
    }>(),
    { valueKey: 'value' }

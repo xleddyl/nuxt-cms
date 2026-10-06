@@ -47,7 +47,7 @@ export function entryFields(name: string) {
    return entry.kind === 'page' ? pageAllFields(entry) : entry.fields
 }
 
-export function defaultFormLayout(name: string, fields = entryFields(name)): CmsFormLayout {
+function defaultFormLayout(name: string, fields = entryFields(name)): CmsFormLayout {
    return resolveFormLayout(fields, layoutFromConfig(entryOf(name)?.layout))
 }
 

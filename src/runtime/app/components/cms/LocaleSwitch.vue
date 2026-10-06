@@ -6,7 +6,7 @@
          type="button"
          role="tab"
          :aria-selected="model === locale"
-         :title="filled(locale) ? locale : `${locale} — empty`"
+         :title="filled(locale) ? locale : `${locale}: empty`"
          class="cms-locale-option"
          :class="{ 'is-active': model === locale, 'is-empty': !filled(locale) }"
          @click="model = locale"

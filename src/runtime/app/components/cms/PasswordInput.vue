@@ -72,11 +72,15 @@ function regenerate() {
 
 async function copyPassword() {
    if (!model.value) return
-   await navigator.clipboard.writeText(model.value)
-   copied.value = true
-   clearTimeout(copiedTimer)
-   copiedTimer = setTimeout(() => {
+   try {
+      await navigator.clipboard.writeText(model.value)
+      copied.value = true
+      clearTimeout(copiedTimer)
+      copiedTimer = setTimeout(() => {
+         copied.value = false
+      }, 1600)
+   } catch {
       copied.value = false
-   }, 1600)
+   }
 }
 </script>

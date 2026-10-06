@@ -13,22 +13,14 @@
                      />
                   </th>
                   <th
-                     v-for="column in visibleColumns"
+                     v-for="column in columns"
                      :key="columnId(column)"
                      :class="{
-                        'is-dragging': draggingId === columnId(column),
-                        'is-drop-target': dropTargetId === columnId(column),
                         'is-sortable': column.sortable,
                         'is-sorted': sort?.key === columnId(column),
                      }"
-                     :draggable="column.reorderable || undefined"
                      :aria-sort="ariaSort(column)"
                      @click="toggleSort(column)"
-                     @dragstart="onDragStart($event, column)"
-                     @dragover="onDragOver($event, column)"
-                     @dragleave="onDragLeave(column)"
-                     @drop="onDrop($event, column)"
-                     @dragend="resetDrag"
                   >
                      <span class="cms-th-label">
                         {{ column.header }}
@@ -44,7 +36,7 @@
             <tbody>
                <tr
                   v-for="(row, index) in data"
-                  :key="index"
+                  :key="keyOf(row)"
                   class="__clickable"
                   :class="{ 'is-selected': isSelected(row) }"
                   :style="{ '--cms-row-delay': `${Math.min(index, 14) * 24}ms` }"
@@ -57,7 +49,7 @@
                         @toggle="toggleRow(row)"
                      />
                   </td>
-                  <td v-for="column in visibleColumns" :key="columnId(column)">
+                  <td v-for="column in columns" :key="columnId(column)">
                      <slot :name="`${columnId(column)}-cell`" :row="{ original: row }">
                         {{ cellValue(column, row) }}
                      </slot>
@@ -70,7 +62,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from '#imports'
+import { computed } from '#imports'
 
 type Row = Record<string, unknown>
 
@@ -79,7 +71,6 @@ interface Column {
    accessorKey?: string
    accessorFn?: (row: Row) => unknown
    header?: string
-   reorderable?: boolean
    sortable?: boolean
 }
 
@@ -92,13 +83,12 @@ const props = defineProps<{
    data: Row[]
    columns: Column[]
    selectable?: boolean
-   rowKey?: string
 }>()
 
 const selected = defineModel<string[]>('selected', { default: () => [] })
 
 function keyOf(row: Row) {
-   return String(row[props.rowKey ?? 'id'])
+   return String(row.id)
 }
 
 function isSelected(row: Row) {
@@ -122,13 +112,10 @@ function toggleAll() {
    selected.value = allSelected.value ? [] : props.data.map(keyOf)
 }
 
-const visibility = defineModel<Record<string, boolean>>('columnVisibility', { default: () => ({}) })
-
 const sort = defineModel<TableSort | null>('sort', { default: null })
 
 const emit = defineEmits<{
    select: [event: Event, row: { original: Row }]
-   reorder: [from: string, to: string]
 }>()
 
 function columnId(column: Column) {
@@ -153,45 +140,6 @@ function ariaSort(column: Column) {
    if (sort.value?.key !== columnId(column)) return 'none'
    return sort.value.order === 'asc' ? 'ascending' : 'descending'
 }
-
-const draggingId = ref<string | null>(null)
-const dropTargetId = ref<string | null>(null)
-
-function resetDrag() {
-   draggingId.value = null
-   dropTargetId.value = null
-}
-
-function onDragStart(event: DragEvent, column: Column) {
-   if (!column.reorderable) return
-   draggingId.value = columnId(column)
-   event.dataTransfer?.setData('text/plain', columnId(column))
-   if (event.dataTransfer) event.dataTransfer.effectAllowed = 'move'
-}
-
-function onDragOver(event: DragEvent, column: Column) {
-   if (!draggingId.value || !column.reorderable) return
-   event.preventDefault()
-   if (event.dataTransfer) event.dataTransfer.dropEffect = 'move'
-   dropTargetId.value = columnId(column)
-}
-
-function onDragLeave(column: Column) {
-   if (dropTargetId.value === columnId(column)) dropTargetId.value = null
-}
-
-function onDrop(event: DragEvent, column: Column) {
-   if (!draggingId.value || !column.reorderable) return
-   event.preventDefault()
-   const from = draggingId.value
-   const to = columnId(column)
-   resetDrag()
-   if (from !== to) emit('reorder', from, to)
-}
-
-const visibleColumns = computed(() =>
-   props.columns.filter((column) => visibility.value[columnId(column)] !== false)
-)
 
 function cellValue(column: Column, row: Row) {
    if (column.accessorFn) return column.accessorFn(row)

@@ -7,6 +7,7 @@ import {
 } from '../../shared/index'
 import { computed, ref } from '#imports'
 import { errorMessage } from '../utils/ui'
+import { invalidateCmsMediaKeys } from './cms-media-keys'
 import { useCmsToast } from './cms-toast'
 
 const endpoint = '/api/cms/admin/media'
@@ -103,6 +104,7 @@ export function useCmsMediaLibrary() {
             method: 'DELETE',
             query: { name, recursive: 'true' },
          })
+         invalidateCmsMediaKeys()
          await reload({ quiet: true })
       })
    }
@@ -117,6 +119,7 @@ export function useCmsMediaLibrary() {
    function deleteItems(keys: string[]) {
       return attempt('Delete failed', async () => {
          await $fetch(`${endpoint}/delete`, { method: 'POST', body: { keys } })
+         invalidateCmsMediaKeys()
          await reload({ quiet: true })
       })
    }

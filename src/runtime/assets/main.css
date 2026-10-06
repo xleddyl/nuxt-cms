@@ -4017,23 +4017,6 @@ textarea.cms-field {
    box-shadow: 0 0 0 3px var(--cms-accent-soft);
 }
 
-.cms-table th[draggable='true'] {
-   cursor: grab;
-   user-select: none;
-}
-.cms-table th[draggable='true']:active {
-   cursor: grabbing;
-}
-.cms-table th.is-dragging {
-   opacity: 0.4;
-}
-.cms-table th.is-drop-target {
-   background: var(--cms-accent-soft);
-   box-shadow:
-      inset 0 -1px 0 var(--cms-line),
-      inset 2px 0 0 var(--cms-accent);
-}
-
 .cms-th-label {
    display: inline-flex;
    align-items: center;

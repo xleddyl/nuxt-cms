@@ -59,7 +59,7 @@ export function useCmsPage<P extends CmsPagePath, DefaultT = null>(
    options: CmsPageOptions<CmsPageTypes[P] | null, DefaultT> = {}
 ): AsyncData<CmsPageTypes[P] | DefaultT | null, Error | undefined> {
    const { locale, key, default: fallback } = options
-   return useAsyncData(`cms-page:${String(path)}:${locale ?? ''}`, async () =>
+   return useAsyncData(key ?? `cms-page:${String(path)}:${locale ?? ''}`, async () =>
       fallback ? fallback() : null
    ) as unknown as AsyncData<CmsPageTypes[P] | DefaultT | null, Error | undefined>
 }

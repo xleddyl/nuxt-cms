@@ -12,8 +12,14 @@ function load() {
       })
       .catch(() => {
          known.value = null
+         loading = null
       })
    return loading
+}
+
+export function invalidateCmsMediaKeys() {
+   loading = null
+   known.value = null
 }
 
 export function useCmsMediaKeys() {

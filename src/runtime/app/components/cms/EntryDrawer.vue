@@ -140,16 +140,24 @@ function revertStatus() {
    formState.value.status = (JSON.parse(snapshot.value) as Record<string, unknown>).status ?? null
 }
 
+let loadRequest = 0
+
 async function load() {
-   if (props.entryId === null) {
+   const request = ++loadRequest
+   const id = props.entryId
+   if (id === null) {
+      loading.value = false
       setState(emptyState())
       return
    }
+   const isStale = () => request !== loadRequest || props.entryId !== id || !open.value
    loading.value = true
    try {
-      const entry = await cmsApi<Record<string, unknown>>(`${endpoint.value}/${props.entryId}`)
+      const entry = await cmsApi<Record<string, unknown>>(`${endpoint.value}/${id}`)
+      if (isStale()) return
       setState(pickFields(entry))
    } catch (error) {
+      if (isStale()) return
       toast.add({
          title: 'Could not load entry',
          description: errorMessage(error),
@@ -157,7 +165,7 @@ async function load() {
       })
       open.value = false
    } finally {
-      loading.value = false
+      if (request === loadRequest) loading.value = false
    }
 }
 
@@ -189,6 +197,7 @@ async function save() {
       emit('saved')
       open.value = false
    } catch (error) {
+      revertStatus()
       toast.add({
          title: 'Save failed',
          description: errorMessage(error),

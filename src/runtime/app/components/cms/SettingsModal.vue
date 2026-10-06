@@ -133,10 +133,11 @@
 
 <script setup lang="ts">
 import type { CmsEntry, CmsEntryKind } from '#nuxt-cms'
-import { computed, onBeforeUnmount, ref, watch } from '#imports'
+import { computed, ref, watch } from '#imports'
 import cmsConfig from '#cms-config'
 import { CMS_THEMES, setCmsTheme, type CmsTheme } from '../../composables/cms-theme'
 import { useCmsAccount } from '../../composables/cms-account'
+import { useCmsOverlay } from '../../composables/cms-overlay'
 
 const { isSuperAdmin } = useCmsAccount()
 
@@ -178,17 +179,10 @@ function close() {
    open.value = false
 }
 
-function onKeydown(event: KeyboardEvent) {
-   if (event.key === 'Escape') close()
-}
+const overlay = useCmsOverlay(close)
 
 watch(open, (value) => {
-   if (import.meta.server) return
-   if (value) document.addEventListener('keydown', onKeydown)
-   else document.removeEventListener('keydown', onKeydown)
-})
-
-onBeforeUnmount(() => {
-   if (import.meta.client) document.removeEventListener('keydown', onKeydown)
+   if (value) overlay.activate()
+   else overlay.deactivate()
 })
 </script>

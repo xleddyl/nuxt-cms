@@ -1,5 +1,9 @@
 <template>
-   <div class="cms-input-wrap" :class="[$attrs.class, { 'has-lead': icon }]">
+   <div
+      class="cms-input-wrap"
+      :class="[$attrs.class, { 'has-lead': icon }]"
+      :style="$attrs.style as StyleValue"
+   >
       <span v-if="icon" class="cms-input-lead">
          <CmsIcon :name="icon" class="size-4" />
       </span>
@@ -7,7 +11,7 @@
          v-bind="inputAttrs"
          :type="type ?? 'text'"
          :value="model ?? ''"
-         :class="['cms-field', `cms-field-${size ?? 'md'}`, { 'is-error': color === 'error' }]"
+         :class="['cms-field', `cms-field-${size ?? 'md'}`]"
          @input="onInput"
       />
       <span v-if="$slots.trailing" class="cms-input-trail">
@@ -17,6 +21,7 @@
 </template>
 
 <script setup lang="ts">
+import type { StyleValue } from 'vue'
 import { computed, useAttrs } from '#imports'
 
 defineOptions({ inheritAttrs: false })
@@ -25,7 +30,6 @@ defineProps<{
    type?: string
    size?: 'sm' | 'md' | 'lg'
    icon?: string
-   color?: 'error'
 }>()
 
 const [model, modifiers] = defineModel<string | number | null, 'number'>()

@@ -60,7 +60,7 @@ async function mediaDimensions(file: File): Promise<Dimensions> {
    return {}
 }
 
-export function matchesAccept(file: File, accept: string | undefined) {
+function matchesAccept(file: File, accept: string | undefined) {
    if (!accept) return true
    return accept.split(',').some((raw) => {
       const pattern = raw.trim().toLowerCase()

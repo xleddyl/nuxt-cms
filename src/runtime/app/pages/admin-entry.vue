@@ -181,6 +181,7 @@ async function save() {
       toast.add({ title: 'Saved', color: 'success' })
       goBack()
    } catch (error) {
+      revertStatus()
       toast.add({
          title: 'Save failed',
          description: errorMessage(error),

@@ -23,7 +23,7 @@
 <script setup lang="ts">
 import type { CmsConfig } from '#nuxt-cms'
 import { isTranslatableField } from '#nuxt-cms'
-import { computed, onMounted, ref, watch } from '#imports'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from '#imports'
 import cmsConfig from '#cms-config'
 import { useCmsRuntime } from '../../composables/cms-runtime'
 import { useCmsToast } from '../../composables/cms-toast'
@@ -48,22 +48,27 @@ const selectedRows = ref(new Map<string, Row>())
 const loading = ref(true)
 const searchTerm = ref('')
 
+let fetchRequest = 0
+
 async function fetchOptions() {
+   const request = ++fetchRequest
    loading.value = true
    try {
       const term = searchTerm.value.trim()
       const page = await $fetch<{ items: Row[] }>(endpoint, {
          query: { light: 'true', limit: 25, ...(term ? { search: term } : {}) },
       })
+      if (request !== fetchRequest) return
       fetched.value = page.items
    } catch (err) {
+      if (request !== fetchRequest) return
       toast.add({
          title: 'Loading failed',
          description: errorMessage(err),
          color: 'error',
       })
    } finally {
-      loading.value = false
+      if (request === fetchRequest) loading.value = false
    }
 }
 
@@ -72,6 +77,8 @@ watch(searchTerm, () => {
    clearTimeout(searchTimer)
    searchTimer = setTimeout(() => void fetchOptions(), 300)
 })
+
+onBeforeUnmount(() => clearTimeout(searchTimer))
 
 const selectedIds = computed<string[]>(() => {
    if (props.multiple) return (model.value as string[] | null) ?? []

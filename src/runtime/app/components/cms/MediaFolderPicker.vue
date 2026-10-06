@@ -52,7 +52,6 @@ import { isWithinMediaFolder, mediaFolderDepth, mediaFolderName } from '#nuxt-cm
 const props = defineProps<{
    folders: string[]
    exclude?: string | null
-   disabled?: (string | null)[]
 }>()
 
 const model = defineModel<string | null>({ default: null })
@@ -65,7 +64,6 @@ const visible = computed(() => {
 })
 
 function isDisabled(folder: string | null) {
-   if (props.disabled?.includes(folder)) return true
    return !!props.exclude && !!folder && isWithinMediaFolder(folder, props.exclude)
 }
 </script>
