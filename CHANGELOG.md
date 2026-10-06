@@ -1,6 +1,31 @@
 # Changelog
 
 
+## v0.2.2
+
+[compare changes](https://github.com/xleddyl/nuxt-cms/compare/v0.2.1...v0.2.2)
+
+### 🚀 Enhancements
+
+- **admin:** Show where each media file is used and warn before deleting used media ([100cc50](https://github.com/xleddyl/nuxt-cms/commit/100cc50))
+
+### 🩹 Fixes
+
+- **auth:** Lock login for 5 minutes after 5 failed attempts per IP or email ([f0d5242](https://github.com/xleddyl/nuxt-cms/commit/f0d5242))
+- Make multi-statement writes atomic on every driver and store ISO timestamps ([4b596c5](https://github.com/xleddyl/nuxt-cms/commit/4b596c5))
+
+### 🏡 Chore
+
+- Remove code comments ([1b73353](https://github.com/xleddyl/nuxt-cms/commit/1b73353))
+
+### 🎨 Styles
+
+- **admin:** Flatten the brand mark and drop the login grid and purple gradients ([cb08f99](https://github.com/xleddyl/nuxt-cms/commit/cb08f99))
+
+### ❤️ Contributors
+
+- Edoardo Alberti <edoalberti99@gmail.com>
+
 ## v0.2.1
 
 [compare changes](https://github.com/xleddyl/nuxt-cms/compare/v0.2.0...v0.2.1)
