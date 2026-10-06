@@ -2,4 +2,4 @@
 dist
 *.sql
 *.md
-
+**/migrations/**/meta
