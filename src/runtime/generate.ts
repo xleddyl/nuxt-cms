@@ -13,7 +13,7 @@ export async function generateMigrations(opts: GenerateMigrationsOptions = {}): 
    const configPath = opts.configPath ?? join(root, '.nuxt/cms/drizzle.config.ts')
    if (!existsSync(configPath)) {
       throw new Error(
-         `[nuxt-cms] drizzle config not found at ${configPath} — run \`nuxi prepare\` first.`
+         `[nuxt-cms] drizzle config not found at ${configPath}. Run \`nuxi prepare\` first.`
       )
    }
    const require = createRequire(import.meta.url)

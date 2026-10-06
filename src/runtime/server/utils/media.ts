@@ -47,8 +47,12 @@ const UPLOAD_TYPES = new Set([
    'application/vnd.openxmlformats-officedocument.presentationml.presentation',
 ])
 
+export function baseContentType(contentType: string) {
+   return contentType.split(';')[0]!.trim().toLowerCase()
+}
+
 export function isAllowedUploadType(contentType: string) {
-   const type = contentType.toLowerCase()
+   const type = baseContentType(contentType)
    return (
       !UPLOAD_TYPE_BLOCKLIST.has(type) &&
       (UPLOAD_TYPES.has(type) || UPLOAD_TYPE_PREFIXES.some((prefix) => type.startsWith(prefix)))

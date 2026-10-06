@@ -5,12 +5,13 @@ import { useDb } from '#cms-db'
 import { cms_media } from '#cms-tables'
 import type { MediaItem } from '../../shared/index'
 import { normalizeMediaFolder } from '../../shared/index'
+import { objectKeySchema } from '../../shared/validation'
 import { useMediaIndex } from '../utils/media-index'
 import { assertMediaWritable, toMediaItem, useMediaConfig } from '../utils/media'
 import { requireAdmin } from '../utils/require-admin'
 
 const bodySchema = z.object({
-   key: z.string().min(1).max(1024),
+   key: objectKeySchema,
    alt: z.string().max(1024).nullish(),
    folder: z.string().max(255).nullish(),
 })

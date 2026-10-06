@@ -70,10 +70,6 @@ export function layoutFromConfig(input: CmsLayoutBlock[] | undefined): CmsFormLa
    return { main: sectionsFromBlocks(input) }
 }
 
-export function layoutKeys(input: CmsLayoutBlock[] | undefined): string[] {
-   return layoutFromConfig(input).main.flatMap((section) => section.rows.flat())
-}
-
 function cloneSection(section: CmsLayoutSection): CmsLayoutSection {
    return { ...section, rows: section.rows.map((row) => [...row]) }
 }

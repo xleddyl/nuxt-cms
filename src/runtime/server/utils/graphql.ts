@@ -19,7 +19,7 @@ import type { AnySQLiteColumn, SQLiteTable } from 'drizzle-orm/sqlite-core'
 import { GraphQLError, GraphQLScalarType, valueFromASTUntyped } from 'graphql'
 import { createSchema } from 'graphql-yoga'
 import cmsConfig from '#cms-config'
-import { useDb } from '#cms-db'
+import { cmsDialect, useDb } from '#cms-db'
 import * as cmsTables from '#cms-tables'
 import { useRuntimeConfig } from '#imports'
 import type { CmsConfig, CmsEntry, FieldConfig, MediaStorageMode } from '../../shared/index'
@@ -165,7 +165,9 @@ const OPERATORS: Record<string, (column: AnySQLiteColumn, value: unknown) => SQL
          .replaceAll('%', '\\%')
          .replaceAll('_', '\\_')
          .replaceAll('*', '%')
-      return sql`${column} like ${pattern} escape '\\'`
+      return cmsDialect === 'postgres'
+         ? sql`cast(${column} as text) ilike ${pattern} escape '\\'`
+         : sql`${column} like ${pattern} escape '\\'`
    },
    in: (column, value) => inArray(column, value as unknown[]),
 }

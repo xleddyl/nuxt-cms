@@ -327,7 +327,7 @@ export function validateConfig(config: CmsConfig, i18n?: CmsI18n): string[] {
                   errors.push(`${fat}: relation target '${field.to}' must be a collection`)
                if (!entry.table && target.table)
                   errors.push(
-                     `${fat}: relation target '${field.to}' uses a custom table — derived relations can only target derived entries`
+                     `${fat}: relation target '${field.to}' uses a custom table: derived relations can only target derived entries`
                   )
             }
             if (

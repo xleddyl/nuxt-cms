@@ -5,8 +5,6 @@ import type { CmsSessionUser } from '../../shared/index'
 import { assertSameOrigin } from './same-origin'
 import { findUserById, passwordStamp } from './users'
 
-export { assertSameOrigin }
-
 export function isSuperAdminEmail(event: H3Event, email: string) {
    const { adminEmail } = useRuntimeConfig(event).cms as { adminEmail: string }
    return !!adminEmail && email.toLowerCase() === adminEmail.toLowerCase()

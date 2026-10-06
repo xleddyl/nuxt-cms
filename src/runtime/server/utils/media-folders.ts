@@ -1,10 +1,14 @@
-import { inArray, like, or } from 'drizzle-orm'
+import { eq, inArray, or, sql } from 'drizzle-orm'
 import { useDb } from '#cms-db'
 import { cms_media } from '#cms-tables'
 import { mediaFolderMarkerKey } from '../../shared/index'
 import type { MediaStore } from './media'
 
 const KEY_CHUNK = 90
+
+function escapeLike(value: string) {
+   return value.replaceAll('\\', '\\\\').replaceAll('%', '\\%').replaceAll('_', '\\_')
+}
 
 export async function writeMediaFolderMarker(store: MediaStore, folder: string) {
    const key = mediaFolderMarkerKey(folder)
@@ -30,7 +34,12 @@ export function mediaRowsInFolder(folder: string) {
    return useDb()
       .select({ key: cms_media.key, folder: cms_media.folder })
       .from(cms_media)
-      .where(or(like(cms_media.folder, `${folder}/%`), like(cms_media.folder, folder)))
+      .where(
+         or(
+            sql`${cms_media.folder} like ${`${escapeLike(folder)}/%`} escape '\\'`,
+            eq(cms_media.folder, folder)
+         )
+      )
 }
 
 export async function deleteMediaRows(store: MediaStore, keys: string[]) {

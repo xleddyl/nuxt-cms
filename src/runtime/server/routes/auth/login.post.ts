@@ -10,8 +10,8 @@ import { assertSameOrigin } from '../../utils/same-origin'
 import { findUserByEmail, sessionUserFor } from '../../utils/users'
 
 const credentialsSchema = z.object({
-   email: z.string().trim().min(1),
-   password: z.string().min(1),
+   email: z.string().trim().min(1).max(254),
+   password: z.string().min(1).max(256),
 })
 
 const RATE_WINDOW_MS = 15 * 60_000

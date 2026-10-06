@@ -10,6 +10,7 @@ import { requireMediaFilePath } from '../utils/media-fs'
 import {
    assertMediaWritable,
    assertUploadContentType,
+   baseContentType,
    toMediaItem,
    useMediaConfig,
 } from '../utils/media'
@@ -37,7 +38,7 @@ export default defineEventHandler(async (event): Promise<MediaItem> => {
 
    const values = {
       key: body.key,
-      mime: body.mime ?? null,
+      mime: body.mime ? baseContentType(body.mime) : null,
       size: body.size ?? null,
       width: body.width ?? null,
       height: body.height ?? null,

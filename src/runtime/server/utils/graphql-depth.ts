@@ -12,27 +12,35 @@ const DEFAULT_MAX_FIELDS = 500
 function measure(
    selectionSet: SelectionSetNode,
    fragments: Map<string, FragmentDefinitionNode>,
-   visited: Set<string>
+   visited: Set<string>,
+   fragmentDepths: Map<string, number>
 ): number {
    let max = 0
    for (const selection of selectionSet.selections) {
       if (selection.kind === Kind.FIELD) {
          if (selection.name.value.startsWith('__')) continue
          const depth = selection.selectionSet
-            ? 1 + measure(selection.selectionSet, fragments, visited)
+            ? 1 + measure(selection.selectionSet, fragments, visited, fragmentDepths)
             : 1
          max = Math.max(max, depth)
       } else if (selection.kind === Kind.FRAGMENT_SPREAD) {
          const name = selection.name.value
          if (visited.has(name)) continue
+         const known = fragmentDepths.get(name)
+         if (known !== undefined) {
+            max = Math.max(max, known)
+            continue
+         }
          const fragment = fragments.get(name)
          if (fragment) {
             visited.add(name)
-            max = Math.max(max, measure(fragment.selectionSet, fragments, visited))
+            const depth = measure(fragment.selectionSet, fragments, visited, fragmentDepths)
             visited.delete(name)
+            fragmentDepths.set(name, depth)
+            max = Math.max(max, depth)
          }
       } else if (selection.kind === Kind.INLINE_FRAGMENT) {
-         max = Math.max(max, measure(selection.selectionSet, fragments, visited))
+         max = Math.max(max, measure(selection.selectionSet, fragments, visited, fragmentDepths))
       }
    }
    return max
@@ -50,7 +58,7 @@ export function createDepthRule(maxDepth?: number) {
             if (definition.kind === Kind.FRAGMENT_DEFINITION)
                fragments.set(definition.name.value, definition)
          }
-         const depth = measure(node.selectionSet, fragments, new Set())
+         const depth = measure(node.selectionSet, fragments, new Set(), new Map())
          if (depth > limit) {
             context.reportError(
                new GraphQLError(`Query is too deep: depth ${depth} exceeds the maximum of ${limit}`)

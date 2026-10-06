@@ -5,6 +5,7 @@ import { cms_users } from '#cms-tables'
 import type { CmsAccount } from '../../shared/index'
 import { MIN_PASSWORD_LENGTH } from '../../shared/index'
 import { customId } from '../utils/custom-id'
+import { mapConstraintErrors } from '../utils/db-errors'
 import { hashPassword } from '../utils/password'
 import { isSuperAdminEmail, requireSuperAdmin } from '../utils/require-admin'
 import { findUserByEmail, toAccount } from '../utils/users'
@@ -22,17 +23,20 @@ export default defineEventHandler(async (event): Promise<CmsAccount> => {
       throw createError({ statusCode: 409, statusMessage: 'A user with this email already exists' })
    }
    const now = new Date().toISOString()
-   const [row] = await useDb()
-      .insert(cms_users)
-      .values({
-         id: customId('usr'),
-         email: body.email,
-         name: body.name || null,
-         role: 'admin',
-         passwordHash: await hashPassword(body.password),
-         createdAt: now,
-         updatedAt: now,
-      })
-      .returning()
+   const passwordHash = await hashPassword(body.password)
+   const [row] = await mapConstraintErrors(() =>
+      useDb()
+         .insert(cms_users)
+         .values({
+            id: customId('usr'),
+            email: body.email,
+            name: body.name || null,
+            role: 'admin',
+            passwordHash,
+            createdAt: now,
+            updatedAt: now,
+         })
+         .returning()
+   )
    return toAccount(row!)
 })

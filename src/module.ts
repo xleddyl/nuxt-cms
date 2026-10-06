@@ -250,7 +250,7 @@ async function loadCmsConfig(
       cmsConfig = expandMobileMedia((await jiti.import(configPath, { default: true })) as CmsConfig)
    } else {
       logger.warn(
-         `[nuxt-cms] Config file not found: ${configPath}. Using an empty registry — create a ${configPathOption}.ts with defineCmsConfig().`
+         `[nuxt-cms] Config file not found: ${configPath}. Using an empty registry. Create a ${configPathOption}.ts with defineCmsConfig().`
       )
       nuxt.options.alias['#cms-config'] = resolver.resolve('./runtime/shared/empty-config')
    }
@@ -562,14 +562,18 @@ export default defineNuxtModule<ModuleOptions>({
                `  schema: '${toPosix(schemaTemplate.dst)}',`,
                `  out: '${toPosix(relativeMigrationsDir)}',`,
                driver === 'postgres'
-                  ? `  dbCredentials: { url: process.env.NUXT_CMS_DATABASE_URL ?? '${databaseUrl}' },`
+                  ? `  dbCredentials: { url: process.env.NUXT_CMS_DATABASE_URL ?? ${JSON.stringify(
+                       databaseUrl
+                    )} },`
                   : driver === 'libsql'
-                    ? `  dbCredentials: { url: process.env.NUXT_CMS_DATABASE_URL ?? '${
+                    ? `  dbCredentials: { url: process.env.NUXT_CMS_DATABASE_URL ?? ${JSON.stringify(
                          databaseUrl || `file:${toPosix(resolvedDbPath)}`
-                      }', authToken: (process.env.NUXT_CMS_DATABASE_AUTH_TOKEN ?? '${databaseAuthToken}') || undefined },`
+                      )}, authToken: (process.env.NUXT_CMS_DATABASE_AUTH_TOKEN ?? ${JSON.stringify(
+                         databaseAuthToken
+                      )}) || undefined },`
                     : driver === 'd1'
                       ? ``
-                      : `  dbCredentials: { url: '${toPosix(resolvedDbPath)}' },`,
+                      : `  dbCredentials: { url: ${JSON.stringify(toPosix(resolvedDbPath))} },`,
                `}`,
                ``,
             ].join('\n'),
@@ -589,7 +593,7 @@ export default defineNuxtModule<ModuleOptions>({
             const migrations = await collectMigrations(migrationsDir)
             if (!migrations && !nuxt.options.dev && Object.keys(cmsConfig).length) {
                logger.warn(
-                  `[nuxt-cms] No migrations found at ${migrationsDir}. The CMS tables will not be created — run the dev server once to generate them and commit ${toPosix(
+                  `[nuxt-cms] No migrations found at ${migrationsDir}. The CMS tables will not be created. Run the dev server once to generate them and commit ${toPosix(
                      relativeMigrationsDir
                   )}.`
                )

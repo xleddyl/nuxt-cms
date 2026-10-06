@@ -56,6 +56,12 @@ describe('assertUploadContentType', () => {
       expect(() => assertUploadContentType('IMAGE/PNG')).not.toThrow()
       expect(() => assertUploadContentType('Image/SVG+XML')).toThrow()
    })
+
+   it('ignores parameters when it checks the type', () => {
+      expect(() => assertUploadContentType('image/svg+xml; charset=utf-8')).toThrow()
+      expect(() => assertUploadContentType(' text/html ;charset=utf-8')).toThrow()
+      expect(() => assertUploadContentType('text/plain; charset=utf-8')).not.toThrow()
+   })
 })
 
 describe('assertMediaConfigured', () => {

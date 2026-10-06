@@ -125,7 +125,14 @@ function autoTypeTs(config: CmsConfig, name: string, entry: CmsEntry): string {
 function pageTypesTs(name: string, entry: CmsEntry): string[] {
    const auto = `${typeName(name)}Auto`
    const lines = pageRoutes(entry).map((route) => {
-      const keys = ['id', 'path', 'updatedAt', ...Object.keys(pageFields(entry, route.path))]
+      const keys = [
+         'id',
+         'path',
+         'updatedAt',
+         ...Object.entries(pageFields(entry, route.path))
+            .filter(([, field]) => !isPrivateField(field))
+            .map(([key]) => key),
+      ]
       return `  ${JSON.stringify(route.path)}: Pick<${auto}, ${quotedKeys(keys)}>`
    })
    return [

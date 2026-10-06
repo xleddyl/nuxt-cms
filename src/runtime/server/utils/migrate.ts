@@ -55,7 +55,7 @@ async function pendingMigrations(): Promise<CmsMigration[]> {
    const migrations = await readMigrations(migrationsDir)
    if (!migrations.length && Object.keys(cmsConfig).length) {
       console.error(
-         `[nuxt-cms] No migrations were found for this build (expected in ${migrationsDir}). CMS tables may be missing — run the dev server once to generate them, commit server/db/migrations, and rebuild.`
+         `[nuxt-cms] No migrations were found for this build (expected in ${migrationsDir}). CMS tables may be missing. Run the dev server once to generate them, commit server/db/migrations, and rebuild.`
       )
    }
    return migrations

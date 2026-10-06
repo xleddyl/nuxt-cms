@@ -69,7 +69,7 @@ export default defineEventHandler(async (event) => {
    let where: SQL | undefined
    if (search) {
       const column = titleColumn ?? idColumn(table)
-      where = sql`${column} like ${likePattern(search)} escape '\\'`
+      where = sql`lower(${column}) like ${likePattern(search.toLowerCase())} escape '\\'`
    }
 
    const selection = light
