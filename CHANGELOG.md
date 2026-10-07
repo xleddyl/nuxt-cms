@@ -1,6 +1,18 @@
 # Changelog
 
 
+## v0.4.2
+
+[compare changes](https://github.com/xleddyl/nuxt-cms/compare/v0.4.1...v0.4.2)
+
+### 🩹 Fixes
+
+- Return block subfields as nullable so missing values never drop the whole list ([a249c35](https://github.com/xleddyl/nuxt-cms/commit/a249c35))
+
+### ❤️ Contributors
+
+- Edoardo Alberti <edoalberti99@gmail.com>
+
 ## v0.4.1
 
 [compare changes](https://github.com/xleddyl/nuxt-cms/compare/v0.4.0...v0.4.1)
