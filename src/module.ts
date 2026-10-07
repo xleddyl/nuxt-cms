@@ -653,15 +653,13 @@ export default defineNuxtModule<ModuleOptions>({
                `  schema: '${toPosix(schemaTemplate.dst)}',`,
                `  out: '${toPosix(relativeMigrationsDir)}',`,
                driver === 'postgres'
-                  ? `  dbCredentials: { url: process.env.NUXT_CMS_DATABASE_URL ?? ${JSON.stringify(
-                       databaseUrl
-                    )} },`
+                  ? `  dbCredentials: { url: process.env.NUXT_CMS_DATABASE_URL },`
                   : driver === 'libsql'
-                    ? `  dbCredentials: { url: process.env.NUXT_CMS_DATABASE_URL ?? ${JSON.stringify(
-                         databaseUrl || `file:${toPosix(resolvedDbPath)}`
-                      )}, authToken: (process.env.NUXT_CMS_DATABASE_AUTH_TOKEN ?? ${JSON.stringify(
-                         databaseAuthToken
-                      )}) || undefined },`
+                    ? databaseUrl
+                       ? `  dbCredentials: { url: process.env.NUXT_CMS_DATABASE_URL, authToken: process.env.NUXT_CMS_DATABASE_AUTH_TOKEN || undefined },`
+                       : `  dbCredentials: { url: ${JSON.stringify(
+                            `file:${toPosix(resolvedDbPath)}`
+                         )} },`
                     : driver === 'd1'
                       ? ``
                       : `  dbCredentials: { url: ${JSON.stringify(toPosix(resolvedDbPath))} },`,

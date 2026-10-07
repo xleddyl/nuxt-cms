@@ -182,6 +182,11 @@ against both remote databases and local files. For `d1` the config carries no cr
 database is only reachable through a Worker binding), so it drives `drizzle-kit generate` but not
 Studio.
 
+The generated config never contains credentials. For `postgres` and for a remote `libsql` database
+it reads `NUXT_CMS_DATABASE_URL` and `NUXT_CMS_DATABASE_AUTH_TOKEN` from the environment of the
+`drizzle-kit` process, with no fallback to the values in `nuxt.config.ts`, so set them before you run
+Studio, `push` or `migrate`. A local SQLite or libSQL file is written as its path.
+
 ## Switching drivers
 
 Changing `driver` switches dialect and migration folder together. After switching, re-run
