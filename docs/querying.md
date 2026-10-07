@@ -4,17 +4,17 @@ Content is read through a **public, read-only GraphQL API** at `POST /api/cms/gr
 Auto-imported composables wrap it.
 
 ```ts
-// one entry, query and types generated from cms.config.ts — no query string to write
+// one entry, query and types generated from cms.config.ts: no query string to write
 const { data } = await useCmsSingle('homepage', { locale })
 const { data } = await useCmsCollection('events', { sort: [{ field: 'date' }], limit: 10 })
 const { data } = await useCmsPage('/about', { locale })
 const { data } = await useCmsContents('news', { limit: 10, locale })
 const { data } = await useCmsContent('news', slug, { locale })
 
-// reactive, SSR-friendly (wraps useAsyncData) — use in components/pages
+// reactive, SSR-friendly (wraps useAsyncData): use in components/pages
 const { data, error, refresh } = useCms(`{ ... }`, variables?, options?)
 
-// plain promise — use in event handlers or server-side logic
+// plain promise: use in event handlers or server-side logic
 const result = await $cmsQuery(`{ ... }`, variables?)
 ```
 
@@ -255,6 +255,10 @@ const { data } = useCms(`query ($cat: String!) {
 - Relations resolve nested entries (localized with the parent's `locale`). A required many-to-one
   pointing to a drafted (unpublished) entry can still resolve to `null`.
 - Query nesting depth is capped by `cms.graphql.maxDepth` (default 8); deeper queries are rejected.
+- A query can select at most 500 fields. This limit is fixed.
+- Introspection works only in development, where GraphiQL is on. In production an introspection
+  query returns the error `Introspection is disabled`.
+- `createdAt` and `updatedAt` are ISO 8601 UTC strings (`2026-05-01T08:30:00.000Z`) on every driver.
 - **SSR and hydration:** `useCms` queries must be awaited at the top level of `<script setup>` (or inside `await definePageMeta()` lifecycle) to ship server-rendered data to the client. Without awaiting, the page loads without the data until hydration:
   ```ts
   const { data } = await useCms(`{ ... }`)

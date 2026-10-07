@@ -22,9 +22,9 @@ export default defineCmsConfig({
 
 ## Entries
 
-- **`collection`** — many rows, with list + detail + count queries.
-- **`single`** — one document, with a single query.
-- **`page`** — one row per route of the app, with a list query and a query by path. See
+- **`collection`**: many rows, with list + detail + count queries.
+- **`single`**: one document, with a single query.
+- **`page`**: one row per route of the app, with a list query and a query by path. See
   [Pages](#pages).
 - **`content`**: one entry per content type (news, blog, ...). Each item has system fields (title,
   slug, excerpt, cover, publish date, SEO) and a body made of blocks, with drafts and scheduled
@@ -35,8 +35,8 @@ export default defineCmsConfig({
   relation cell shows the target's title instead of its id). It must be a `text`, `slug`, `email`,
   `number`, `date` or single `select` field, and it is the field the admin search matches on.
 - `drafts: true` (collections only) adds a draft/published status. **The public GraphQL API returns
-  published rows only** — drafts are invisible to it.
-- `id`, `createdAt` (collections only) and `updatedAt` are managed automatically — never declare
+  published rows only**: drafts are invisible to it.
+- `id`, `createdAt` (collections only) and `updatedAt` are managed automatically: never declare
   them as fields. Row ids are opaque strings.
 
 The GraphQL type name is the PascalCase of the entry key (`blog_posts` → `BlogPosts`).
@@ -315,13 +315,13 @@ Every field has `label: string` and optional `required?: boolean` and `private?:
 | `text`     | `textarea?: boolean`, `translatable?: boolean`                                      | String              |
 | `richtext` | `translatable?: boolean`                                                            | String (HTML)       |
 | `number`   | `integer?: boolean`                                                                 | Float / Int         |
-| `boolean`  | —                                                                                   | Boolean             |
-| `date`     | —                                                                                   | String `yyyy-mm-dd` |
+| `boolean`  | none                                                                               | Boolean             |
+| `date`     | none                                                                               | String `yyyy-mm-dd` |
 | `datetime` | none                                                                                | String, ISO 8601 UTC |
-| `email`    | —                                                                                   | String              |
+| `email`    | none                                                                               | String              |
 | `slug`     | `from: '<fieldKey>'` (required; auto-generated from that text field)                | String (unique)     |
 | `select`   | `options: string[]` (required, unique), `multiple?: boolean`                        | String (enum) or `[String!]!` |
-| `json`     | —                                                                                   | JSON                |
+| `json`     | none                                                                               | JSON                |
 | `media`    | `mediaType?: T \| T[]` where `T` is `'image' \| 'video' \| 'file'`, `accept?: string[]`, `translatable?: boolean`, `mobile?: boolean` | CmsMedia object     |
 | `relation` | see [Relations](#relations)                                                         | related entry / list |
 | `blocks`   | `blocks: Record<name, { label, fields }>` (required)                                | array of typed blocks |
@@ -370,7 +370,7 @@ category: {
 
 ## Blocks
 
-A `blocks` field is an ordered list of typed content blocks — good for page builders.
+A `blocks` field is an ordered list of typed content blocks, for page builders.
 
 ```ts
 body: {
@@ -389,7 +389,7 @@ body: {
 ```
 
 Block fields accept every field type **except** `slug`, `relation`, `blocks`, and multi-select
-(`select` with `multiple: true`). They can be `translatable` (see below) but not `private` — mark the
+(`select` with `multiple: true`). They can be `translatable` (see below) but not `private`: mark the
 whole `blocks` field private instead.
 `required` inside a block is an admin and save-time rule: the API and the generated types always
 return block fields as nullable, since stored items can predate a field or its `required` flag.
@@ -459,7 +459,7 @@ answers: {
 The per-locale values live inside the block's JSON, so the column shape does not change and **adding
 `translatable: true` to an existing block field needs no migration**: blocks that still hold a plain
 value keep working and are read as the default locale's value. The query shape does not change
-either — the field still resolves to a single `String` (or `CmsMedia`) for the requested `locale`.
+either: the field still resolves to a single `String` (or `CmsMedia`) for the requested `locale`.
 
 In the admin panel the locale switcher appears next to the `blocks` field label and applies to every
 translatable sub-field of every block at once, so a whole list can be translated in one pass.
@@ -554,7 +554,7 @@ to it.
 
 ## Conditional fields
 
-`showIf` hides a field in the admin editor until another field of the same entry has a given value —
+`showIf` hides a field in the admin editor until another field of the same entry has a given value. This is
 useful when one `select` decides which of the remaining fields are meaningful.
 
 ```ts
@@ -566,15 +566,15 @@ photo: { label: 'Photo', type: 'media', showIf: { field: 'type', eq: 'image' } }
 - Use `eq` for a single value or `in` for a list; pass an **array of conditions** to require all of
   them (AND).
 - **Only the admin editor is affected.** The GraphQL schema, the database column and the query shape
-  are unchanged — a condition cannot make a column conditional.
+  are unchanged: a condition cannot make a column conditional.
 - A hidden field **keeps the value it already has**; it is not cleared on save, so toggling the
   controlling field back and forth does not lose work.
 - On a conditional field, `required` means **"required while visible"**: it is enforced by the admin
   form only. The column stays nullable and the GraphQL field stays optional, because two fields
-  belonging to opposite branches can never both be filled — a `NOT NULL` on either would make every
+  belonging to opposite branches can never both be filled, and a `NOT NULL` on either would make every
   entry unsavable. Treat a conditional field as optional when you read it.
 - The condition may point at a `select`, `boolean`, `text`, `number`, `date`, `email` or `slug`
-  field — not at `blocks`, `relation`, `media`, `json`, multi-select or translatable fields, whose
+  field. It cannot point at `blocks`, `relation`, `media`, `json`, multi-select or translatable fields, whose
   values have no single comparable form.
 - When the target is a `select`, the referenced values are checked against its `options` at build
   time, so a typo fails the build instead of silently hiding the field forever.
@@ -583,7 +583,7 @@ photo: { label: 'Photo', type: 'media', showIf: { field: 'type', eq: 'image' } }
 ## Private fields
 
 `private: true` keeps a field out of the **public GraphQL API**. The column is still created, the
-field is still editable in the admin panel and its value is still stored — it is simply never
+field is still editable in the admin panel and its value is still stored. It is simply never
 published: it is absent from the entry type, from the filters input and from the sort enum, so it
 cannot be selected, filtered or sorted on, and introspection does not reveal it. It is also omitted
 from the generated `#cms-types` interfaces, which describe the API shape.
@@ -611,8 +611,8 @@ a translatable media field a JSON map of locale → key), not the resolved Graph
 
 ## Translatable fields
 
-`translatable: true` is supported on `text`, `richtext` and `media` — both as top-level fields and
-[inside blocks](#translatable-block-fields) — and requires `cms.i18n.locales` to be configured. Values are stored per locale and resolved to a single value at query time via the
+`translatable: true` is supported on `text`, `richtext` and `media`, as top-level fields and
+[inside blocks](#translatable-block-fields). It requires `cms.i18n.locales` to be configured. Values are stored per locale and resolved to a single value at query time via the
 `locale` argument (falling back to `defaultLocale` when a translation is missing). Translatable
 fields are **excluded from filtering and sorting**.
 
@@ -711,9 +711,9 @@ export default defineCmsConfig({
 
 ## Validation rules (highlights)
 
-- Entry keys and field keys must be valid identifiers; some names are reserved (`admin`, `auth`,
-  `login`, `media`, `graphql`, …) and so are the automatic columns (`id`, `status`, `created_at`,
-  `updated_at`).
+- Entry keys and field keys must be valid identifiers. The reserved entry names are `admin`,
+  `auth`, `login`, `media`, `graphql`, `settings`, `cms_media`, `cms_settings` and `cms_users`. The
+  automatic columns (`id`, `status`, `created_at`, `updated_at`) are reserved field names.
 - `drafts` is only valid on collections; content entries always have drafts and do not take the
   option.
 - A content entry needs a non-empty `blocks` map and cannot declare a system field, `titleField`,
@@ -721,7 +721,7 @@ export default defineCmsConfig({
 - A block `component` must be a non-empty string naming a registered Nuxt component; `icon` must be
   a non-empty string.
 - `titleField` is required on collections, must reference a declared field, and that field must be a
-  `text`, `slug`, `email`, `number`, `date` or single `select`.
+  `text`, `slug`, `email`, `number`, `date`, `datetime` or single `select`.
 - `select` needs a non-empty array of unique `options`.
 - Multi-select (`select` with `multiple: true`) is not allowed inside `blocks` and is excluded from filters and sorting.
 - `translatable` is only valid on `text`, `richtext` and `media`, at the top level or inside a block, and requires `cms.i18n.locales`. The `blocks` field itself cannot be translatable.

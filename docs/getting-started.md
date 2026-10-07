@@ -43,7 +43,7 @@ libSQL/Turso and Cloudflare D1.
 
 ## 3. Set the required environment variables
 
-The admin login is a single account read from env, and production sessions need an encryption key:
+The env credentials sign in as the super admin, who can add more admin accounts in the panel. Production sessions need an encryption key:
 
 ```bash
 NUXT_CMS_ADMIN_EMAIL=admin@example.com

@@ -1,7 +1,7 @@
 # Admin panel & security
 
-The admin panel is served by the same Nitro server, under `/cms`. It is a single-admin application:
-one account, read from environment variables.
+The admin panel is served by the same Nitro server, under `/cms`. The super admin signs in with
+the credentials from the environment variables. The super admin can add more admin accounts.
 
 The brand shown in the sidebar, the mobile bar and the login page (logo, title, subtitle) is set
 with `cms.admin.logo`, `cms.admin.title` and `cms.admin.subtitle`, see
@@ -178,24 +178,28 @@ route middleware).
   in Nitro's `useStorage()` under `cms:login-rate`, which defaults to an in-memory driver: with more
   than one instance the limit is enforced per instance unless you mount a shared driver. See
   [Deployment → Horizontal scaling](deployment.md#horizontal-scaling).
+- The count of failed attempts also resets 5 minutes after the first failure. A successful login
+  clears the counters.
 
 ## Sessions
 
 Sessions are encrypted cookies. In **production** the module refuses to boot unless
-`NUXT_SESSION_PASSWORD` is set to at least 32 characters — set a strong random value:
+`NUXT_SESSION_PASSWORD` is set to at least 32 characters. Set a strong random value:
 
 ```bash
 NUXT_SESSION_PASSWORD=$(openssl rand -base64 32)
 ```
 
 The admin panel manages entries and media through its own authenticated, same-origin API. That API
-is internal to the panel — your frontend reads content through the public
+is internal to the panel: your frontend reads content through the public
 [GraphQL API](querying.md), never through the admin endpoints.
 
 ## Security summary
 
-- Single admin account from env; timing-safe credential check.
+- A super admin from env, plus admin accounts in `cms_users` (scrypt hashes). The credential check
+  is timing-safe.
 - Encrypted session cookies; production requires `NUXT_SESSION_PASSWORD` (≥ 32 chars).
-- Login rate limiting (per-IP and global).
+- Login rate limiting: per IP and per email, 5 failures lock the login for 5 minutes.
 - Admin mutations require a same-origin request.
-- The public GraphQL API is read-only and never exposes draft entries.
+- The public GraphQL API is read-only and never exposes draft entries. Introspection works only
+  in development.

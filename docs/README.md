@@ -7,14 +7,19 @@ deploy.
 
 ## Table of contents
 
-1. [Getting started](getting-started.md) — install, configure, first content type, run.
-2. [Configuration](configuration.md) — every `cms.*` option and the `NUXT_CMS_*` env vars.
-3. [Database](database.md) — SQLite, Postgres, libSQL/Turso and D1 drivers, migrations, studio.
-4. [Schema](schema.md) — `defineCmsConfig`, entries, field types, relations, blocks, i18n.
-5. [Querying content](querying.md) — GraphQL API, `useCms` / `$cmsQuery`, filters, sorting, pagination.
-6. [Admin panel & security](admin.md) — pages, authentication, sessions, admin REST API.
-7. [Media](media.md) — S3-compatible storage or file-backed local mode, upload flow, allowed file types.
-8. [Deployment](deployment.md) — host/driver matrix, migrations on serverless, horizontal scaling, Cloudflare Workers.
+1. [Getting started](getting-started.md): install, configure, first content type, run.
+2. [Configuration](configuration.md): every `cms.*` option and the `NUXT_CMS_*` env vars.
+3. [Database](database.md): SQLite, Postgres, libSQL/Turso and D1 drivers, migrations, studio.
+4. [Schema](schema.md): `defineCmsConfig`, entry kinds (collection, single, page, content), field
+   types, relations, blocks, i18n, form layout.
+5. [Querying content](querying.md): GraphQL API, `useCms*` composables, `<CmsBlocks>`, filters,
+   sorting, pagination.
+6. [Admin panel & security](admin.md): admin pages, search, visual editor, settings, admin
+   accounts, sessions.
+7. [Media](media.md): S3-compatible storage, filesystem storage or local mode, upload flow,
+   allowed file types.
+8. [Deployment](deployment.md): host and driver matrix, migrations on serverless, horizontal
+   scaling, Cloudflare Workers.
 
 ## How it works in one paragraph
 

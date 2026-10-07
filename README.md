@@ -4,131 +4,109 @@
 [![CI](https://github.com/xleddyl/nuxt-cms/actions/workflows/ci.yml/badge.svg)](https://github.com/xleddyl/nuxt-cms/actions/workflows/ci.yml)
 [![license](https://img.shields.io/npm/l/%40xleddyl%2Fnuxt-cms)](LICENSE)
 
-nuxt-cms is a Nuxt module that leverages the Nitro server to ship a lightweight CMS together with your Nuxt frontend, no external CMS, no second service to deploy, nothing extra to pay for. Content lives next to the code that renders it: you define content types in code, editors manage entries from a built-in admin panel, and the same server that serves your site serves your content.
+nuxt-cms is a Nuxt module that adds a CMS to your Nuxt app. The CMS runs in the Nitro server of the app. You deploy one app, with no external CMS service.
 
-- **Zero extra infrastructure**: the CMS runs inside your app's Nitro server; you deploy one thing.
-- **Content types in code**: a `cms.config.ts` with `defineCmsConfig()` declares collections, single documents, relations, blocks and translatable fields; database schema, migrations and TypeScript types are generated from it.
-- **Content with blocks**: news, blog and other content types with title, slug, cover, SEO fields and a body built from your own site components, drafts and scheduled publishing; `<CmsBlocks>` renders the body with typed props.
-- **Visual editor**: content items (and any blocks field built from site components) are edited on a live preview of your own site, with drag and drop, a block palette, per-locale and mobile previews, scheduling and publishing.
-- **Admin panel at `/cms`**: entry editing with validation, drafts, media library with one-click download of the original file (S3-compatible storage, a directory on the server's disk, or a local mode backed directly by your `public/` folder), a global search (⌘K / Ctrl K) over labels and every stored value in all locales, single-admin auth from env credentials.
-- **Public GraphQL API**: read-only, typed end-to-end via gql.tada, with filtering, sorting and pagination; fields marked `private` stay out of it.
-- **SQLite, Postgres, libSQL/Turso or Cloudflare D1**: a local file database by default, one config line to switch (including remote SQLite over the network).
-- **Runs on serverless too**: migrations are baked into the server bundle, uploads are presigned straight to your bucket, sessions are sealed cookies. Nothing on the request path needs a local disk or sticky instances.
+![Visual editor](docs/screenshots/visual-editor.png)
+
+## Features
+
+- **Content types in code.** You declare collections, singles, pages and content types (news, blog) in `cms.config.ts`. The module generates the database schema, the migrations and the TypeScript types.
+- **Admin panel at `/cms`.** Editors manage entries, drafts and media. The panel has a light and a dark theme, a global search (⌘K) and admin accounts.
+- **Visual editor.** Editors build content from your own site components, on a live preview of the site.
+- **GraphQL API.** A read-only, typed API with filters, sorting and pagination. Composables such as `useCmsCollection` and `useCmsContent` query it for you.
+- **Your database.** SQLite (default), Postgres, libSQL/Turso or Cloudflare D1.
+- **Your storage.** S3-compatible storage, a folder on the server disk, or your `public/` folder.
+- **Serverless ready.** The build puts the migrations in the server bundle. Uploads go directly to the bucket. Sessions are sealed cookies.
 
 ## Screenshots
 
-![Collection view](docs/screenshots/collection.png)
+| Collection | Entry editor |
+| --- | --- |
+| ![Collection](docs/screenshots/collection.png) | ![Entry editor](docs/screenshots/entry.png) |
+| **Media library** | **Search** |
+| ![Media library](docs/screenshots/media.png) | ![Search](docs/screenshots/search.png) |
 
-![Entry editor](docs/screenshots/entry.png)
+## Quick start
 
-![Media library](docs/screenshots/media.png)
+1. Install the module:
 
-## Installation
+   ```bash
+   npm install @xleddyl/nuxt-cms
+   ```
 
-```bash
-npm install @xleddyl/nuxt-cms
-```
+2. Add the module to `nuxt.config.ts`:
 
-Register the module and configure it under the `cms` key in `nuxt.config.ts`:
+   ```ts
+   export default defineNuxtConfig({
+      modules: ['@xleddyl/nuxt-cms'],
+   })
+   ```
 
-```ts
-export default defineNuxtConfig({
-   modules: ['@xleddyl/nuxt-cms'],
-   cms: {
-      i18n: {
-         locales: ['en', 'it'],
-         defaultLocale: 'en',
+3. Declare your content types in `cms.config.ts`, at the project root:
+
+   ```ts
+   import { defineCmsConfig } from '#nuxt-cms'
+
+   export default defineCmsConfig({
+      events: {
+         id: 'events',
+         label: 'Events',
+         kind: 'collection',
+         titleField: 'title',
+         fields: {
+            title: { label: 'Title', type: 'text', required: true },
+            date: { label: 'Date', type: 'date' },
+            poster: { label: 'Poster', type: 'media', mediaType: 'image' },
+         },
       },
-   },
-})
-```
+   })
+   ```
 
-`database` defaults to SQLite (`{ driver: 'sqlite', path: 'data/cms.db' }`) and can be omitted
-entirely. Switch it to `{ driver: 'postgres', url: '...' }`,
-`{ driver: 'libsql', url: '...', authToken: '...' }` (Turso/remote) or
-`{ driver: 'd1', binding: 'DB' }` (Cloudflare Workers); see
-[Configuration](docs/configuration.md) for every option and
-[Deployment](docs/deployment.md) for which driver each host supports.
+4. Set the admin credentials in `.env`:
 
-Each driver brings its own client, and only the one you use has to be installed: SQLite works out of
-the box, `postgres` needs `pg`, `libsql` needs `@libsql/client`, and `d1` needs nothing extra. The
-build stops with an explicit message if the client for the configured driver is missing.
+   ```bash
+   NUXT_CMS_ADMIN_EMAIL=admin@example.com
+   NUXT_CMS_ADMIN_PASSWORD=change-me
+   NUXT_SESSION_PASSWORD=a-random-secret-of-at-least-32-characters
+   ```
 
-Then declare your content types in a `cms.config.ts` at the project root with `defineCmsConfig()`.
+5. Start the app with `npm run dev`. Open `http://localhost:3000/cms` and sign in.
 
-### Admin branding
+6. Read the content in a page:
 
-`cms.admin.title`, `cms.admin.subtitle` and `cms.admin.logo` replace the name, the tagline and the
-mark in the admin sidebar, mobile bar and login page. `logo` takes a URL or public path, a path to
-an `.svg` file in the project (inlined, so it follows the light and dark theme) or raw `<svg>`
-markup; see [Configuration](docs/configuration.md#admin-branding).
+   ```vue
+   <script setup lang="ts">
+   const { data: events } = await useCmsCollection('events', { sort: [{ field: 'date' }] })
+   </script>
+   ```
 
-### Disabling the CMS
-
-Keep the module in `modules[]` at all times and turn it off with the `enabled` option or the
-`NUXT_CMS_ENABLED` env var. When disabled the module registers no-op query composables and keeps the
-generated types, and nothing else, so components can call them unconditionally and simply render
-their empty states:
-
-```ts
-export default defineNuxtConfig({
-   modules: ['@xleddyl/nuxt-cms'],
-   cms: { enabled: false },
-})
-```
-
-See [Configuration](docs/configuration.md#enabled) for the resolution order.
-
-### Environment variables
-
-Every secret maps to runtime config, so it can be set as an env var instead of in `nuxt.config.ts`:
-
-| Variable | Required | Purpose |
-| --- | --- | --- |
-| `NUXT_CMS_ENABLED` | no | set to `0` / `false` to disable the CMS (default enabled) |
-| `NUXT_CMS_ADMIN_EMAIL` | yes | admin login email |
-| `NUXT_CMS_ADMIN_PASSWORD` | yes | admin login password |
-| `NUXT_SESSION_PASSWORD` | in production | session encryption key (32+ chars) |
-| `NUXT_CMS_DATABASE_URL` | with `postgres` / remote `libsql` | Postgres connection string or libSQL URL |
-| `NUXT_CMS_DATABASE_AUTH_TOKEN` | with remote `libsql` | libSQL/Turso auth token |
-| `NUXT_CMS_MIGRATE_ON_BOOT` | no | `false` to apply migrations in CI instead of on boot |
-| `NUXT_CMS_MEDIA_ENDPOINT` | for media | S3-compatible endpoint |
-| `NUXT_CMS_MEDIA_REGION` | for media | S3 region (default `auto`) |
-| `NUXT_CMS_MEDIA_BUCKET` | for media | bucket name |
-| `NUXT_CMS_MEDIA_ACCESS_KEY_ID` | for media | S3 access key id |
-| `NUXT_CMS_MEDIA_SECRET_ACCESS_KEY` | for media | S3 secret access key |
-| `NUXT_PUBLIC_CMS_MEDIA_BASE_URL` | for media | public base URL for uploaded files |
-| `NUXT_CMS_MEDIA_DIR` | for filesystem media | directory for uploaded files (default `data/media`) |
+The database is a local SQLite file (`data/cms.db`) by default. To use a different database or media storage, see [Configuration](docs/configuration.md).
 
 ## Documentation
 
-Full documentation lives in [`docs/`](docs/README.md):
+| Page | Content |
+| --- | --- |
+| [Getting started](docs/getting-started.md) | Install, configure, first content type, run |
+| [Configuration](docs/configuration.md) | Every `cms.*` option and every env var |
+| [Database](docs/database.md) | Drivers, migrations, Drizzle Studio |
+| [Schema](docs/schema.md) | Entry kinds, field types, relations, blocks, i18n, form layout |
+| [Querying content](docs/querying.md) | GraphQL API, composables, `<CmsBlocks>` |
+| [Admin panel & security](docs/admin.md) | Admin pages, search, visual editor, accounts, sessions |
+| [Media](docs/media.md) | Storage modes, uploads, allowed file types |
+| [Deployment](docs/deployment.md) | Hosts, migrations on serverless, scaling |
 
-- [Getting started](docs/getting-started.md) — install, configure, first content type, run.
-- [Configuration](docs/configuration.md) — every `cms.*` option and the `NUXT_CMS_*` env vars.
-- [Database](docs/database.md) — SQLite, Postgres, libSQL/Turso and D1 drivers, migrations, studio.
-- [Schema](docs/schema.md) — `defineCmsConfig`, entries, pages, field types, relations, blocks, i18n.
-- [Querying content](docs/querying.md) — GraphQL API, `useCmsSingle` / `useCmsCollection` / `useCmsPage` / `useCmsContents` / `useCmsContent` / `useCms` / `$cmsQuery`, `<CmsBlocks>`, filters, sorting, pagination.
-- [Admin panel & security](docs/admin.md) — pages, authentication, sessions, admin REST API.
-- [Media](docs/media.md) — S3-compatible storage, filesystem storage on the server's disk, or local mode backed by your `public/` folder, upload flow, allowed file types.
-- [Deployment](docs/deployment.md) — host/driver matrix, migrations on serverless, horizontal scaling, Cloudflare Workers.
-
-## LLM guide
-
-[llm.txt](llm.txt) is a compact reference meant to be fed to an LLM: schema definition (`cms.config.ts`, field types, relations, blocks, i18n), the `useCms` / `$cmsQuery` composables and the generated GraphQL API (filters, sorting, pagination).
+[llm.txt](llm.txt) is a compact reference for LLMs: schema, composables and GraphQL API.
 
 ## Development
 
 ```bash
 pnpm install
-pnpm dev:prepare  # module stub + playground prepare (first time and after module.ts changes)
-pnpm dev          # playground on http://localhost:3000 (generates + applies migrations on boot)
-pnpm db:studio    # drizzle studio
+pnpm dev:prepare   # first time, and after a change to src/module.ts
+pnpm dev           # playground on http://localhost:3000
+pnpm test
 ```
 
-## Configuration
-
-All config lives under `cms` in `nuxt.config.ts` (see `ModuleOptions` in `src/module.ts`); secrets map to runtime config, so they can be provided as `NUXT_CMS_*` env vars instead (plus `NUXT_SESSION_PASSWORD` for sessions in production). `cms.database.driver: 'postgres'` switches driver, drizzle dialect and migration folder together; re-run `dev:prepare` after switching.
+The playground (`playground/`) uses every option of the module. Copy `playground/.env.example` to `playground/.env` before the first start.
 
 ## License
 

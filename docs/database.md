@@ -6,7 +6,7 @@ client, the Drizzle dialect, the migration folder (`server/db/migrations/<driver
 generated `drizzle.config.ts` together.
 
 Four drivers are supported: **`sqlite`** (default), **`postgres`**, **`libsql`** (SQLite over
-the network — Turso or a self-hosted `sqld`, or a local file), and **`d1`** (Cloudflare D1).
+the network: Turso or a self-hosted `sqld`, or a local file), and **`d1`** (Cloudflare D1).
 
 Only the client package for the driver you pick has to be installed. `better-sqlite3` is an optional
 dependency and comes along by default; `pg` and `@libsql/client` are optional peer dependencies you

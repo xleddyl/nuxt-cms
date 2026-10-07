@@ -142,7 +142,7 @@ Only the client package for the driver you pick has to be installed (`pg` for `p
 S3-compatible object storage for the media library by default (`storage: 's3'`). When it is not
 configured, media endpoints return `501` and media fields simply cannot be uploaded to. Set
 `storage: 'local'` to back the media library with files served from `publicBaseUrl`
-by the host app instead of a bucket — no S3 config needed. In that mode a root-relative
+by the host app instead of a bucket, with no S3 config. In that mode a root-relative
 `publicBaseUrl` (e.g. `/images` → `<rootDir>/public/images`) also selects the folder the library is
 read from: live from disk wherever that folder exists, otherwise from a manifest baked at build
 time. Nothing is written back to the database. `maxFileSize` caps a single upload in bytes
@@ -209,18 +209,22 @@ Secrets should be provided as env vars rather than committed to `nuxt.config.ts`
 
 | Variable | Required | Purpose |
 | --- | --- | --- |
+| `NUXT_CMS_ENABLED` | no | set to `0` or `false` to disable the CMS (default enabled) |
 | `NUXT_CMS_ADMIN_EMAIL` | yes | admin login email |
 | `NUXT_CMS_ADMIN_PASSWORD` | yes | admin login password |
 | `NUXT_SESSION_PASSWORD` | in production | session encryption key (min 32 chars) |
 | `NUXT_CMS_DATABASE_URL` | with `postgres`, or remote `libsql` | connection string / libSQL URL |
 | `NUXT_CMS_DATABASE_AUTH_TOKEN` | with remote `libsql` | libSQL/Turso auth token |
 | `NUXT_CMS_MIGRATE_ON_BOOT` | no | set to `false` to apply migrations in CI instead of on boot |
+| `NUXT_CMS_D1_BINDING` | no | name of the D1 binding (default `DB`) |
+| `NUXT_CMS_GRAPHQL_MAX_DEPTH` | no | maximum GraphQL query depth (default `8`) |
 | `NUXT_CMS_POOL_MAX` | no | max Postgres pool connections per instance (`0` = driver default) |
 | `NUXT_CMS_MEDIA_ENDPOINT` | for media | S3-compatible endpoint |
 | `NUXT_CMS_MEDIA_REGION` | for media | S3 region (default `auto`) |
 | `NUXT_CMS_MEDIA_BUCKET` | for media | bucket name |
 | `NUXT_CMS_MEDIA_ACCESS_KEY_ID` | for media | S3 access key id |
 | `NUXT_CMS_MEDIA_SECRET_ACCESS_KEY` | for media | S3 secret access key |
+| `NUXT_CMS_MEDIA_PRESIGN_EXPIRY` | no | seconds a presigned upload URL stays valid (default `600`) |
 | `NUXT_CMS_MEDIA_MAX_FILE_SIZE` | no | max upload size in bytes (default `10485760`), enforced by the server |
 | `NUXT_PUBLIC_CMS_MEDIA_MAX_FILE_SIZE` | no | same limit, checked by the admin client; set it to the same value as `NUXT_CMS_MEDIA_MAX_FILE_SIZE` |
 | `NUXT_CMS_MEDIA_DIR` | for filesystem media | directory for uploaded files (default `data/media`) |
@@ -229,6 +233,9 @@ Secrets should be provided as env vars rather than committed to `nuxt.config.ts`
 Env vars follow Nuxt's runtime-config convention: `cms.admin.email` ← `NUXT_CMS_ADMIN_EMAIL`,
 `cms.database.url` ← `NUXT_CMS_DATABASE_URL`, and so on. Values set via env override the ones in
 `nuxt.config.ts` at runtime.
+
+`cms.admin.title`, `cms.admin.subtitle` and `cms.admin.logo` have no env var. The build writes them
+into the admin, so a change needs a new build.
 
 > **Production:** the module refuses to boot without a valid `NUXT_SESSION_PASSWORD` (≥ 32
 > characters). See [Admin panel & security](admin.md#sessions).

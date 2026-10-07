@@ -3,10 +3,10 @@
 Media (images, video, documents) can be stored three ways, selected with `cms.media.storage`
 (default `'s3'`):
 
-- **`'s3'`** — **S3-compatible object storage**: AWS S3, Cloudflare R2, MinIO, Backblaze B2, and
+- **`'s3'`**: **S3-compatible object storage**, such as AWS S3, Cloudflare R2, MinIO, Backblaze B2, and
   similar. The database stores only metadata; the files live in your bucket. When media is not
   configured, media endpoints return `501` and `media` fields cannot be uploaded to.
-- **`'local'`** — the files in your `public/` folder **are** the library: no bucket, no credentials,
+- **`'local'`**: the files in your `public/` folder **are** the library: no bucket, no credentials,
   no uploads. Only alt text is editable. Files
   are expected to already live wherever `publicBaseUrl` points (e.g. your app's own `public/`
   directory, or any URL you serve yourself). When `publicBaseUrl` is a root-relative path, the
@@ -49,19 +49,19 @@ NUXT_CMS_MEDIA_MAX_FILE_SIZE=52428800
 NUXT_PUBLIC_CMS_MEDIA_MAX_FILE_SIZE=52428800
 ```
 
-- **`storage`** — `'s3'` (default) enables uploads against object storage; `'local'` turns the
+- **`storage`**: `'s3'` (default) enables uploads against object storage; `'local'` turns the
   media library file-backed, listing the folder `publicBaseUrl` points to, and
   does not accept the S3 keys at all (`endpoint` / `bucket` / `accessKeyId` / `secretAccessKey` are
   rejected at the type level in `'local'` mode, and `publicBaseUrl` is required there).
-- **`endpoint` / `bucket` / `accessKeyId` / `secretAccessKey`** — S3 connection, required when
+- **`endpoint` / `bucket` / `accessKeyId` / `secretAccessKey`**: S3 connection, required when
   `storage` is `'s3'`.
-- **`publicBaseUrl`** (`NUXT_PUBLIC_CMS_MEDIA_BASE_URL`) — the public base URL prepended to object
+- **`publicBaseUrl`** (`NUXT_PUBLIC_CMS_MEDIA_BASE_URL`): the public base URL prepended to object
   keys to build the URL returned in queries. Point it at your bucket's public domain or CDN in
   `'s3'` mode, or at wherever your host app serves the files from in `'local'` mode. A root-relative
   value (`/images`) in `'local'` mode also selects the folder the library is read from
   (`<rootDir>/public/images`).
-- **`region`** — S3 region (default `auto`, which suits R2). Unused in `'local'` mode.
-- **`presignExpiry`** — how many seconds a presigned upload URL stays valid (default 600). Unused
+- **`region`**: S3 region (default `auto`, which suits R2). Unused in `'local'` mode.
+- **`presignExpiry`**: how many seconds a presigned upload URL stays valid (default 600). Unused
   in `'local'` mode.
 - **`maxFileSize`** (`NUXT_CMS_MEDIA_MAX_FILE_SIZE`): the largest single upload accepted, in bytes
   (default `10485760`, i.e. 10 MB). Must be a positive integer. The admin panel checks it before
@@ -90,7 +90,7 @@ reconciles, and there is no background job that can disagree with what is on dis
 app's public directory (`<rootDir>/public/images`). The list is then resolved in this order:
 
 1. **the folder on disk**, whenever it exists (dev, and any deploy that ships the source tree). Read
-   live, with a one-second cache, so adding a file and refreshing the page is enough — no restart.
+   live, with a one-second cache, so adding a file and refreshing the page is enough, with no restart.
 2. **the build manifest**, otherwise. At build time the module scans the folder and bakes the result
    into the server bundle as `cms/media-manifest.js` (key, folder, mime, size, width, height, plus
    the build timestamp).
@@ -134,7 +134,7 @@ Consequences worth knowing:
 - Dev sees a new file immediately; production sees it after a deploy. This divergence is by design
   and is surfaced in the UI rather than papered over.
 - An `alt` whose file is later removed stays in the table as a harmless orphan, and reattaches by
-  itself if the file comes back. **It is never pruned** — pruning against one environment's partial
+  itself if the file comes back. **It is never pruned**: pruning against one environment's partial
   view is exactly the bug described above.
 - If `publicBaseUrl` is an absolute `http(s)` URL, no folder can be resolved and the library is
   empty. The build warns about it.
@@ -185,7 +185,7 @@ through the Nitro server. From the admin panel:
    the browser before the upload: images through `createImageBitmap`, videos from the loaded
    metadata of a detached `<video>` element.
 
-This all happens through the panel's internal, authenticated same-origin API — there is nothing to
+This all happens through the panel's internal, authenticated same-origin API: there is nothing to
 call yourself.
 
 ## Folders and the media library
@@ -206,8 +206,10 @@ levels. In `'s3'` and `'filesystem'` mode you manage the folders from the panel:
   than 4 levels go into the deepest allowed folder.
 - Select files with the round check on a tile, or with Shift, Ctrl or Cmd and a click. The
   selection bar moves or deletes all the selected files.
-- Click a file to open its detail panel: preview, facts, alt text, folder, a **Copy URL** button
-  and the list of entries that use the file.
+- Click a file to open its detail panel: preview, facts, alt text, folder, a **Copy URL** button,
+  a **Download** button and the list of entries that use the file, with links to them.
+- Each tile and each list row shows how many entries use the file, or an "unused" mark.
+- Before you delete a file that entries use, the confirmation lists those entries with links.
 - The search looks in the open folder and its subfolders. **Search all folders** extends it to the
   full library. The search matches the file name, the alt text and the folder.
 - Sort by date, name or size, and switch between the grid and the list view. The panel remembers
@@ -264,7 +266,7 @@ Uploads are restricted by content type:
 
 - **Allowed prefixes:** `image/*`, `video/*`, `audio/*`, `font/*`.
 - **Allowed documents:** PDF, ZIP, GZIP, JSON, plain text, CSV, Markdown, and Microsoft Office
-  formats (Word, Excel, PowerPoint — both legacy and OOXML).
+  formats (Word, Excel, PowerPoint, legacy and OOXML).
 - **Blocked:** `image/svg+xml` (blocked even though it matches `image/*`).
 
 Anything else is rejected with `415 Unsupported content type`, and anything larger than
