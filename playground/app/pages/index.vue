@@ -3,17 +3,17 @@
       <div class="mx-auto flex min-h-screen w-full max-w-5xl flex-col px-6 py-10 sm:py-14">
          <section class="cms-rise" style="animation-delay: 60ms">
             <h1 class="cms-display max-w-3xl text-4xl font-bold text-balance sm:text-6xl">
-               {{ data?.homepage?.heroTitle ?? 'Content, served from your own server' }}
+               {{ home?.heroTitle ?? 'Content, served from your own server' }}
             </h1>
 
             <p class="mt-4 max-w-xl text-base text-(--ui-text-muted) sm:text-lg">
                {{
-                  data?.homepage?.heroSubtitle ??
+                  home?.heroSubtitle ??
                   'Everything on this page is fetched from the CMS GraphQL endpoint.'
                }}
             </p>
-            <p v-if="data?.homepage?.launchDate" class="cms-label mt-6">
-               launching {{ formatDate(data.homepage.launchDate) }}
+            <p v-if="home?.launchDate" class="cms-label mt-6">
+               launching {{ formatDate(home.launchDate) }}
             </p>
          </section>
 
@@ -27,14 +27,18 @@
                </span>
                <span class="cms-label">{{ stat.label }}</span>
             </div>
+            <NuxtLink to="/news" class="cms-label ml-auto">news</NuxtLink>
+            <NuxtLink to="/blog" class="cms-label">blog</NuxtLink>
             <NuxtLink
                to="/cms"
-               class="ml-auto inline-flex items-center gap-2 rounded-lg border border-(--cms-line-strong) px-4 py-1.5 text-sm font-medium text-(--ui-text-highlighted) transition-colors hover:bg-(--ui-bg-elevated)"
+               class="inline-flex items-center gap-2 rounded-lg border border-(--cms-line-strong) px-4 py-1.5 text-sm font-medium text-(--ui-text-highlighted) transition-colors hover:bg-(--ui-bg-elevated)"
             >
                <CmsIcon name="cog-6-tooth" class="size-4" />
                Open admin
             </NuxtLink>
          </section>
+
+         <CmsBlocks :blocks="home?.sections" />
 
          <section class="mt-14 flex-1">
             <h2 class="cms-label cms-rise" style="animation-delay: 180ms">upcoming events</h2>
@@ -46,7 +50,7 @@
             >
                <CmsIcon name="calendar" class="size-6 text-(--ui-text-dimmed)" />
                <p class="text-sm text-(--ui-text-muted)">
-                  No published events yet — create one in the admin and it will show up here.
+                  No published events yet. Create one in the admin and it will show up here.
                </p>
             </div>
 
@@ -129,11 +133,12 @@
 
 <script setup lang="ts">
 const { data } = await useCms(`{
-   homepage { heroTitle heroSubtitle launchDate }
    eventsCount
    categories { id }
    tags { id }
 }`)
+
+const { data: home } = await useCmsSingle('homepage')
 
 const { data: events } = await useCmsCollection('events', { sort: [{ field: 'date' }] })
 

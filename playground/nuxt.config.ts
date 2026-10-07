@@ -9,6 +9,11 @@ export default defineNuxtConfig({
       plugins: [tailwindcss()],
    },
    cms: {
+      admin: {
+         title: 'Lakeside Anglers',
+         subtitle: 'Club editors',
+         logo: '~/assets/logo.svg',
+      },
       database: {
          driver: 'sqlite',
          path: 'data/cms.db',
@@ -21,5 +26,12 @@ export default defineNuxtConfig({
          process.env.PLAYGROUND_MEDIA_STORAGE === 'filesystem'
             ? { storage: 'filesystem' }
             : { storage: 'local', publicBaseUrl: '/images' },
+      graphql: {
+         maxDepth: 8,
+      },
+      preview: {
+         path: '/cms/preview',
+         component: 'NewsArticle',
+      },
    },
 })

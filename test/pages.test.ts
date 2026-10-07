@@ -245,6 +245,7 @@ describe('resolveCmsPages', () => {
       expect(config.pages!.pages!.map((route) => route.path)).toEqual([
          '/',
          '/about',
+         '/blog',
          '/guides',
          '/guides/knots',
          '/news',

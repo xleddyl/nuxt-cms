@@ -40,6 +40,8 @@ export default defineCmsConfig({
       kind: 'page',
       icon: 'window',
       exclude: ['/cms'],
+      include: ['/privacy'],
+      columns: ['title'],
       labels: { '/': 'Home' },
       order: ['/', '/about'],
       tabs: [
@@ -245,6 +247,11 @@ export default defineCmsConfig({
             description: 'Leave it empty for free events.',
          },
          date: { label: 'Date', type: 'date', required: true },
+         doorsOpen: {
+            label: 'Doors open',
+            type: 'datetime',
+            description: 'Stored in UTC, shown in your time zone.',
+         },
          featured: { label: 'Featured', type: 'boolean' },
          visibility: {
             label: 'Visibility',
@@ -262,8 +269,24 @@ export default defineCmsConfig({
             type: 'email',
             showIf: { field: 'visibility', in: ['public', 'members'] },
          },
+         sponsor: {
+            label: 'Sponsor',
+            type: 'text',
+            showIf: [
+               { field: 'featured', eq: true },
+               { field: 'visibility', in: ['public', 'members'] },
+            ],
+            description: 'Shown only on featured events that are not hidden.',
+         },
          category: { label: 'Category', type: 'relation', to: 'categories' },
          tags: { label: 'Tags', type: 'relation', to: 'tags', cardinality: 'many-to-many' },
+         report: {
+            label: 'Report',
+            type: 'relation',
+            to: 'blog',
+            cardinality: 'one-to-one',
+            description: 'The blog post written after the event.',
+         },
          spot: {
             label: 'Spot',
             type: 'relation',
@@ -312,6 +335,26 @@ export default defineCmsConfig({
                      author: { label: 'Author', type: 'text' },
                   },
                },
+               session: {
+                  label: 'Session',
+                  fields: {
+                     title: { label: 'Title', type: 'text', required: true, translatable: true },
+                     notes: { label: 'Notes', type: 'richtext', translatable: true },
+                     day: { label: 'Day', type: 'date' },
+                     startsAt: { label: 'Starts at', type: 'datetime' },
+                     minutes: { label: 'Minutes', type: 'number', integer: true },
+                     fee: { label: 'Fee (EUR)', type: 'number' },
+                     indoor: { label: 'Indoor', type: 'boolean' },
+                     level: {
+                        label: 'Level',
+                        type: 'select',
+                        options: ['beginner', 'intermediate', 'expert'],
+                     },
+                     host: { label: 'Host email', type: 'email' },
+                     handout: { label: 'Handout', type: 'media', mediaType: 'file' },
+                     extra: { label: 'Extra', type: 'json' },
+                  },
+               },
             },
          },
          metadata: {
@@ -333,7 +376,8 @@ export default defineCmsConfig({
          ['title', 'slug'],
          'description',
          ['seats', 'price', 'date'],
-         ['category', 'spot', 'featured'],
+         ['doorsOpen', 'featured', 'sponsor'],
+         ['category', 'spot', 'report'],
          'tags',
          ['visibility', 'contactEmail'],
          'species',
@@ -356,12 +400,66 @@ export default defineCmsConfig({
       kind: 'content',
       icon: 'newspaper',
       blocks: sections,
-      preview: { component: 'NewsArticle' },
       labels: { excerpt: 'Summary' },
       fields: {
          category: { label: 'Category', type: 'relation', to: 'categories' },
          featured: { label: 'Featured', type: 'boolean' },
       },
+   },
+
+   blog: {
+      id: 'blog',
+      label: 'Blog',
+      kind: 'content',
+      icon: 'pencil-square',
+      blocks: sections,
+      preview: { component: 'BlogPost' },
+      labels: { cover: 'Header image', seoTitle: 'Search title' },
+      tabs: [
+         { id: 'content', label: 'Content' },
+         { id: 'meta', label: 'Meta' },
+      ],
+      fields: {
+         author: {
+            label: 'Author',
+            type: 'relation',
+            to: 'authors',
+            required: true,
+            onDelete: 'restrict',
+         },
+         readingTime: { label: 'Reading time (min)', type: 'number', integer: true, tab: 'meta' },
+         tags: {
+            label: 'Tags',
+            type: 'relation',
+            to: 'tags',
+            cardinality: 'many-to-many',
+            tab: 'meta',
+         },
+      },
+      layout: [['title', 'author'], 'excerpt', 'cover'],
+      list: { columns: ['title', 'author', 'status', 'publishedAt'] },
+   },
+
+   authors: {
+      id: 'authors',
+      label: 'Authors',
+      kind: 'collection',
+      icon: 'user-circle',
+      titleField: 'name',
+      fields: {
+         name: { label: 'Name', type: 'text', required: true },
+         email: { label: 'Email', type: 'email' },
+         avatar: {
+            label: 'Avatar',
+            type: 'media',
+            mediaType: 'image',
+            accept: ['image/jpeg', 'image/png'],
+            description: 'JPEG or PNG only.',
+         },
+         bio: { label: 'Bio', type: 'richtext', translatable: true },
+      },
+      layout: [['name', 'email'], 'avatar', 'bio'],
+      list: { columns: ['name', 'email', 'avatar'] },
    },
 
    spots: {
@@ -433,8 +531,15 @@ export default defineCmsConfig({
             options: ['green', 'blue', 'amber', 'rose'],
             description: 'Used for the badge on the site.',
          },
+         parent: {
+            label: 'Parent',
+            type: 'relation',
+            to: 'categories',
+            onDelete: 'cascade',
+            description: 'Deleting the parent also deletes this category.',
+         },
       },
-      layout: [['name', 'color']],
+      layout: [['name', 'color'], 'parent'],
    },
 
    tags: {
