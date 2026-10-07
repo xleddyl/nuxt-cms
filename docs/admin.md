@@ -55,6 +55,31 @@ the form and are saved with it.
 **Bulk actions.** Every row of a collection table has a checkbox. When rows are selected, the
 toolbar shows **Delete** and, on a collection with `drafts`, **Publish** and **Draft**.
 
+## Search
+
+The search box under the title of the sidebar, or ⌘K (Ctrl K on Windows and Linux), opens a search
+dialog. Results appear while you type, from 2 characters on, grouped by entry:
+
+- **Labels** from the config: entries, pages (label or path), tabs, fields, blocks and block
+  fields. A hit opens that entry or page; on a single or on a field of one page it opens the editor
+  on that field.
+- **Values** stored in every entry: collections, singles, content items and pages (page field rows
+  and blocks included), in every language of a translatable field, with a language badge. Text,
+  rich text (matched without its markup), slugs, emails, selects, JSON and the fields of blocks are
+  searched, private fields too, plus the alt texts of the media library. Each hit shows the item,
+  the field and a snippet with the match highlighted.
+
+Up and down move through the results, Enter opens one, Escape or a click outside closes the dialog.
+A hit opens the editor with `?field=`, `locale=` and `block=` in the URL: the editor switches to the
+tab and the language of the field, selects the block in the visual editor, scrolls to the field and
+highlights it.
+
+The dialog reads `GET /api/cms/search?q=`, which needs an admin session like every admin endpoint.
+Matching is a case-insensitive `LIKE` (`%` and `_` in the query are matched literally), with at
+most 10 rows per entry and 50 value hits; type more words to narrow the results. On SQLite, libSQL
+and D1 the case folding only covers ASCII letters, and a phrase that spans formatting in rich text
+(for example a bold word in the middle) is not found as a whole.
+
 ## Visual editor
 
 The visual editor edits a body of blocks on top of the real site. It fills the window:

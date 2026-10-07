@@ -27,6 +27,7 @@
             :drafts="drafts"
             :form-id="FORM_ID"
             :loading="saving"
+            :focus="focus"
             @submit="save"
             @error="revertStatus"
          />
@@ -50,6 +51,7 @@ import {
    watch,
 } from '#imports'
 import cmsConfig from '#cms-config'
+import { readSearchFocus } from '../../shared/search'
 import { useCmsConfirm } from '../composables/cms-confirm'
 import { useCmsToast } from '../composables/cms-toast'
 import { cmsApi } from '../utils/api'
@@ -66,6 +68,7 @@ definePageMeta({
 
 const route = useRoute()
 const toast = useCmsToast()
+const focus = readSearchFocus(route.query)
 
 const name = route.params.collection as string
 const config = (cmsConfig as CmsConfig)[name]

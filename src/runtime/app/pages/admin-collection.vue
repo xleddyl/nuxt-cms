@@ -35,6 +35,7 @@
             :entry-name="name"
             :form-id="FORM_ID"
             :loading="saving"
+            :focus="focus"
             @submit="saveSingle"
          />
       </div>
@@ -220,6 +221,7 @@ import {
    watch,
 } from '#imports'
 import cmsConfig from '#cms-config'
+import { readSearchFocus } from '../../shared/search'
 import { useCmsConfirm } from '../composables/cms-confirm'
 import { useCmsRuntime } from '../composables/cms-runtime'
 import { entryListColumns, useCmsSettingsState } from '../composables/cms-settings'
@@ -238,6 +240,7 @@ const FORM_ID = 'cms-single-form'
 
 const route = useRoute()
 const toast = useCmsToast()
+const focus = readSearchFocus(route.query)
 
 const name = route.params.collection as string
 const config = (cmsConfig as CmsConfig)[name]

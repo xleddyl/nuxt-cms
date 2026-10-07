@@ -13,22 +13,31 @@
             <CmsIcon v-else :name="mediaIconFor(item.type)" class="size-12" />
          </div>
 
-         <div v-if="item.url" class="cms-actions">
-            <CmsButton
-               :label="copied ? 'Copied' : 'Copy URL'"
-               :icon="copied ? 'check' : 'clipboard-document'"
-               variant="soft"
-               color="neutral"
-               size="sm"
-               @click="copyUrl"
-            />
+         <div class="cms-actions">
+            <template v-if="item.url">
+               <CmsButton
+                  :label="copied ? 'Copied' : 'Copy URL'"
+                  :icon="copied ? 'check' : 'clipboard-document'"
+                  variant="soft"
+                  color="neutral"
+                  size="sm"
+                  @click="copyUrl"
+               />
+               <a
+                  :href="item.url"
+                  target="_blank"
+                  rel="noopener"
+                  class="cms-btn cms-btn-sm cms-btn-neutral cms-btn-ghost"
+               >
+                  <CmsIcon name="arrow-top-right-on-square" class="size-4 shrink-0" />Open
+               </a>
+            </template>
             <a
-               :href="item.url"
-               target="_blank"
-               rel="noopener"
+               :href="downloadHref"
+               download
                class="cms-btn cms-btn-sm cms-btn-neutral cms-btn-ghost"
             >
-               <CmsIcon name="arrow-top-right-on-square" class="size-4 shrink-0" />Open
+               <CmsIcon name="arrow-down-tray" class="size-4 shrink-0" />Download
             </a>
          </div>
 
@@ -139,6 +148,10 @@ const dirty = computed(() => {
       (!props.readOnly && folder.value !== (props.item.folder ?? null))
    )
 })
+
+const downloadHref = computed(() =>
+   props.item ? `/api/cms/admin/media/download?key=${encodeURIComponent(props.item.key)}` : ''
+)
 
 const facts = computed(() => {
    const item = props.item

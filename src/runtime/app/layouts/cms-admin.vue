@@ -10,6 +10,8 @@
                </div>
             </div>
 
+            <CmsSearch @open="navOpen = false" />
+
             <nav class="cms-sidebar-nav">
                <div v-for="group in groups" :key="group.title" class="cms-sidebar-group">
                   <div class="cms-label">

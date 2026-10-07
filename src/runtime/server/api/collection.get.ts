@@ -4,6 +4,7 @@ import { defineEventHandler, getValidatedQuery } from 'h3'
 import { z } from 'zod'
 import { cmsDialect, useDb } from '#cms-db'
 import { pageRoutes } from '../../shared/index'
+import { searchLikePattern } from '../../shared/search'
 import { decodeRows, getRegistryEntry, idColumn, tableColumns } from '../utils/registry'
 import { readPages } from '../utils/page-storage'
 import { attachManyToMany, relationTitles } from '../utils/relations'
@@ -17,10 +18,6 @@ const querySchema = z.object({
    order: z.enum(['asc', 'desc']).default('desc'),
    light: z.stringbool().default(false),
 })
-
-function likePattern(term: string) {
-   return `%${term.replaceAll('\\', '\\\\').replaceAll('%', '\\%').replaceAll('_', '\\_')}%`
-}
 
 export default defineEventHandler(async (event) => {
    await requireAdmin(event)
@@ -70,7 +67,7 @@ export default defineEventHandler(async (event) => {
    if (search) {
       const column = titleColumn ?? idColumn(table)
       const text = cmsDialect === 'postgres' ? sql`cast(${column} as text)` : sql`${column}`
-      where = sql`lower(${text}) like ${likePattern(search.toLowerCase())} escape '\\'`
+      where = sql`lower(${text}) like ${searchLikePattern(search.toLowerCase())} escape '\\'`
    }
 
    const selection = light

@@ -1,5 +1,12 @@
 <template>
-   <CmsForm :id="formId" :state="state" :schema="schema" @submit="emit('submit')" @error="onError">
+   <CmsForm
+      :id="formId"
+      ref="form"
+      :state="state"
+      :schema="schema"
+      @submit="emit('submit')"
+      @error="onError"
+   >
       <div v-if="tabList.length > 1" class="cms-tabs" role="tablist">
          <button
             v-for="tab in tabList"
@@ -53,6 +60,8 @@
                         :icon="fieldIcon(fields[key]!)"
                         :name="key"
                         :required="fields[key]!.required"
+                        :data-cms-field="key"
+                        :class="{ 'is-search-focus': highlighted === key }"
                      >
                         <template
                            v-if="hasLocaleSwitch(fields[key]!) && i18n.locales.length > 1"
@@ -105,8 +114,10 @@ import {
    resolveFormLayout,
    slugSourceValue,
 } from '#nuxt-cms'
-import { computed, nextTick, ref, watch } from '#imports'
+import { computed, nextTick, onMounted, ref, watch } from '#imports'
+import type { CmsSearchFocus } from '../../../shared/search'
 import { buildEntrySchema } from '../../../shared/validation'
+import { useCmsFieldFocus } from '../../composables/cms-field-focus'
 import { useCmsRuntime } from '../../composables/cms-runtime'
 import { entryFormLayout, useCmsSettingsState } from '../../composables/cms-settings'
 import { fieldIcon } from '../../utils/ui'
@@ -120,6 +131,7 @@ const props = withDefaults(
       loading?: boolean
       formId?: string
       footer?: boolean
+      focus?: CmsSearchFocus | null
    }>(),
    { footer: true }
 )
@@ -232,4 +244,27 @@ const published = computed({
 function togglePublished() {
    published.value = !published.value
 }
+
+const form = ref<{ $el: HTMLElement } | null>(null)
+const { highlighted, reveal } = useCmsFieldFocus()
+
+function applyFocus(focus: CmsSearchFocus) {
+   if (focus.tab && tabList.value.some((tab) => tab.id === focus.tab)) activeTab.value = focus.tab
+   const key = focus.field
+   const field = key ? props.fields[key] : undefined
+   if (!key || !field) return
+   const tab = tabList.value.length ? fieldTab(field, tabList.value) : undefined
+   if (tab) activeTab.value = tab
+   if (focus.locale && hasLocaleSwitch(field) && i18n.locales.includes(focus.locale)) {
+      setLocale(key, focus.locale)
+   }
+   void nextTick(() => {
+      revealField(key)
+      reveal(() => form.value?.$el, key)
+   })
+}
+
+onMounted(() => {
+   if (props.focus) applyFocus(props.focus)
+})
 </script>

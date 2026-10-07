@@ -75,6 +75,7 @@
 
             <div
                :id="`cms-editor-tabpanel-${activeTab}`"
+               ref="panel"
                class="cms-editor-panel-body"
                role="tabpanel"
                :aria-labelledby="tabList.length > 1 ? `cms-editor-tab-${activeTab}` : undefined"
@@ -213,6 +214,8 @@
                         :icon="fieldIcon(fields[key]!)"
                         :name="key"
                         :required="fields[key]!.required"
+                        :data-cms-field="key"
+                        :class="{ 'is-search-focus': highlighted === key }"
                      >
                         <CmsFieldInput
                            :model-value="state[key]"
@@ -249,6 +252,7 @@ import {
    shallowRef,
    watch,
 } from '#imports'
+import type { CmsSearchFocus } from '../../../shared/search'
 import { buildEntrySchema } from '../../../shared/validation'
 import type {
    CmsBlockValue,
@@ -273,6 +277,7 @@ import {
    toggleBlockHidden,
 } from '../../../shared/preview'
 import { useCmsConfirm } from '../../composables/cms-confirm'
+import { useCmsFieldFocus } from '../../composables/cms-field-focus'
 import { useCmsRuntime } from '../../composables/cms-runtime'
 import { entryFormLayout, useCmsSettingsState } from '../../composables/cms-settings'
 import { CMS_FORM_ERRORS, fieldIcon } from '../../utils/ui'
@@ -290,6 +295,7 @@ const props = defineProps<{
    fields: Record<string, FieldConfig>
    title: string
    content?: boolean
+   focus?: CmsSearchFocus | null
 }>()
 
 const state = defineModel<Record<string, unknown>>('state', { required: true })
@@ -511,9 +517,26 @@ async function loadLibrary() {
    }
 }
 
+const panel = ref<HTMLElement | null>(null)
+const { highlighted, reveal } = useCmsFieldFocus()
+
+function applyFocus(focus: CmsSearchFocus) {
+   if (focus.locale && i18n.locales.includes(focus.locale)) locale.value = focus.locale
+   const key = focus.field
+   if (!key || !Object.hasOwn(props.fields, key)) return
+   if (key === props.fieldKey) {
+      activeTab.value = 'block'
+      if (focus.block != null && focus.block < blocks.value.length) select(focus.block)
+      return
+   }
+   activeTab.value = tabOfKey(key)
+   reveal(() => panel.value, key)
+}
+
 onMounted(() => {
    window.addEventListener('message', onMessage)
    void loadLibrary()
+   if (props.focus) applyFocus(props.focus)
 })
 
 onBeforeUnmount(() => {

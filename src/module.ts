@@ -1014,6 +1014,11 @@ export default defineNuxtModule<ModuleOptions>({
          method: 'post',
          handler: resolver.resolve('./runtime/server/api/media-usage.post'),
       })
+      addServerHandler({
+         route: '/api/cms/admin/media/download',
+         method: 'get',
+         handler: resolver.resolve('./runtime/server/api/media-download.get'),
+      })
 
       if (mediaFilesystemBase) {
          addServerHandler({
@@ -1027,6 +1032,11 @@ export default defineNuxtModule<ModuleOptions>({
          })
       }
 
+      addServerHandler({
+         route: '/api/cms/search',
+         method: 'get',
+         handler: resolver.resolve('./runtime/server/api/search.get'),
+      })
       addServerHandler({
          route: '/api/cms/users',
          method: 'get',

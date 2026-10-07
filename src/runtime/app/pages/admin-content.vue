@@ -6,6 +6,7 @@
       :field-key="CONTENT_BODY_FIELD"
       :fields="config.fields"
       :title="headerTitle"
+      :focus="focus"
       content
    >
       <template #start>
@@ -121,6 +122,7 @@ import {
    watch,
 } from '#imports'
 import cmsConfig from '#cms-config'
+import { readSearchFocus } from '../../shared/search'
 import { useCmsConfirm } from '../composables/cms-confirm'
 import { useCmsRuntime } from '../composables/cms-runtime'
 import { useCmsToast } from '../composables/cms-toast'
@@ -138,6 +140,7 @@ type Status = 'draft' | 'published'
 const route = useRoute()
 const toast = useCmsToast()
 const confirmAction = useCmsConfirm()
+const focus = readSearchFocus(route.query)
 const { i18n } = useCmsRuntime()
 
 const name = String(route.meta.cmsEntry ?? route.path.split('/')[2] ?? '')

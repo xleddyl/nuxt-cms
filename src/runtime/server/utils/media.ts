@@ -134,14 +134,32 @@ function filesystemStore(dir: string): MediaStore {
    }
 }
 
-function s3Store(media: MediaConfig): MediaStore {
-   const client = new AwsClient({
+function s3Client(media: MediaConfig) {
+   return new AwsClient({
       accessKeyId: media.accessKeyId,
       secretAccessKey: media.secretAccessKey,
       region: media.region,
       service: 's3',
    })
-   const bucketUrl = `${media.endpoint.replace(/\/+$/, '')}/${media.bucket}`
+}
+
+function s3BucketUrl(media: MediaConfig) {
+   return `${media.endpoint.replace(/\/+$/, '')}/${media.bucket}`
+}
+
+export async function presignedDownloadUrl(media: MediaConfig, key: string, disposition: string) {
+   const url = new URL(`${s3BucketUrl(media)}/${encodeKey(key)}`)
+   url.searchParams.set('X-Amz-Expires', String(media.presignExpiry))
+   url.searchParams.set('response-content-disposition', disposition)
+   const signed = await s3Client(media).sign(new Request(url, { method: 'GET' }), {
+      aws: { signQuery: true },
+   })
+   return signed.url
+}
+
+function s3Store(media: MediaConfig): MediaStore {
+   const client = s3Client(media)
+   const bucketUrl = s3BucketUrl(media)
 
    return {
       async uploadTarget(key, contentType, size) {

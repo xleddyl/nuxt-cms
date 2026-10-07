@@ -233,6 +233,14 @@ How folders are stored:
 In `'local'` mode the folders are the sub-directories of `publicBaseUrl`. You can browse and search
 them, but you cannot change them from the panel: create or delete them in your repository.
 
+### Downloading the original
+
+The detail drawer has a Download button. It points at `GET /api/cms/admin/media/download?key=...`, which works in every storage mode and for every file type, and never serves a resized variant. The key must be in the library, otherwise the route answers `404` (`400` for a malformed key).
+
+- `'s3'`: redirects to a presigned GET with `response-content-disposition`, so the bytes never pass through your server.
+- `'filesystem'`: streams the file from disk.
+- `'local'`: streams the file from the `publicBaseUrl` folder when it exists on disk. Otherwise (manifest on a serverless host, or a remote `publicBaseUrl`) it fetches the file from `publicBaseUrl` and streams it, so very large files are subject to the host's response limits.
+
 ### Admin endpoints
 
 The panel uses these authenticated, same-origin endpoints under `/api/cms/admin/media`:
@@ -245,6 +253,7 @@ The panel uses these authenticated, same-origin endpoints under `/api/cms/admin/
 | `POST /move` | `{ keys, folder }` | Moves files to a folder (`null` is the library root). |
 | `POST /delete` | `{ keys }` | Deletes files. |
 | `POST /usage` | `{ keys }` | Returns, for each key, the entries and fields that use it. |
+| `GET /download` | `?key=` | Downloads the original file with its filename (`Content-Disposition: attachment`). |
 
 `PATCH /folders` answers `400` when the target is inside the folder itself, or when the result is
 deeper than 4 levels.
