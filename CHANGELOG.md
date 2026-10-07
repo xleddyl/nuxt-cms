@@ -1,6 +1,18 @@
 # Changelog
 
 
+## v0.4.0
+
+[compare changes](https://github.com/xleddyl/nuxt-cms/compare/v0.3.0...v0.4.0)
+
+### 🚀 Enhancements
+
+- **admin:** Configurable brand title, subtitle and logo ([d51e4ac](https://github.com/xleddyl/nuxt-cms/commit/d51e4ac))
+
+### ❤️ Contributors
+
+- Edoardo Alberti <edoalberti99@gmail.com>
+
 ## v0.3.0
 
 [compare changes](https://github.com/xleddyl/nuxt-cms/compare/v0.2.3...v0.3.0)
