@@ -5,29 +5,8 @@
     {
       "idx": 0,
       "version": "6",
-      "when": 1790761431758,
-      "tag": "0000_quiet_toro",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "6",
-      "when": 1791302788299,
-      "tag": "0001_square_brood",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "6",
-      "when": 1791304381313,
-      "tag": "0002_violet_wild_child",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "6",
-      "when": 1791382722826,
-      "tag": "0003_medical_silk_fever",
+      "when": 1791383592901,
+      "tag": "0000_stormy_clint_barton",
       "breakpoints": true
     }
   ]

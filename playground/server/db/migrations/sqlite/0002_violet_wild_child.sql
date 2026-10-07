@@ -1,1 +1,0 @@
-ALTER TABLE `homepage` ADD `sections` text;
