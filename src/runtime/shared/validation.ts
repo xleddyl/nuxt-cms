@@ -61,6 +61,8 @@ function scalarSchema(field: FieldConfig, m: ValidationMessages): z.ZodType {
          return z.enum(field.options as [string, ...string[]])
       case 'media':
          return objectKeySchema
+      case 'json':
+         return z.unknown()
       default:
          return field.required ? z.string().trim().min(1, m.required) : z.string()
    }

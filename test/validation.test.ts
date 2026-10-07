@@ -102,6 +102,31 @@ describe('buildEntrySchema', () => {
       expect(result.success).toBe(false)
    })
 
+   it('accepts any JSON value in a json field inside a block', () => {
+      const config = sampleConfig().events!
+      config.fields.body!.blocks!.hero!.fields.extra = { label: 'Extra', type: 'json' }
+      const withJson = buildEntrySchema(config, I18N)
+      for (const extra of [{ room: 'A' }, [1, 2], 'text', 3, true, null]) {
+         expect(
+            withJson.safeParse({ ...validEvent(), body: [{ type: 'hero', heading: 'Hi', extra }] })
+               .success
+         ).toBe(true)
+      }
+   })
+
+   it('requires a value in a required json field inside a block', () => {
+      const config = sampleConfig().events!
+      config.fields.body!.blocks!.hero!.fields.extra = {
+         label: 'Extra',
+         type: 'json',
+         required: true,
+      }
+      const withJson = buildEntrySchema(config, I18N)
+      expect(
+         withJson.safeParse({ ...validEvent(), body: [{ type: 'hero', heading: 'Hi' }] }).success
+      ).toBe(false)
+   })
+
    it('validates translatable fields inside blocks as locale maps', () => {
       const config = sampleConfig().events!
       config.fields.body!.blocks!.hero!.fields.heading!.translatable = true
