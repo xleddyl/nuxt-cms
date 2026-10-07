@@ -25,6 +25,7 @@ import svgLoader from 'vite-svg-loader'
 import { buildSchema, introspectionFromSchema } from 'graphql'
 import { minifyIntrospection, outputIntrospectionFile } from 'gql.tada/internal'
 import { createJiti } from 'jiti'
+import { renderBrandFile, resolveBrand } from './brand-codegen'
 import { renderGraphqlSdl } from './runtime/shared/graphql-sdl'
 import { migrationsDirFor } from './runtime/shared/migrations-dir'
 import type { CmsConfig, CmsPageRoute, MediaStorageMode } from './runtime/shared/index'
@@ -82,6 +83,9 @@ export interface ModuleOptions {
    admin?: {
       email?: string
       password?: string
+      title?: string
+      subtitle?: string
+      logo?: string
    }
    database?: ModuleOptionsDatabase
    media?: ModuleOptionsMedia
@@ -103,6 +107,9 @@ interface ResolvedModuleOptions {
    admin: {
       email: string
       password: string
+      title: string
+      subtitle: string | undefined
+      logo: string
    }
    database: {
       driver: Driver
@@ -223,6 +230,9 @@ function resolveModuleOptions(options: ModuleOptions): ResolvedModuleOptions {
       admin: {
          email: options.admin?.email ?? '',
          password: options.admin?.password ?? '',
+         title: options.admin?.title ?? '',
+         subtitle: options.admin?.subtitle,
+         logo: options.admin?.logo ?? '',
       },
       database: resolveDatabaseOptions(options.database),
       media: resolveMediaOptions(options.media),
@@ -870,6 +880,19 @@ export default defineNuxtModule<ModuleOptions>({
          },
          { nuxt: true, nitro: true }
       )
+
+      const brandPaths = {
+         rootDir: nuxt.options.rootDir,
+         srcDir: nuxt.options.srcDir ?? nuxt.options.rootDir,
+      }
+      const { file: brandFile } = resolveBrand(resolved.admin, brandPaths)
+      if (brandFile) nuxt.options.watch.push(brandFile)
+      const brandTemplate = addTemplate({
+         filename: 'cms/brand.ts',
+         write: true,
+         getContents: () => renderBrandFile(resolveBrand(resolved.admin, brandPaths).brand),
+      })
+      nuxt.options.alias['#cms-brand'] = brandTemplate.dst
 
       addVitePlugin(tailwindcss())
       addVitePlugin(svgLoader({ defaultImport: 'url', svgoConfig: { plugins: ['prefixIds'] } }))

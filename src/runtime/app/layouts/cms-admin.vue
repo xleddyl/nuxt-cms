@@ -5,8 +5,10 @@
             <div class="cms-sidebar-brand">
                <CmsBrandMark />
                <div class="cms-brand-text">
-                  <span class="cms-brand-name">nuxt-cms</span>
-                  <span class="cms-brand-meta">Content studio</span>
+                  <span class="cms-brand-name">{{ cmsBrand.title }}</span>
+                  <span v-if="cmsBrand.subtitle" class="cms-brand-meta">{{
+                     cmsBrand.subtitle
+                  }}</span>
                </div>
             </div>
 
@@ -64,7 +66,7 @@
                   @click="navOpen = true"
                />
                <CmsBrandMark />
-               <span class="cms-brand-name">nuxt-cms</span>
+               <span class="cms-brand-name">{{ cmsBrand.title }}</span>
             </header>
             <div class="cms-main-inner">
                <slot />
@@ -83,6 +85,7 @@
 import type { CmsConfig } from '#nuxt-cms'
 import { computed, navigateTo, ref, useRoute, useUserSession, watch } from '#imports'
 import cmsConfig from '#cms-config'
+import { cmsBrand } from '#cms-brand'
 import { useCmsTheme } from '../composables/cms-theme'
 import { useCmsAccount } from '../composables/cms-account'
 import { loadCmsSettings } from '../composables/cms-settings'

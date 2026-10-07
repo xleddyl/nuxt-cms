@@ -56,6 +56,13 @@ build stops with an explicit message if the client for the configured driver is 
 
 Then declare your content types in a `cms.config.ts` at the project root with `defineCmsConfig()`.
 
+### Admin branding
+
+`cms.admin.title`, `cms.admin.subtitle` and `cms.admin.logo` replace the name, the tagline and the
+mark in the admin sidebar, mobile bar and login page. `logo` takes a URL or public path, a path to
+an `.svg` file in the project (inlined, so it follows the light and dark theme) or raw `<svg>`
+markup; see [Configuration](docs/configuration.md#admin-branding).
+
 ### Disabling the CMS
 
 Keep the module in `modules[]` at all times and turn it off with the `enabled` option or the

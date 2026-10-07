@@ -1,5 +1,10 @@
 <template>
-   <CmsModal :open="open" size="sm" title="Welcome to nuxt-cms" @update:open="(v) => !v && keep()">
+   <CmsModal
+      :open="open"
+      size="sm"
+      :title="`Welcome to ${cmsBrand.title}`"
+      @update:open="(v) => !v && keep()"
+   >
       <template #body>
          <CmsForm :state="state" @submit="save">
             <p class="cms-settings-hint">
@@ -32,6 +37,7 @@
 
 <script setup lang="ts">
 import { MIN_PASSWORD_LENGTH } from '#nuxt-cms'
+import { cmsBrand } from '#cms-brand'
 import { computed, ref } from '#imports'
 import { useCmsAccount } from '../../composables/cms-account'
 import { useCmsToast } from '../../composables/cms-toast'

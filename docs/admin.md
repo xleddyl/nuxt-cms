@@ -3,6 +3,10 @@
 The admin panel is served by the same Nitro server, under `/cms`. It is a single-admin application:
 one account, read from environment variables.
 
+The brand shown in the sidebar, the mobile bar and the login page (logo, title, subtitle) is set
+with `cms.admin.logo`, `cms.admin.title` and `cms.admin.subtitle`, see
+[Configuration](configuration.md#admin-branding).
+
 ## Pages
 
 | Path | Purpose |

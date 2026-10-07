@@ -287,6 +287,36 @@ body:has(.cms-scope)
    border-radius: var(--cms-radius-lg);
 }
 
+.cms-brand-logo {
+   display: block;
+   flex: none;
+   width: auto;
+   max-width: 7.5rem;
+   height: 1.75rem;
+   object-fit: contain;
+   color: var(--ui-text-highlighted);
+}
+
+.cms-brand-logo.is-lg {
+   max-width: 12rem;
+   height: 2.75rem;
+}
+
+span.cms-brand-logo {
+   display: inline-flex;
+}
+
+span.cms-brand-logo svg {
+   display: block;
+   width: auto;
+   max-width: 100%;
+   height: 100%;
+}
+
+.cms-auth-header .cms-brand-logo {
+   margin-bottom: 0.75rem;
+}
+
 .cms-brand-text {
    display: flex;
    min-width: 0;
@@ -295,6 +325,9 @@ body:has(.cms-scope)
 }
 
 .cms-brand-name {
+   overflow: hidden;
+   text-overflow: ellipsis;
+   white-space: nowrap;
    font-size: 0.875rem;
    font-weight: 600;
    letter-spacing: -0.01em;
@@ -302,6 +335,9 @@ body:has(.cms-scope)
 }
 
 .cms-brand-meta {
+   overflow: hidden;
+   text-overflow: ellipsis;
+   white-space: nowrap;
    font-size: 0.75rem;
    color: var(--ui-text-dimmed);
 }

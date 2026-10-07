@@ -17,6 +17,9 @@ cms: {
    admin: {
       email: '',                    // prefer NUXT_CMS_ADMIN_EMAIL
       password: '',                 // prefer NUXT_CMS_ADMIN_PASSWORD
+      title: 'nuxt-cms',            // brand name in the sidebar and the mobile bar
+      subtitle: 'Content studio',   // line under the title; '' hides it
+      logo: '',                     // see Admin branding below; empty keeps the default mark
    },
    database: { driver: 'sqlite' },  // the default; nothing else required
    media: { storage: 's3' },        // the default; endpoint/bucket/keys via env or below
@@ -159,6 +162,35 @@ under `publicBaseUrl` (default `/media`), with no bucket needed. See
 
 Upper bound on GraphQL query nesting; deeper queries are rejected. Raise it if you have deeply
 nested relations.
+
+### `admin` branding
+
+`title`, `subtitle` and `logo` change the brand area of the admin: the sidebar, the mobile top bar
+and the login page. Without them the admin looks as before (`nuxt-cms`, `Content studio` and the
+default mark). An empty `subtitle` hides that line. `title` also names the logo for screen readers
+and fills the welcome dialog.
+
+`logo` accepts:
+
+- a URL or a root-relative public path (`/logo.png`, `/brand/logo.svg`, `https://example.com/a.png`),
+  rendered as an `<img>`. An SVG used this way cannot take the colors of the admin theme.
+- a path to an `.svg` file in the project: relative to the Nuxt root dir, or with the `~/` and `@/`
+  (source dir) and `~~/` and `@@/` (root dir) aliases. The file is read at build time and inlined, so
+  it can use `currentColor` and follow the light and dark theme. The build strips `<script>`,
+  `<foreignObject>`, `on*` attributes and `javascript:` links, and removes the fixed `width` and
+  `height` of the root so CSS sizes it (the `viewBox` is kept, and built from `width` and `height`
+  when missing).
+- raw SVG markup starting with `<svg`, inlined the same way.
+
+A project path that does not exist, or that is not an `.svg`, fails the build: raster images are not
+copied as assets, put them in `public/` and use the public path. A custom logo keeps its aspect
+ratio (28px high in the sidebar, 44px on the login page); only the default mark sits in a square box.
+
+```ts
+cms: {
+   admin: { title: 'Acme CMS', subtitle: 'Editors', logo: '~/assets/logo.svg' },
+}
+```
 
 ### `preview`
 
