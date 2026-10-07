@@ -1,6 +1,18 @@
 # Changelog
 
 
+## v0.4.1
+
+[compare changes](https://github.com/xleddyl/nuxt-cms/compare/v0.4.0...v0.4.1)
+
+### 🩹 Fixes
+
+- Never write database credentials into the generated drizzle config ([907941e](https://github.com/xleddyl/nuxt-cms/commit/907941e))
+
+### ❤️ Contributors
+
+- Edoardo Alberti <edoalberti99@gmail.com>
+
 ## v0.4.0
 
 [compare changes](https://github.com/xleddyl/nuxt-cms/compare/v0.3.0...v0.4.0)
