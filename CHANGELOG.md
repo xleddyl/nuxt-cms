@@ -1,6 +1,19 @@
 # Changelog
 
 
+## v0.2.3
+
+[compare changes](https://github.com/xleddyl/nuxt-cms/compare/v0.2.2...v0.2.3)
+
+### 🚀 Enhancements
+
+- Content entries with scheduled publishing, datetime field and block components ([925e335](https://github.com/xleddyl/nuxt-cms/commit/925e335))
+- **admin:** Visual block editor with live preview page ([77910d5](https://github.com/xleddyl/nuxt-cms/commit/77910d5))
+
+### ❤️ Contributors
+
+- Edoardo Alberti <edoalberti99@gmail.com>
+
 ## v0.2.2
 
 [compare changes](https://github.com/xleddyl/nuxt-cms/compare/v0.2.1...v0.2.2)
