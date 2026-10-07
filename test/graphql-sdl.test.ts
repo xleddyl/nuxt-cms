@@ -1,4 +1,4 @@
-import { buildSchema, parse, validate } from 'graphql'
+import { buildSchema, graphql, parse, validate } from 'graphql'
 import { describe, expect, it } from 'vitest'
 import { renderGraphqlSdl } from '../src/runtime/shared/graphql-sdl'
 import { sampleConfig } from './fixtures'
@@ -66,16 +66,71 @@ describe('renderGraphqlSdl', () => {
       expect(iface).not.toContain('text')
    })
 
-   it('makes a shared field nullable when one block leaves it optional', () => {
+   it('renders every block subfield as nullable, required or not', () => {
+      expect(sdl.match(/type EventsBodyHero implements EventsBodyBlock \{[^}]*\}/)![0]).toBe(
+         'type EventsBodyHero implements EventsBodyBlock {\n  type: String!\n  heading: String\n}'
+      )
+      expect(sdl.match(/type EventsBodyQuote implements EventsBodyBlock \{[^}]*\}/)![0]).toBe(
+         'type EventsBodyQuote implements EventsBodyBlock {\n  type: String!\n  text: String\n  author: String\n}'
+      )
+   })
+
+   it('renders a shared field as nullable on the interface even when every block requires it', () => {
+      const config = sampleConfig()
+      config.events!.fields.body!.blocks!.quote!.fields.heading = {
+         label: 'Heading',
+         type: 'text',
+         required: true,
+      }
+      const out = renderGraphqlSdl(config)
+      expect(() => buildSchema(out)).not.toThrow()
+      const iface = out.match(/interface EventsBodyBlock \{[^}]*\}/)![0]
+      expect(iface).toContain('heading: String')
+      expect(iface).not.toContain('heading: String!')
+   })
+
+   describe('a subfield required in one block and optional in another', () => {
       const config = sampleConfig()
       config.events!.fields.body!.blocks!.quote!.fields.heading = {
          label: 'Heading',
          type: 'text',
       }
-      const out = renderGraphqlSdl(config)
-      expect(() => buildSchema(out)).not.toThrow()
-      expect(out.match(/interface EventsBodyBlock \{[^}]*\}/)![0]).toContain('heading: String')
-      expect(out.match(/interface EventsBodyBlock \{[^}]*\}/)![0]).not.toContain('heading: String!')
+      const schema = buildSchema(renderGraphqlSdl(config))
+      const source = `{
+         events {
+            body {
+               type
+               ... on EventsBodyHero { heading }
+               ... on EventsBodyQuote { heading text author }
+            }
+         }
+      }`
+
+      it('validates a query with inline fragments on both blocks', () => {
+         expect(validate(schema, parse(source))).toEqual([])
+      })
+
+      it('resolves a block item missing a required subfield without errors', async () => {
+         const body = [{ type: 'hero' }, { type: 'quote', heading: 'Title', author: 'Ada' }]
+         const result = await graphql({
+            schema,
+            source,
+            rootValue: { events: () => [{ id: 'e1', body }] },
+            typeResolver: (value: { type: string }) =>
+               value.type === 'hero' ? 'EventsBodyHero' : 'EventsBodyQuote',
+         })
+         expect(result.errors).toBeUndefined()
+         expect(result.data).toEqual({
+            events: [
+               {
+                  body: [
+                     { type: 'hero', heading: null },
+                     { type: 'quote', heading: 'Title', text: null, author: 'Ada' },
+                  ],
+               },
+            ],
+         })
+      })
    })
 
    it('lets a single-block field select its fields without an inline fragment', () => {

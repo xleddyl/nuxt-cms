@@ -99,6 +99,14 @@ describe('block rendering', () => {
       expect(cmsBlockComponent({ type: 'text' }, 'news', 'other')).toBeUndefined()
    })
 
+   it('still renders a block whose subfields come back null', () => {
+      const resolved = resolveCmsBlocks([
+         { __typename: 'NewsBodyText', type: 'text', heading: null, body: null } as CmsBlockItem,
+      ])
+      expect(resolved[0]!.component).toBe(cmsBlockComponents.NewsBodyText)
+      expect(resolved[0]!.props).toEqual({ heading: null, body: null })
+   })
+
    it('passes every field but type and __typename as props', () => {
       expect(cmsBlockProps({ __typename: 'X', type: 'a', title: 't' } as CmsBlockItem)).toEqual({
          title: 't',

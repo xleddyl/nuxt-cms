@@ -234,6 +234,8 @@ gallery { type hidden photo { url alt } }
 body { type ... on EventsBodyHero { heading image { url alt } } }
 ```
 
+Block fields are always nullable in GraphQL and in `#cms-types` (`string | null`), `required` included: inside blocks `required` is an admin and save-time rule only, because stored items can predate the field. `type` and `__typename` stay non-null.
+
 Rendering: `<CmsBlocks :blocks="item.body" />` renders each block with its `component`, the block fields as props (no `type`/`__typename`), skipping hidden blocks and blocks without a component (dev warning). It finds the component by `__typename` (selected by the generated queries); for data without it pass `entry="news" field="body"` (`field` defaults to `body`). `annotate` adds `data-cms-block` (index) and `data-cms-block-type` to each root element. Components come from a build-time map (`#cms-blocks`) of lazy imports from `#components`. Type a block component with the generated interface: `defineProps<NewsBodyTextProps>()` from `#cms-types` (name `<Entry><Field><Block>Props`); `CmsBlockProps<'news', 'body', 'text'>` is the same type for use outside `defineProps` (Vue's compiler cannot resolve the generic there).
 
 ### Example

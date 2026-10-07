@@ -391,6 +391,8 @@ body: {
 Block fields accept every field type **except** `slug`, `relation`, `blocks`, and multi-select
 (`select` with `multiple: true`). They can be `translatable` (see below) but not `private` — mark the
 whole `blocks` field private instead.
+`required` inside a block is an admin and save-time rule: the API and the generated types always
+return block fields as nullable, since stored items can predate a field or its `required` flag.
 See [Querying → Blocks](querying.md#blocks) for how to read them.
 
 Every block item can carry `hidden: true`, set from the block editor with **Hide**. When the block

@@ -88,9 +88,8 @@ function entrySdl(config: CmsConfig, name: string, entry: CmsEntry): string {
    return `type ${typeName(name)} {\n${lines.join('\n')}\n}`
 }
 
-function blockFieldSdl(field: FieldConfig): { base: string; nonNull: boolean } {
-   if (field.type === 'media') return { base: 'CmsMedia', nonNull: false }
-   return { base: scalarFor(field), nonNull: !!field.required }
+function blockFieldSdl(field: FieldConfig): string {
+   return field.type === 'media' ? 'CmsMedia' : scalarFor(field)
 }
 
 function sharedBlockFieldsSdl(field: FieldConfig): string[] {
@@ -102,9 +101,8 @@ function sharedBlockFieldsSdl(field: FieldConfig): string[] {
       const rendered = blocks.map((block) => block.fields[key])
       if (rendered.some((blockField) => !blockField)) continue
       const types = rendered.map((blockField) => blockFieldSdl(blockField!))
-      if (types.some((type) => type.base !== types[0]!.base)) continue
-      const nonNull = types.every((type) => type.nonNull)
-      lines.push(`  ${key}: ${types[0]!.base}${nonNull ? '!' : ''}`)
+      if (types.some((type) => type !== types[0])) continue
+      lines.push(`  ${key}: ${types[0]}`)
    }
    return lines
 }
@@ -118,8 +116,7 @@ function blocksSdl(name: string, key: string, field: FieldConfig): string[] {
    for (const [blockName, block] of blocks) {
       const lines = ['  type: String!']
       for (const [blockFieldKey, blockField] of Object.entries(block.fields)) {
-         const type = blockFieldSdl(blockField)
-         lines.push(`  ${blockFieldKey}: ${type.base}${type.nonNull ? '!' : ''}`)
+         lines.push(`  ${blockFieldKey}: ${blockFieldSdl(blockField)}`)
       }
       const gqlType = blockTypeName(name, key, blockName)
       defs.push(`type ${gqlType} implements ${interfaceName} {\n${lines.join('\n')}\n}`)

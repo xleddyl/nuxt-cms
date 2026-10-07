@@ -69,12 +69,9 @@ function blockTypesTs(entryName: string, key: string, field: FieldConfig): strin
       members.push(name)
       const lines: string[] = []
       for (const [blockFieldKey, blockField] of Object.entries(block.fields)) {
-         if (blockField.type === 'media') {
-            lines.push(`  ${blockFieldKey}: ${mediaTsType(blockField)} | null`)
-            continue
-         }
-         const base = scalarTsType(blockField)
-         lines.push(`  ${blockFieldKey}: ${blockField.required ? base : `${base} | null`}`)
+         const base =
+            blockField.type === 'media' ? mediaTsType(blockField) : scalarTsType(blockField)
+         lines.push(`  ${blockFieldKey}: ${base} | null`)
       }
       defs.push(`export interface ${props} {\n${lines.join('\n')}\n}`)
       defs.push(

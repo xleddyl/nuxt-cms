@@ -187,6 +187,10 @@ body {
 }
 ```
 
+Every block field is nullable in the API and in the generated types, even when it is `required`:
+block items are stored as JSON, so older items can lack a field added or made required later.
+`type` and `__typename` are always set.
+
 ## Rendering blocks
 
 `<CmsBlocks>` renders a blocks value with the components named by `component` on each block (see
