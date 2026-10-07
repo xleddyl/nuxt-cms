@@ -489,7 +489,7 @@ function jsonExpr(col: string, dialect: Dialect) {
    return dialect === 'postgres' ? `jsonb('${col}')` : `text('${col}', { mode: 'json' })`
 }
 
-function columnExpr(key: string, field: FieldConfig, dialect: Dialect): string {
+function columnExpr(key: string, field: FieldConfig, dialect: Dialect, table: string): string {
    const col = snakeCase(key)
    let expr: string
    if (isTranslatableField(field)) {
@@ -524,7 +524,8 @@ function columnExpr(key: string, field: FieldConfig, dialect: Dialect): string {
          break
       case 'relation': {
          const onDelete = field.onDelete ?? (field.required ? 'restrict' : 'set null')
-         expr = `text('${col}').references(() => ${field.to}.id, { onDelete: '${onDelete}' })`
+         const target = field.to === table ? `(): ${anyColumnType(dialect)}` : '()'
+         expr = `text('${col}').references(${target} => ${field.to}.id, { onDelete: '${onDelete}' })`
          if (field.cardinality === 'one-to-one') expr += '.unique()'
          break
       }
@@ -533,6 +534,14 @@ function columnExpr(key: string, field: FieldConfig, dialect: Dialect): string {
    }
    if (isRequiredField(field)) expr += '.notNull()'
    return `  ${key}: ${expr},`
+}
+
+function anyColumnType(dialect: Dialect) {
+   return dialect === 'postgres' ? 'AnyPgColumn' : 'AnySQLiteColumn'
+}
+
+function isSelfRelation(table: string, field: FieldConfig) {
+   return field.type === 'relation' && !isManyToMany(field) && field.to === table
 }
 
 function isManyToMany(field: FieldConfig) {
@@ -564,7 +573,7 @@ function tableExpr(name: string, entry: CmsEntry, dialect: Dialect): string {
       entry.kind === 'page' ? pageColumnFields(entry) : entry.fields
    )) {
       if (isManyToMany(field)) continue
-      lines.push(columnExpr(key, field, dialect))
+      lines.push(columnExpr(key, field, dialect, name))
    }
 
    if (entry.drafts) lines.push(`  status: text('status').notNull().default('draft'),`)
@@ -688,8 +697,20 @@ export function renderSchemaFile(
    if (pg) core.add('timestamp')
    if (fields.some(isManyToMany) || rowsEntries.length) core.add('primaryKey')
 
+   const hasSelfRelation = derived.some(([name, entry]) =>
+      Object.values(entry.kind === 'page' ? pageColumnFields(entry) : entry.fields).some((field) =>
+         isSelfRelation(name, field)
+      )
+   )
    const imports = [
       ...(pg ? [] : [`import { sql } from '${resolveImport('drizzle-orm')}'`]),
+      ...(hasSelfRelation
+         ? [
+              `import type { ${anyColumnType(dialect)} } from '${resolveImport(
+                 `drizzle-orm/${pg ? 'pg-core' : 'sqlite-core'}`
+              )}'`,
+           ]
+         : []),
       `import { ${[...core].sort().join(', ')} } from '${resolveImport(
          `drizzle-orm/${pg ? 'pg-core' : 'sqlite-core'}`
       )}'`,

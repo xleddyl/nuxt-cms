@@ -81,6 +81,28 @@ describe('renderSchemaFile', () => {
       )
    })
 
+   it('types the reference of a self relation in both dialects', () => {
+      const config = sampleConfig()
+      config.categories!.fields.parent = {
+         label: 'Parent',
+         type: 'relation',
+         to: 'categories',
+         onDelete: 'cascade',
+      }
+      const sqlite = renderSchemaFile(config, 'sqlite')
+      expect(sqlite).toContain("import type { AnySQLiteColumn } from 'drizzle-orm/sqlite-core'")
+      expect(sqlite).toContain(
+         "parent: text('parent').references((): AnySQLiteColumn => categories.id, { onDelete: 'cascade' })"
+      )
+      const pg = renderSchemaFile(config, 'postgres')
+      expect(pg).toContain("import type { AnyPgColumn } from 'drizzle-orm/pg-core'")
+      expect(pg).toContain('references((): AnyPgColumn => categories.id')
+   })
+
+   it('imports no column type without a self relation', () => {
+      expect(renderSchemaFile(sampleConfig(), 'sqlite')).not.toContain('AnySQLiteColumn')
+   })
+
    it('routes imports through the resolver', () => {
       const out = renderSchemaFile(sampleConfig(), 'sqlite', (s) => `/abs/${s}`)
       expect(out).toContain("from '/abs/drizzle-orm/sqlite-core'")
