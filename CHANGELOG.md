@@ -1,6 +1,22 @@
 # Changelog
 
 
+## v0.3.0
+
+[compare changes](https://github.com/xleddyl/nuxt-cms/compare/v0.2.3...v0.3.0)
+
+### 🚀 Enhancements
+
+- **admin:** Global search and media download ([2cbef57](https://github.com/xleddyl/nuxt-cms/commit/2cbef57))
+
+### 🏡 Chore
+
+- Release script bumps the exact semver level on 0.x versions ([141860b](https://github.com/xleddyl/nuxt-cms/commit/141860b))
+
+### ❤️ Contributors
+
+- Edoardo Alberti <edoalberti99@gmail.com>
+
 ## v0.2.3
 
 [compare changes](https://github.com/xleddyl/nuxt-cms/compare/v0.2.2...v0.2.3)
